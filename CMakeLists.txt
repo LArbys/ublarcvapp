@@ -63,12 +63,30 @@ set(UBLARCVAPP_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 #---Add base of source
 add_subdirectory(ublarcvapp)
 
+#---Configuration export
+include(CMakePackageConfigHelpers)
+set(UBLARCVAPP_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
+set(UBLARCVAPP_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+set(TARGETS_EXPORT_NAME "ublarcvappTargets")
+configure_package_config_file("cmake/Config.cmake.in"
+  "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfig.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp"
+  PATH_VARS UBLARCVAPP_INCLUDE_DIR UBLARCVAPP_LIBRARY_DIR UBLARCVAPP_BASE_DIR)
+write_basic_package_version_file("${CMAKE_BINARY_DIR}/cmake/ublarcvappConfigVersion.cmake"
+  COMPATIBILITY SameMajorVersion)
+
 ## Export Targets
 
 #---Create info to include LArCV in other cmake files
 install(EXPORT ublarcvapp
         FILE ublarcvappTargets.cmake
         DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp")
+
+#---Create info to include LArCV in other cmake files
+install(FILES "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfig.cmake"
+  "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfigVersion.cmake"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp")
+
 
 
 
