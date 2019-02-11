@@ -23,10 +23,21 @@ if (USE_OPENCV)
   endif()
 endif()
 
-#---GEO2D
-set( GEO2D_INC_DIR "$ENV{GEO2D_INCDIR}" )
-set( GEO2D_LIB_DIR "$ENV{GEO2D_LIBDIR}" )
-file( GLOB GEO2D_LIBS "$ENV{GEO2D_LIBDIR}/*.so" )
+#---larbys GEO2D
+# use it if env variables defined
+if (DEFINED ENV{GEO2D_BASEDIR})
+  set(LARCV_USE_GEO2D 1)
+  file( GLOB GEO2D_LIBS "$ENV{GEO2D_LIBDIR}/*.so" )
+  set( GEO2D_INC_DIR "$ENV{GEO2D_INCDIR}" )
+  set( GEO2D_LIB_DIR "$ENV{GEO2D_LIBDIR}" )
+else()
+  set(LARCV_USE_GEO2D 0)
+endif()
+
+# unless explicitly told no
+if (NOT USE_GEO2D)
+  set(LARCV_USE_GEO2D 0)
+endif()
 
 #---LArLite
 set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" )
