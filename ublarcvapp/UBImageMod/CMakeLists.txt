@@ -15,6 +15,13 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 # includes
 include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INCDIRS})
 
+if (HAS_LARLITE)
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")
+  #message("build ubimagemod with larlite")
+else()
+  #message("build ubimagemod without larlite")
+endif()
+
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
 
