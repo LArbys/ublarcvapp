@@ -61,8 +61,9 @@ namespace ublarcvapp {
           int min_tick = 3200 + ll[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
           int max_tick = 3200 + ur[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
           if ( (max_tick-min_tick)!=512*6 ) {
-            min_tick = (min_tick+max_tick)/2 - 256*6;
-            max_tick = (min_tick+max_tick)/2 + 256*6;
+            int center = (int)(min_tick+max_tick)/2;
+            min_tick = center - 256*6;
+            max_tick = center + 256*6;
           }
           
           for ( size_t p=0; p<3; p++ ) {
@@ -77,8 +78,8 @@ namespace ublarcvapp {
             // set fixed size
             if ( (max_col-min_col) != 512 ) {
               int ave = (max_col+min_col)/2;
-              max_col = (ave)/2+256;
-              min_col = (ave)/2-256;
+              min_col = (ave)-256;              
+              max_col = (ave)+256;
             }
             // adjust if on image bounds
             if ( min_col<0 ) {
