@@ -15,7 +15,7 @@
 // ROOT TRandom3
 #include "TRandom3.h"
 
-namespace larcv {
+namespace ublarcvapp {
 
   static UBSplitDetectorProcessFactory __global_UBSplitDetectorProcessFactory__;
 
@@ -27,7 +27,7 @@ namespace larcv {
   int   UBSplitDetector::num_calls = 0;
   
   UBSplitDetector::UBSplitDetector(const std::string name)
-    : ProcessBase(name)
+    : larcv::ProcessBase(name)
   {
     _num_expected_crops = -1;
     _numcrops_changed = false;
@@ -43,7 +43,7 @@ namespace larcv {
 #endif
   }
 
-  void UBSplitDetector::configure(const PSet& cfg)
+  void UBSplitDetector::configure(const larcv::PSet& cfg)
   {
     // operating parameters
     // name of tree from which to get ADC images and their meta
@@ -115,7 +115,7 @@ namespace larcv {
   void UBSplitDetector::initialize()
   {}
 
-  bool UBSplitDetector::process(IOManager& mgr)
+  bool UBSplitDetector::process(larcv::IOManager& mgr)
   {
     // we split the full detector image into 3D subpieces
 
@@ -124,7 +124,7 @@ namespace larcv {
     auto input_image  = (larcv::EventImage2D*)(mgr.get_data(larcv::kProductImage2D, _input_producer));
     if (!input_image) {
       LARCV_CRITICAL() << "No Image2D found with a name: " << _input_producer << std::endl;
-      throw larbys();
+      throw larcv::larbys();
     }
     const std::vector< larcv::Image2D >& img_v = input_image->Image2DArray();
 

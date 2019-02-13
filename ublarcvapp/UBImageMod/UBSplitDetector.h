@@ -22,14 +22,14 @@
 
 #include "larcv/core/DataFormat/EventImage2D.h"
 
-namespace larcv {
+namespace ublarcvapp {
 
   /**
      \class ProcessBase
      User defined class UBSplitDetector ... these comments are used to generate
      doxygen documentation!
   */
-  class UBSplitDetector : public ProcessBase {
+  class UBSplitDetector : public larcv::ProcessBase {
 
   public:
 
@@ -39,11 +39,11 @@ namespace larcv {
     /// Default destructor
     ~UBSplitDetector() {}
 
-    void configure(const PSet&);
+    void configure(const larcv::PSet&);
 
     void initialize();
 
-    bool process(IOManager& mgr);
+    bool process( larcv::IOManager& mgr);
 
     void finalize();
 
@@ -125,16 +125,16 @@ namespace larcv {
 
   /**
      \class larcv::UBSplitDetectorFactory
-     \brief A concrete factory class for larcv::UBSplitDetector
+     \brief A concrete factory class for ublarcvapp::UBSplitDetector
   */
-  class UBSplitDetectorProcessFactory : public ProcessFactoryBase {
+  class UBSplitDetectorProcessFactory : public larcv::ProcessFactoryBase {
   public:
     /// ctor
-    UBSplitDetectorProcessFactory() { ProcessFactory::get().add_factory("UBSplitDetector", this); }
+    UBSplitDetectorProcessFactory() { larcv::ProcessFactory::get().add_factory("UBSplitDetector", this); }
     /// dtor
     ~UBSplitDetectorProcessFactory() {}
     /// creation method
-    ProcessBase* create(const std::string instance_name) { return new UBSplitDetector(instance_name); }
+    larcv::ProcessBase* create(const std::string instance_name) { return new UBSplitDetector(instance_name); }
   };
 
 }

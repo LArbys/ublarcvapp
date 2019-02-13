@@ -3,8 +3,8 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ namespace larcv+;
-#pragma link C++ class larcv::UBSplitDetector+;
+#pragma link C++ namespace ublarcvapp+;
+#pragma link C++ class ublarcvapp::UBSplitDetector+;
 
 #endif
 
