@@ -15,3 +15,5 @@ ublarcvapp_dir = os.environ['UBLARCVAPP_BASEDIR']+"/build/lib"
 # We need to load in order
 for l in [x for x in os.listdir(ublarcvapp_dir) if x.endswith('.so')]:
     ROOT.gSystem.Load(l)
+
+import ROOT.ublarcvapp as ublarcvapp

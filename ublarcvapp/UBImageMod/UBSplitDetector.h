@@ -22,14 +22,14 @@
 
 #include "larcv/core/DataFormat/EventImage2D.h"
 
-namespace larcv {
+namespace ublarcvapp {
 
   /**
      \class ProcessBase
      User defined class UBSplitDetector ... these comments are used to generate
      doxygen documentation!
   */
-  class UBSplitDetector : public ProcessBase {
+  class UBSplitDetector : public larcv::ProcessBase {
 
   public:
 
@@ -39,22 +39,28 @@ namespace larcv {
     /// Default destructor
     ~UBSplitDetector() {}
 
-    void configure(const PSet&);
+    void configure(const larcv::PSet&);
 
     void initialize();
 
-    bool process(IOManager& mgr);
+    bool process( larcv::IOManager& mgr);
 
     void finalize();
 
     // algo functions
+
+    bool process( const std::vector<larcv::Image2D>& img_v, 
+		  std::vector<larcv::Image2D>& outimg_v, 
+		  std::vector<larcv::ROI>& outbbox_v);
+    
     // static functions are defined to allow them to be reused in a stand-alone manner
     static larcv::ROI defineBoundingBoxFromCropCoords( const std::vector<larcv::Image2D>& img_v,
 						       const int box_pixel_width, const int box_pixel_height, 
 						       const int t1, const int t2,
-								    const int u1, const int u2,
+						       const int u1, const int u2,
 						       const int v1, const int v2,
-						       const int y1, const int y2);
+						       const int y1, const int y2, 
+						       const bool tick_forward);
     
     static bool cropUsingBBox2D( const larcv::ROI& bbox_vec,
 				 const std::vector<larcv::Image2D>& img_v,
@@ -63,10 +69,21 @@ namespace larcv {
 				 const int first_outidx,
 				 const bool copy_imgs,
 				 larcv::EventImage2D& output_imgs );
+
+    static bool cropUsingBBox2D( const larcv::ROI& bbox_vec,
+				 const std::vector<larcv::Image2D>& img_v,
+				 const int y1, const int y2, bool fill_y_image,
+				 const float minpixfrac,
+				 const int first_outidx,
+				 const bool copy_imgs,
+				 std::vector<larcv::Image2D>& outimg_v );
     
-    static std::vector<int> defineImageBoundsFromPosZT( const float zwire, const float tmid, const float zwidth, const float dtick,
+    
+    static std::vector<int> defineImageBoundsFromPosZT( const float zwire, const float tmid, 
+							const float zwidth, const float dtick,
 							const int box_pixel_width, const int box_pixel_height,
-							const std::vector<larcv::Image2D>& img_v );
+							const std::vector<larcv::Image2D>& img_v, 
+							const bool tick_forward );
     
     
     void printElapsedTime();
@@ -91,6 +108,7 @@ namespace larcv {
     float _randomize_minfracpix;
     int  _num_expected_crops;
     bool _numcrops_changed;
+    bool _tick_forward;
 
     // cropping variables
     std::vector< std::vector<int> > m_lattice;    //< defines (t,u,v,y) wire coordinates that serve as center of cropped subimages
@@ -107,16 +125,16 @@ namespace larcv {
 
   /**
      \class larcv::UBSplitDetectorFactory
-     \brief A concrete factory class for larcv::UBSplitDetector
+     \brief A concrete factory class for ublarcvapp::UBSplitDetector
   */
-  class UBSplitDetectorProcessFactory : public ProcessFactoryBase {
+  class UBSplitDetectorProcessFactory : public larcv::ProcessFactoryBase {
   public:
     /// ctor
-    UBSplitDetectorProcessFactory() { ProcessFactory::get().add_factory("UBSplitDetector", this); }
+    UBSplitDetectorProcessFactory() { larcv::ProcessFactory::get().add_factory("UBSplitDetector", this); }
     /// dtor
     ~UBSplitDetectorProcessFactory() {}
     /// creation method
-    ProcessBase* create(const std::string instance_name) { return new UBSplitDetector(instance_name); }
+    larcv::ProcessBase* create(const std::string instance_name) { return new UBSplitDetector(instance_name); }
   };
 
 }

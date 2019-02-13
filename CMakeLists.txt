@@ -23,14 +23,26 @@ if (USE_OPENCV)
   endif()
 endif()
 
-#---GEO2D
-set( GEO2D_INC_DIR "$ENV{GEO2D_INCDIR}" )
-set( GEO2D_LIB_DIR "$ENV{GEO2D_LIBDIR}" )
-file( GLOB GEO2D_LIBS "$ENV{GEO2D_LIBDIR}/*.so" )
+#---larbys GEO2D
+# use it if env variables defined
+if (DEFINED ENV{GEO2D_BASEDIR})
+  set(LARCV_USE_GEO2D 1)
+  file( GLOB GEO2D_LIBS "$ENV{GEO2D_LIBDIR}/*.so" )
+  set( GEO2D_INC_DIR "$ENV{GEO2D_INCDIR}" )
+  set( GEO2D_LIB_DIR "$ENV{GEO2D_LIBDIR}" )
+else()
+  set(LARCV_USE_GEO2D 0)
+endif()
+
+# unless explicitly told no
+if (NOT USE_GEO2D)
+  set(LARCV_USE_GEO2D 0)
+endif()
 
 #---LArLite
 set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" )
 set( LARLITE_LIB_DIR  "$ENV{LARLITE_LIBDIR}" )
+set( HAS_LARLITE 1 )
 file( GLOB LARLITE_LIBS "$ENV{LARLITE_LIBDIR}/libLArLite*.so" )
 
 #---LArOpenCV
@@ -52,12 +64,30 @@ set(UBLARCVAPP_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 #---Add base of source
 add_subdirectory(ublarcvapp)
 
+#---Configuration export
+include(CMakePackageConfigHelpers)
+set(UBLARCVAPP_INCLUDE_DIR "${CMAKE_INSTALL_PREFIX}/include")
+set(UBLARCVAPP_LIBRARY_DIR "${CMAKE_INSTALL_PREFIX}/lib")
+set(TARGETS_EXPORT_NAME "ublarcvappTargets")
+configure_package_config_file("cmake/Config.cmake.in"
+  "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfig.cmake"
+  INSTALL_DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp"
+  PATH_VARS UBLARCVAPP_INCLUDE_DIR UBLARCVAPP_LIBRARY_DIR UBLARCVAPP_BASE_DIR)
+write_basic_package_version_file("${CMAKE_BINARY_DIR}/cmake/ublarcvappConfigVersion.cmake"
+  COMPATIBILITY SameMajorVersion)
+
 ## Export Targets
 
 #---Create info to include LArCV in other cmake files
 install(EXPORT ublarcvapp
         FILE ublarcvappTargets.cmake
         DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp")
+
+#---Create info to include LArCV in other cmake files
+install(FILES "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfig.cmake"
+  "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfigVersion.cmake"
+  DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp")
+
 
 
 

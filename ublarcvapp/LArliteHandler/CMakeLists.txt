@@ -1,4 +1,4 @@
-set(MODULE_NAME UBImageMod)
+set(MODULE_NAME LArliteHandler)
 
 # Collect the headers
 file(GLOB HEADERS "*.h")
@@ -13,7 +13,7 @@ file(GLOB SOURCES "*.cxx")
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # includes
-include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INCDIRS})
+include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS})
 
 if (HAS_LARLITE)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")
