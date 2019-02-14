@@ -1,4 +1,4 @@
-set(MODULE_NAME UBDLLEE)
+set(MODULE_NAME ubdllee)
 
 # Collect the headers
 file(GLOB HEADERS "*.h")

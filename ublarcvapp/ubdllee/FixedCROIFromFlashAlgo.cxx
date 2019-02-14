@@ -120,8 +120,21 @@ namespace ublarcvapp {
 		if (split_z)
 		  postemp[2] += croi_dzcenters[iz];
 		
-		double ywire = larutil::Geometry::GetME()->NearestWire( postemp, 2 );
-		larcv::ImageMeta ymeta( meta.width(), meta.height(), 512, 512, ywire, min_tick, 2 );
+		// the new center
+		float ywire = larutil::Geometry::GetME()->NearestWire( postemp, 2 );
+
+		// adjust the origin
+		float yp_origin = ywire-0.5*meta.width();
+		
+		// need to check the range
+		float split_ymax = yp_origin + meta.width();
+
+		if ( split_ymax>=3456 )
+		  yp_origin = 3456 - meta.width();
+		if ( yp_origin<0 )
+		  yp_origin = 0;
+
+		larcv::ImageMeta ymeta( meta.width(), meta.height(), 512, 512, yp_origin, min_tick, 2 );
 		bb_zmod.push_back( ymeta );
 	      }
 	    }
