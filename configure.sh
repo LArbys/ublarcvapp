@@ -1,7 +1,7 @@
 #!/bin/bash
 
 
-export UBLARCVAPP_BASEDIR=$PWD
+export UBLARCVAPP_BASEDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 export UBLARCVAPP_LIBDIR=${UBLARCVAPP_BASEDIR}/build/lib
 export UBLARCVAPP_INCDIR=${UBLARCVAPP_BASEDIR}/build/include
 
