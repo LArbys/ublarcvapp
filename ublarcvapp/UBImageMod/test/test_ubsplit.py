@@ -1,14 +1,19 @@
 import sys
 import ROOT as rt
 from larcv import larcv
-from ublarcvapp import larcv
+larcv.load_rootutil()
+from ublarcvapp import ublarcvapp
+from ROOT import std
 
 superafile = sys.argv[1]
 
-io = larcv.IOManager(larcv.IOManager.kBOTH)
+io = larcv.IOManager(larcv.IOManager.kREAD,"",larcv.IOManager.kTickBackward)
 io.add_in_file( superafile )
-io.set_out_file( "baka.root" )
 io.initialize()
+
+out = larcv.IOManager(larcv.IOManager.kWRITE)
+out.set_out_file( "baka.root" )
+out.initialize()
 
 # -------------------------------------
 # UBSplitDetector
@@ -16,7 +21,7 @@ io.initialize()
 scfg="""Verbosity: 2
 InputProducer: \"wire\"
 OutputBBox2DProducer: \"detsplit\"
-CropInModule: false
+CropInModule: true
 OutputCroppedProducer: \"detsplit\"
 BBoxPixelHeight: 512
 BBoxPixelWidth: 832
@@ -35,7 +40,7 @@ fcfg.close()
 
 
 cfg = larcv.CreatePSetFromFile( "ubsplit.cfg", "UBSplitDetector" )
-algo = larcv.UBSplitDetector()
+algo = ublarcvapp.UBSplitDetector()
 algo.initialize()
 algo.configure(cfg)
 algo.set_verbosity(2)
@@ -52,17 +57,23 @@ nentries = 1
 
 for n in range(nentries):
     io.read_entry(n)
-    algo.process( io )
 
-    #detsplit = io.get_data( larcv.kProductImage2D, "detsplit" )
-    detsplit = io.get_data( larcv.kProductROI, "detsplit" )
-    print "num rois: ",detsplit.ROIArray().size()
+    ev_adc = io.get_data(larcv.kProductImage2D,"wiremc")
+    adc_v  = ev_adc.Image2DArray()
+
+    roi_v = std.vector("larcv::ROI")()
+    out_v = std.vector("larcv::Image2D")()
+    algo.process( adc_v, out_v, roi_v  )
+
+    detsplit = out.get_data( larcv.kProductImage2D, "detsplit" )
+    print "num rois: ",roi_v.size()
+    print "num crops: ",out_v.size()
 
     if True:
         # visualize
         h_v = {}
-        for i in range(0,detsplit.Image2DArray().size()):
-            h_v[i] = larcv.as_th2d( detsplit.Image2DArray()[i], "test%d"%(i) )
+        for i in xrange(out_v.size()):
+            h_v[i] = larcv.as_th2d( out_v.at(i), "test%d"%(i) )
             h_v[i].GetZaxis().SetRangeUser(-10,100)
         #print h_v
 
@@ -72,14 +83,21 @@ for n in range(nentries):
             for j in range(3):
                 c.cd(j+1)
                 h_v[3*i+j].Draw("COLZ")
+                print out_v.at(3*i+j).meta().dump()
 
             c.Update()
             raw_input()
-    print "save entry"
-    io.save_entry()
+    for i in xrange(out_v.size()):
+        detsplit.Append(out_v.at(i))
+    out.set_id( io.event_id().run(), io.event_id().subrun(), io.event_id().event() )
+    print "save entry"    
+    out.save_entry()
 
 algo.printElapsedTime()
 io.finalize()
+out.finalize()
+
+print "=========================================="
 
 io2 = larcv.IOManager(larcv.IOManager.kREAD)
 io2.add_in_file( "baka.root" )
