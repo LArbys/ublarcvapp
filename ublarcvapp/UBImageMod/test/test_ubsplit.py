@@ -5,6 +5,8 @@ larcv.load_rootutil()
 from ublarcvapp import ublarcvapp
 from ROOT import std
 
+rt.gStyle.SetOptStat(0)
+
 superafile = sys.argv[1]
 
 io = larcv.IOManager(larcv.IOManager.kREAD,"",larcv.IOManager.kTickBackward)
@@ -43,7 +45,7 @@ cfg = larcv.CreatePSetFromFile( "ubsplit.cfg", "UBSplitDetector" )
 algo = ublarcvapp.UBSplitDetector()
 algo.initialize()
 algo.configure(cfg)
-algo.set_verbosity(2)
+algo.set_verbosity(0)
 
 # -------------------------------------
 
@@ -90,7 +92,7 @@ for n in range(nentries):
     for i in xrange(out_v.size()):
         detsplit.Append(out_v.at(i))
     out.set_id( io.event_id().run(), io.event_id().subrun(), io.event_id().event() )
-    print "save entry"    
+    print "save entry"
     out.save_entry()
 
 algo.printElapsedTime()

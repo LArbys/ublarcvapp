@@ -204,8 +204,8 @@ namespace ublarcvapp {
 
     int zcols      = img_v.front().meta().cols();
 
-    int zend       = zcols-_box_pixel_width*meta.pixel_width()/2;
-    int zstart     = _box_pixel_width*meta.pixel_width()/2;
+    int zend       = zcols-_covered_z_width*meta.pixel_width()/2;
+    int zstart     = _covered_z_width*meta.pixel_width()/2;
     int zspan      = zend-zstart;
     int nz         = zspan/(zwidth/2);
     if ( abs( (zwidth/2)*nz - zspan )!=0 )
@@ -348,12 +348,19 @@ namespace ublarcvapp {
 
       std::clock_t begin = std::clock();
       LARCV_DEBUG() << "define one lattice point ROI: "
-		    << "t=[" << t1 << "," << t2 << "] "
-		    << "pixh=" << _box_pixel_height << " "
-		    << "pixw=" << _box_pixel_width
+        << " y=[" << y1 << "," << y2 << "] dy=" << y2-y1
+        << " u=[" << u1 << "," << u2 << "] du=" << u2-u1
+        << " v=[" << v1 << "," << v2 << "] dv=" << v2-v1
+		    << " t=[" << t1 << "," << t2 << "] "
+		    << " pixh=" << _box_pixel_height << " "
+		    << " pixw=" << _box_pixel_width
 		    << std::endl;
       larcv::ROI bbox_vec = defineBoundingBoxFromCropCoords( img_v, _box_pixel_width, _box_pixel_height,
 							     t1, t2, u1, u2, v1, v2, y1, y2, _tick_forward );
+      //LARCV_DEBUG() << "  meta[0]: " << bbox_vec.BB(0).dump() << std::endl;
+      //LARCV_DEBUG() << "  meta[1]: " << bbox_vec.BB(1).dump() << std::endl;
+      //LARCV_DEBUG() << "  meta[2]: " << bbox_vec.BB(2).dump() << std::endl;
+
       std::clock_t end = std::clock();
       elapsed_genbbox += double(end - begin) / CLOCKS_PER_SEC;
 
@@ -363,53 +370,53 @@ namespace ublarcvapp {
       //   for random cropping or filtering, the size changes. we resize to avoid as many reallocations as possible
       bool filledimg = false;
       if ( _enable_img_crop ) {
-	if ( copy_imgs && ( _numcrops_changed || outimg_v.size()!=_num_expected_crops*img_v.size() ) ) {
-	  // we need to create image to copy to
-	  // the intention is for this to only run once
-	  std::clock_t begin = std::clock();
-	  //std::vector<larcv::Image2D> tmp;
-	  //output_imgs->Move(tmp);
-	  LARCV_DEBUG() << "output image container has " << outimg_v.size()
-			<< " images while we need " << _num_expected_crops*img_v.size() << std::endl;
-	  for ( size_t ip=0; ip<img_v.size(); ip++ ) {
+        if ( copy_imgs && ( _numcrops_changed || outimg_v.size()!=_num_expected_crops*img_v.size() ) ) {
+          // we need to create image to copy to
+          // the intention is for this to only run once
+          std::clock_t begin = std::clock();
+          //std::vector<larcv::Image2D> tmp;
+          //output_imgs->Move(tmp);
+          LARCV_DEBUG() << "output image container has " << outimg_v.size()
+        		<< " images while we need " << _num_expected_crops*img_v.size() << std::endl;
+          for ( size_t ip=0; ip<img_v.size(); ip++ ) {
 
-	    // larcv2 meta
-	    // larcv::ImageMeta planecrop( bbox_vec[ip].min_x(), bbox_vec[ip].min_y(), bbox_vec[ip].max_x(), bbox_vec[ip].max_y(),
-	    // 				(int)(bbox_vec[ip].height()/img_v[ip].meta().pixel_height()),
-	    // 				(int)(bbox_vec[ip].width()/img_v[ip].meta().pixel_width()),
-	    // 				img_v[ip].meta().id() );
+            // larcv2 meta
+            // larcv::ImageMeta planecrop( bbox_vec[ip].min_x(), bbox_vec[ip].min_y(), bbox_vec[ip].max_x(), bbox_vec[ip].max_y(),
+            // 				(int)(bbox_vec[ip].height()/img_v[ip].meta().pixel_height()),
+            // 				(int)(bbox_vec[ip].width()/img_v[ip].meta().pixel_width()),
+            // 				img_v[ip].meta().id() );
 
-	    // larcv1 meta
-	    const larcv::ImageMeta& planecrop = bbox_vec.BB(ip);
+            // larcv1 meta
+            const larcv::ImageMeta& planecrop = bbox_vec.BB(ip);
 
 
-	    larcv::Image2D imgcrop( planecrop );
-	    imgcrop.paint(0.0);
-	    outimg_v.emplace_back( std::move(imgcrop) );
-	  }
-	  //output_imgs->Emplace( std::move(tmp) );
-	  std::clock_t end = std::clock();
-	  elapsed_alloc += double(end - begin) / CLOCKS_PER_SEC;
-	  LARCV_DEBUG() << "Created image for copying values. Total number=" << outimg_v.size() << std::endl;
-	}
-	LARCV_DEBUG() << "crop using bbox2d, reuse image. nfilled=" << nfilled
-		      << " copy_imgs=" << copy_imgs
-		      << " numcrops_changed=" << _numcrops_changed
-		      << " output_imgs_size=" << outimg_v.size()
-		      << std::endl;
-	begin = std::clock();
-	filledimg = cropUsingBBox2D( bbox_vec, img_v, y1, y2, _complete_y_crop, _randomize_minfracpix, nfilled*3, copy_imgs, outimg_v );
-	end = std::clock();
-	elapsed_crop += double(end - begin) / CLOCKS_PER_SEC;
+            larcv::Image2D imgcrop( planecrop );
+            imgcrop.paint(0.0);
+            outimg_v.emplace_back( std::move(imgcrop) );
+          }
+          //output_imgs->Emplace( std::move(tmp) );
+          std::clock_t end = std::clock();
+          elapsed_alloc += double(end - begin) / CLOCKS_PER_SEC;
+          LARCV_DEBUG() << "Created image for copying values. Total number=" << outimg_v.size() << std::endl;
+        }
+        LARCV_DEBUG() << "crop using bbox2d, reuse image. nfilled=" << nfilled
+        	      << " copy_imgs=" << copy_imgs
+        	      << " numcrops_changed=" << _numcrops_changed
+        	      << " output_imgs_size=" << outimg_v.size()
+        	      << std::endl;
+        begin = std::clock();
+        filledimg = cropUsingBBox2D( bbox_vec, img_v, y1, y2, _complete_y_crop, _randomize_minfracpix, nfilled*3, copy_imgs, outimg_v );
+        end = std::clock();
+        elapsed_crop += double(end - begin) / CLOCKS_PER_SEC;
       }
 
       if ( filledimg || !_enable_img_crop ) {
-	nfilled ++;
-	//output_bbox->Emplace( std::move(bbox_vec) );
-	outbbox_v.emplace_back( std::move(bbox_vec) );
+        nfilled ++;
+        //output_bbox->Emplace( std::move(bbox_vec) );
+        outbbox_v.emplace_back( std::move(bbox_vec) );
       }
       else {
-	nrejected ++;
+        nrejected ++;
       }
 
     }///end of loop over lattice
@@ -630,21 +637,21 @@ namespace ublarcvapp {
     if ( fill_y_image ) {
       // we fill all y-columns will all values
       if ( copy_imgs ) {
-	//std::cout << "copy region: meta=" << y_img_out_old->meta().dump() << " intended meta=" << crop_metas[2].dump() << std::endl;
-	y_img_out_old->copy_region( img_v[2] ); // copy pixels within this region
+        //std::cout << "copy region: meta=" << y_img_out_old->meta().dump() << " intended meta=" << crop_metas[2].dump() << std::endl;
+        y_img_out_old->copy_region( img_v[2] ); // copy pixels within this region
       }
       else {
-	std::clock_t begin = std::clock();
-	larcv::Image2D newyimg( crop_metas[2] );
-	std::clock_t end  = std::clock();
-	elapsed_alloc += double(end-begin)/CLOCKS_PER_SEC;
+        std::clock_t begin = std::clock();
+        larcv::Image2D newyimg( crop_metas[2] );
+        std::clock_t end  = std::clock();
+        elapsed_alloc += double(end-begin)/CLOCKS_PER_SEC;
 
-	//begin = std::clock();
-	newyimg.copy_region( img_v[2] );
-	std::swap( newyimg, y_img_out_new );
-	//end = std::clock();
-	//elapsed_crop += double(end-begin)/CLOCKS_PER_SEC;
-	//y_img_out_new = img_v[2].crop( bbox_vec[2] ); // shitty?
+        //begin = std::clock();
+        newyimg.copy_region( img_v[2] );
+        std::swap( newyimg, y_img_out_new );
+        //end = std::clock();
+        //elapsed_crop += double(end-begin)/CLOCKS_PER_SEC;
+        //y_img_out_new = img_v[2].crop( bbox_vec[2] ); // shitty?
       }
     }
     else {
@@ -658,27 +665,27 @@ namespace ublarcvapp {
       // is determined by the copy_imgs flag
       larcv::Image2D* y_target = NULL;
       if ( copy_imgs ) {
-	y_img_out_old->paint(0.0);
-	y_target = y_img_out_old;
+        y_img_out_old->paint(0.0);
+        y_target = y_img_out_old;
       }
       else {
-	larcv::Image2D ynew( crop_metas[2] );
-	ynew.paint(0.0);
-	std::swap( y_img_out_new, ynew );
-	y_target = &y_img_out_new;
+        larcv::Image2D ynew( crop_metas[2] );
+        ynew.paint(0.0);
+        std::swap( y_img_out_new, ynew );
+        y_target = &y_img_out_new;
       }
 
       // finally, fill
       for (int c=0; c<(int)crop_metas[2].cols(); c++) {
-	float cropx = crop_metas[2].pos_x(c);
+        float cropx = crop_metas[2].pos_x(c);
 
-	if ( cropx<y1 || cropx>=y2 )
-	  continue;
-	int cropc = src_metas[2].col(cropx);
-	for (int r=0; r<(int)crop_metas[2].rows(); r++) {
-	  //std::cout << "fill ytarget (" << r << "," << c << ")"  << std::endl;
-	  y_target->set_pixel( r, c, img_v[2].pixel( t1+r, cropc ) );
-	}
+        if ( cropx<y1 || cropx>=y2 )
+          continue;
+        int cropc = src_metas[2].col(cropx);
+        for (int r=0; r<(int)crop_metas[2].rows(); r++) {
+          //std::cout << "fill ytarget (" << r << "," << c << ")"  << std::endl;
+          y_target->set_pixel( r, c, img_v[2].pixel( t1+r, cropc ) );
+        }
       }
     }
 
@@ -690,22 +697,21 @@ namespace ublarcvapp {
     if ( minpixfrac>0 ) {
       larcv::Image2D* ycount = NULL;
       if ( copy_imgs )
-	ycount = y_img_out_old;
+        ycount = y_img_out_old;
       else
-	ycount = &y_img_out_new;
+        ycount = &y_img_out_new;
 
       for (int row=0; row<(int)ycount->meta().rows(); row++) {
-	for (int col=0; col<(int)ycount->meta().cols(); col++) {
-	  if ( ycount->pixel(row,col)>10.0 )
-	    frac_occupied+=1.0;
-	}
+        for (int col=0; col<(int)ycount->meta().cols(); col++) {
+          if ( ycount->pixel(row,col)>10.0 )
+            frac_occupied+=1.0;
+        }
       }
       frac_occupied /= float(ycount->meta().rows()*ycount->meta().cols());
 
       if ( frac_occupied<minpixfrac )
-	saveimg = false;
+	      saveimg = false;
     }
-
 
     if ( !saveimg )
       return false;
@@ -750,10 +756,27 @@ namespace ublarcvapp {
     return true;
   }
 
-  std::vector<int> UBSplitDetector::defineImageBoundsFromPosZT( const float zwire, const float tmid, const float zwidth, const float dtick,
-								const int box_pixel_width, const int box_pixel_height,
-								const std::vector<larcv::Image2D>& img_v,
-								const bool tick_forward ) {
+  /**
+  * define bounds in all three planes centered around (z,t) point
+  * attempts to define view in all-three planes where charge seen in Y-plane
+  * in some gap will have a match in U,V crop
+  *
+  * @param[in] zwire Central Z position
+  * @param[in] tmid  Central tick position
+  * @param[in] zwidth Width in Z we want coverage in all 3 planes
+  * @param[in] dtick Width in tick dimension
+  * @param[in] box_pixel_width max image width
+  * @param[in] box_pixel_height max image height
+  * @param[in] img_v ADC images, three planes
+  * @param[in] tick_forward true, if we expect image data to be in forward order
+  */
+  std::vector<int>
+  UBSplitDetector::defineImageBoundsFromPosZT( const float zwire, const float tmid,
+    const float zwidth, const float dtick,
+		const int box_pixel_width, const int box_pixel_height,
+		const std::vector<larcv::Image2D>& img_v,
+		const bool tick_forward )
+  {
 
     // zwidth will be smaller than image size. that is because we are specificying range where we have complete overlap with U,V
     // however, we will expand around this region, filling edges of Y image with information
@@ -761,70 +784,66 @@ namespace ublarcvapp {
     const larcv::ImageMeta& meta = img_v.front().meta();
 #ifdef HAS_LARLITE
     const larutil::Geometry* geo = larutil::Geometry::GetME();
+#else
+    LARCV_CRITICAL() << "Class must be compiled with LARLITE" << std::endl;
 #endif
 
-    float t1 = tmid-0.5*dtick;
-    float t2 = tmid+0.5*dtick;
+    float t1 = tmid-0.5*dtick; // set the lower bound
+    float t2 = tmid+0.5*dtick; // set the upper bound
+
     int r1,r2; // we want r1<r2
     try {
       if ( tick_forward ) {
-	// tick-forward
-	r1 = meta.row( t1+0.5*meta.pixel_height() );
-	if ( t2<meta.max_y() )
-	  r2 = meta.row( t2 );
-	else
-	  r2 = meta.rows()-1;
+	      // tick-forward, anchor is t1
+        // if outside image, move to beginning
+        if (t1<meta.min_y()) t1 = meta.min_y();
+	      r1 = meta.row( t1 );
+        r2 = r1+box_pixel_height;
+        if (r2>=meta.rows()) {
+          r2 = meta.rows()-1;
+          r1 = meta.rows()-box_pixel_height-1;
+          t2 = meta.pos_y(r2);
+        }
+        else
+          t2 = meta.pos_y(r2);
       }
       else {
-	r1 = meta.row( t2-0.5*meta.pixel_height() );
-	if ( t1>meta.min_y() )
-	  r2 = meta.row( t1 );
-	else
-	  r2 = meta.row( t1+meta.pixel_height() )+1;
+        // tick-backward
+	      r1 = meta.row( t2-0.5*meta.pixel_height() );
+	      if ( t1>meta.min_y() )
+	        r2 = meta.row( t1 );
+	      else
+	        r2 = meta.row( t1+meta.pixel_height() )+1;
       }
     }
     catch ( const std::exception& e ) {
       std::cout << __PRETTY_FUNCTION__ << "::" __FILE__ << ":" << __LINE__
-		<< ": tick bounds outside image. tmid=" << tmid << " t1=" << t1 << " t2=" << t2 << ". min_t=" << meta.min_y() << " max_t=" << meta.max_y() << std::endl;
+                << ": tick bounds outside image. tmid=" << tmid << " t1=" << t1 << " t2=" << t2 << ". min_t=" << meta.min_y() << " max_t=" << meta.max_y() << std::endl;
       throw e;
     }
     //std::cout << "tmid=" << tmid << " [" << t1 << "," << t2 << "] = [" << r1 << "," << r2 << "]" << std::endl;
-
-    // fix tick bounds
-    if ( r2-r1!=box_pixel_height ) {
-      r1 = r2-box_pixel_height;
-    }
-
-    if ( r1<0 ) {
-      r1 = 0;
-      r2 = r1 + box_pixel_height;
-    }
-    if ( r2>(int)meta.rows() ) {
-      r2 = (int)meta.rows();
-      r1 = r2-meta.rows();
-    }
 
     // set z range
     int zcol0 = zwire - zwidth/2;
     int zcol1 = zwire + zwidth/2;
 
-    if ( zcol1>3455 ) {
-      std::stringstream ss;
-      ss << __PRETTY_FUNCTION__ << ":" << __FILE__ << "." << __LINE__ << ": zcol1 extends beyond the image boundary?" << std::endl;
-      throw std::runtime_error( ss.str() );
-      zcol0 -= (zcol1-3455);
+    if ( zcol1>=3456 ) {
       zcol1 = 3455;
+      zcol0 = (zcol1-zwidth);
     }
+    //std::cout << "zbounds: [" << zcol0 << "," << zcol1 << "] "
+    //          << " around zwire=" << zwire << std::endl;
 
     if ( zcol0 < meta.min_x() || zcol1 >= meta.max_x() ) {
       std::stringstream ss;
       ss << "Y wire bounds outside image. z1=" << zcol0 << " z2=" << zcol1 << "."
-	 << "min_z=" << meta.min_x() << " max_z=" << meta.max_x() << std::endl;
+	       << "min_z=" << meta.min_x() << " max_z=" << meta.max_x() << std::endl;
       throw std::runtime_error( ss.str() );
     }
 
 
     // determine range for u-plane
+    // we get the min and max U-wires overlapping with the z-wire lower bound
     Double_t xyzStart[3];
     Double_t xyzEnd[3];
 #ifdef HAS_LARLITE
@@ -832,14 +851,19 @@ namespace ublarcvapp {
 #endif
 
     float z0 = xyzStart[2];
-    Double_t zupt0[3] = { 0,+117.5, z0 };
+    Double_t zupt0[3] = { 0,+116.0, z0+0.1 };
     int ucol0 = 0;
 #ifdef HAS_LARLITE
-    geo->NearestWire( zupt0, 0 );
+    try {
+      ucol0 = geo->NearestWire( zupt0, 0 );
+    }
+    catch (...) {
+      ucol0 = 0;
+    }
     geo->WireEndPoints( 2, zcol1, xyzStart, xyzEnd );
 #endif
     float z1 = xyzStart[2];
-    Double_t zupt1[3] = { 0,-117.5, z1-0.1 };
+    Double_t zupt1[3] = { 0,-116.0, z1-0.1 };
     int ucol1 = 0;
 #ifdef HAS_LARLITE
     try {
@@ -849,32 +873,25 @@ namespace ublarcvapp {
       ucol1 = 2399;
     }
 #endif
+    //std::cout << "  inferred u bounds: [" << ucol0 << "," << ucol1 << "]"
+    //          << " du=" << ucol1-ucol0 << std::endl;
 
-    if ( ucol0>ucol1 ) {
-      // this happens on the detector edge
+    // must fit in _box_pixel_width.
+    // we center around the u bounds
+    int centeru = (ucol1+ucol0)/2;
+    ucol0 = centeru-box_pixel_width/2;
+    ucol1 = ucol0+box_pixel_width;
+    // fix if out of bounds
+    if (ucol0<0) {
       ucol0 = 0;
+      ucol1 = box_pixel_width;
+    }
+    if (ucol1>=2400) {
+      ucol1 = 2399;
+      ucol0 = ucol1-box_pixel_width;
     }
 
-    // must fit in _box_pixel_width
-    int ddu = ucol1-ucol0;
-    int rdu = box_pixel_width%ddu;
-    int ndu = ddu/box_pixel_width;
-    if ( rdu!= 0) {
-      if ( ndu==0 ) {
-	// short, extend the end (or lower the start if near end)
-	if ( ucol1+rdu<2400 )
-	  ucol1+=rdu;
-	else
-	  ucol0-=rdu;
-      }
-      else {
-	rdu = ddu%box_pixel_width;
-	// long, reduce the end
-	ucol1 -= rdu;
-      }
-    }
-
-    // determine v-plane
+    // determine v-plane in the same way
 #ifdef HAS_LARLITE
     geo->WireEndPoints( 2, zcol0, xyzStart, xyzEnd );
 #endif
@@ -882,7 +899,7 @@ namespace ublarcvapp {
     Double_t zvpt0[3] = { 0,-115.5, z0 };
     int vcol0 = 0;
 #ifdef HAS_LARLITE
-    geo->NearestWire( zvpt0, 1 );
+    vcol0 = geo->NearestWire( zvpt0, 1 );
     geo->WireEndPoints( 2, zcol1, xyzStart, xyzEnd );
 #endif
 
@@ -897,23 +914,21 @@ namespace ublarcvapp {
       vcol1 = 2399;
     }
 #endif
-
-    int ddv = vcol1-vcol0;
-    int rdv = box_pixel_width%ddv;
-    int ndv = ddv/box_pixel_width;
-    if ( rdv!= 0) {
-      if ( ndv==0 ) {
-	// short, extend the end (or lower the start if near end)
-	if ( vcol1+rdv<2400 )
-	  vcol1+=rdv;
-	else
-	  vcol0-=rdv;
-      }
-      else {
-	// long, redvce the end
-	rdv = ddv%box_pixel_width;
-	vcol1 -= rdv;
-      }
+    //std::cout << "  inferred v bounds: [" << vcol0 << "," << vcol1 << "]"
+    //          << " dv=" << vcol1-vcol0 << std::endl;
+    // must fit in _box_pixel_width.
+    // we center around the u bounds
+    int centerv = (vcol1+vcol0)/2;
+    vcol0 = centerv-box_pixel_width/2;
+    vcol1 = vcol0+box_pixel_width;
+    // fix if out of bounds
+    if (vcol0<0) {
+      vcol0 = 0;
+      vcol1 = box_pixel_width;
+    }
+    if (vcol1>=2400) {
+      vcol1 = 2399;
+      vcol0 = vcol1-box_pixel_width;
     }
 
 
