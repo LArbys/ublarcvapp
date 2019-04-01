@@ -8,6 +8,7 @@ from ROOT import std
 rt.gStyle.SetOptStat(0)
 
 superafile = sys.argv[1]
+input_adc_producer = sys.argv[2]
 
 io = larcv.IOManager(larcv.IOManager.kREAD,"",larcv.IOManager.kTickBackward)
 io.add_in_file( superafile )
@@ -21,7 +22,7 @@ out.initialize()
 # UBSplitDetector
 
 scfg="""Verbosity: 2
-InputProducer: \"wire\"
+InputProducer: \"%s\"
 OutputBBox2DProducer: \"detsplit\"
 CropInModule: true
 OutputCroppedProducer: \"detsplit\"
@@ -37,7 +38,7 @@ MinFracPixelsInCrop: -0.0001
 """
 
 fcfg = open("ubsplit.cfg",'w')
-print >>fcfg,scfg
+print >>fcfg,scfg%(input_adc_producer)
 fcfg.close()
 
 

@@ -5,6 +5,7 @@
 
 #pragma link C++ namespace ublarcvapp+;
 #pragma link C++ class ublarcvapp::UBSplitDetector+;
+#pragma link C++ class ublarcvapp::UBCropLArFlow+;
 
 #endif
 
