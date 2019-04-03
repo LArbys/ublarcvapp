@@ -7,6 +7,8 @@ import sys
 sys.argv.append("-b")
 larcv.load_rootutil()
 
+rt.gStyle.SetOptStat(0)
+
 superafile = sys.argv[1]
 #superafile = "../../../../testdata/mcc9mar_bnbcorsika/larcv_mctruth_ee881c25-aeca-4c92-9622-4c21f492db41.root"
 
@@ -48,17 +50,19 @@ split_pset = larcv.CreatePSetFromFile( "ubsplit.cfg", "UBSplitDetector" )
 lfcrop_cfg="""Verbosity:0
 InputBBoxProducer: \"detsplit\"
 InputCroppedADCProducer: \"detsplit\"
-InputADCProducer: \"wire\"
-InputVisiProducer: \"pixvisi\"
-InputFlowProducer: \"pixflow\"
-OutputCroppedADCProducer:  \"adc\"
-OutputCroppedVisiProducer: \"visi\"
-OutputCroppedFlowProducer: \"flow\"
+InputADCProducer: \"wiremc\"
+InputChStatusProducer: \"wiremc\"
+InputVisiProducer: \"\"
+InputFlowProducer: \"larflow\"
+OutputCroppedADCProducer:  \"croppedadc\"
+OutputCroppedVisiProducer: \"croppedvisi\"
+OutputCroppedFlowProducer: \"croppedflow\"
 OutputCroppedMetaProducer: \"flowmeta\"
 OutputFilename: \"baka_lf.root\"
-SaveOutput: false
+HasVisibilityImage: false
+SaveTrainingOutput: false
 CheckFlow:  true
-MakeCheckImage: true
+MakeCheckImage: false
 DoMaxPool: false
 RowDownsampleFactor: 2
 ColDownsampleFactor: 2
@@ -67,7 +71,6 @@ LimitOverlap: false
 RequireMinGoodPixels: false
 MaxOverlapFraction: 0.2
 IsMC: true
-UseVectorizedCode: true
 """
 
 print(lfcrop_cfg,file=open("ublarflowcrop.cfg",'w'))
