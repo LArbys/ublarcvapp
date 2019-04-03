@@ -7,8 +7,8 @@ import sys
 sys.argv.append("-b")
 larcv.load_rootutil()
 
-#superafile = sys.argv[1]
-superafile = "../../../../testdata/mcc9mar_bnbcorsika/larcv_mctruth_ee881c25-aeca-4c92-9622-4c21f492db41.root"
+superafile = sys.argv[1]
+#superafile = "../../../../testdata/mcc9mar_bnbcorsika/larcv_mctruth_ee881c25-aeca-4c92-9622-4c21f492db41.root"
 
 VIS_SPLITS = False
 VIS_FLOWS  = True
