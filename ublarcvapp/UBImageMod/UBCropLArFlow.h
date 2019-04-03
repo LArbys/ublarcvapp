@@ -125,6 +125,7 @@ namespace ublarcvapp {
     std::string _input_vis_producer;
     std::string _input_flo_producer;
     std::string _input_cropped_producer;
+    std::string _input_chstatus_producer;
     std::string _output_adc_producer;
     std::string _output_vis_producer;
     std::string _output_flo_producer;
@@ -143,7 +144,11 @@ namespace ublarcvapp {
     int   _verbosity_;
     bool  _save_output;
     bool  _is_mc;
+    bool  _has_visi;
+    bool  _has_chstatus;
     static bool  _fusevector;
+
+    larcv::EventChStatus* _dummy_ev_chstatus;
 
     // The code uses a lot of the std::algorithm to
     // help parallel many of the operations.

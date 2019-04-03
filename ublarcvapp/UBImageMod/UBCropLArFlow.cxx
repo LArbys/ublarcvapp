@@ -27,25 +27,27 @@ namespace ublarcvapp {
   int* UBCropLArFlow::_colors = NULL;
   
   UBCropLArFlow::UBCropLArFlow(const std::string name)
-    : ProcessBase(name)
+    : ProcessBase(name),_dummy_ev_chstatus(nullptr)
   {}
 
   void UBCropLArFlow::configure(const larcv::PSet& cfg)
   {
 
-    _verbosity_             = cfg.get<int>("Verbosity");
-    _input_adc_producer     = cfg.get<std::string>("InputADCProducer"); // whole image
-    _input_bbox_producer    = cfg.get<std::string>("InputBBoxProducer");  // from UBSplitDetector
-    _input_cropped_producer = cfg.get<std::string>("InputCroppedADCProducer"); // from UBSplitDetector
-    _input_vis_producer     = cfg.get<std::string>("InputVisiProducer"); // whole image with visi truth
-    _input_flo_producer     = cfg.get<std::string>("InputFlowProducer"); // whole image with flow truth
-    _output_adc_producer    = cfg.get<std::string>("OutputCroppedADCProducer");  
-    _output_vis_producer    = cfg.get<std::string>("OutputCroppedVisiProducer");
-    _output_flo_producer    = cfg.get<std::string>("OutputCroppedFlowProducer");
-    _output_meta_producer   = cfg.get<std::string>("OutputCroppedMetaProducer");    
-    _output_filename        = cfg.get<std::string>("OutputFilename"); // creates new larcv file to store cropped images, if SaveOuput=true
-    _is_mc                  = cfg.get<bool>("IsMC"); // if we expect to have truth visi and flow
-    UBCropLArFlow::_fusevector = cfg.get<bool>("UseVectorizedCode",false); // optimization (experimental)
+    _verbosity_              = cfg.get<int>("Verbosity");
+    _input_adc_producer      = cfg.get<std::string>("InputADCProducer"); // whole image
+    _input_bbox_producer     = cfg.get<std::string>("InputBBoxProducer");  // from UBSplitDetector
+    _input_cropped_producer  = cfg.get<std::string>("InputCroppedADCProducer"); // from UBSplitDetector
+    _input_vis_producer      = cfg.get<std::string>("InputVisiProducer"); // whole image with visi truth
+    _input_flo_producer      = cfg.get<std::string>("InputFlowProducer"); // whole image with flow truth
+    _input_chstatus_producer = cfg.get<std::string>("InputChStatusProducer"); // whole image with flow truth    
+    _output_adc_producer     = cfg.get<std::string>("OutputCroppedADCProducer");  
+    _output_vis_producer     = cfg.get<std::string>("OutputCroppedVisiProducer");
+    _output_flo_producer     = cfg.get<std::string>("OutputCroppedFlowProducer");
+    _output_meta_producer    = cfg.get<std::string>("OutputCroppedMetaProducer");    
+    _is_mc                   = cfg.get<bool>("IsMC"); // if we expect to have truth visi and flow
+    _has_visi                = cfg.get<bool>("HasVisibilityImage");
+    _has_chstatus            = cfg.get<bool>("HasChStatus",true);
+    UBCropLArFlow::_fusevector = cfg.get<bool>("UseVectorizedCode",true); // optimization
 
     _max_images             = cfg.get<int>("MaxImages",-1); // maximum number of images to save
     _thresholds_v           = cfg.get< std::vector<float> >("Thresholds",std::vector<float>(3,10.0) ); // ADC thresholds for each plane
@@ -73,9 +75,14 @@ namespace ublarcvapp {
     _make_check_image       = cfg.get<bool>("MakeCheckImage",false); // dump png of image checks
     if ( _make_check_image )
       gStyle->SetOptStat(0);
-
-    // save output
-    _save_output = cfg.get<bool>("SaveOutput"); // save cropped images to _output_filename
+    
+    // save output in format best suited for training
+    // here, individual crops are saved
+    _save_output     = cfg.get<bool>("SaveTrainingOutput"); // save cropped images to _output_filename
+    if ( _save_output ) 
+      _output_filename = cfg.get<std::string>("OutputFilename"); // creates new larcv file to store cropped images, if SaveOuput=true
+    else
+      _output_filename = "";
     
     // output file
     if ( _save_output ) {
@@ -94,87 +101,131 @@ namespace ublarcvapp {
 
   bool UBCropLArFlow::process(larcv::IOManager& mgr)
   {
-    // // we split the full detector image into 3D subpieces
+    // we split the full detector image into 3D subpieces
 
-    // // ---------------------------------------------------------------
-    // // get data
+    // ---------------------------------------------------------------
+    // get data
 
-    // // input ADC: Whole image
-    // auto ev_in_adc  = (larcv::EventImage2D*)(mgr.get_data("image2d", _input_adc_producer));
-    // if (!ev_in_adc) {
-    //   LARCV_CRITICAL() << "No Input ADC Image2D found with a name: " << _input_adc_producer << std::endl;
-    //   throw larbys();
-    // }
-    // const std::vector< larcv::Image2D >& img_v = ev_in_adc->as_vector();
+    // input ADC: Whole image
+    auto ev_in_adc  = (larcv::EventImage2D*)(mgr.get_data(larcv::kProductImage2D, _input_adc_producer));
+    if (!ev_in_adc) {
+      LARCV_CRITICAL() << "No Input ADC Image2D found with a name: " << _input_adc_producer << std::endl;
+      throw larcv::larbys();
+    }
+    const std::vector< larcv::Image2D >& img_v = ev_in_adc->as_vector();
+    LARCV_DEBUG() << "Number of wholeview input ADC images: " << img_v.size() << std::endl;
 
-    // // input visibility/matchability (whole image)
-    // larcv::EventImage2D* ev_in_vis = NULL;
-    // const std::vector< larcv::Image2D >* vis_v = NULL;    
-    // if ( _is_mc ) {
-    //   ev_in_vis  = (larcv::EventImage2D*)(mgr.get_data("image2d", _input_vis_producer));
-    //   if (!ev_in_vis) {
-    //     LARCV_CRITICAL() << "No Input VIS Image2D found with a name: " << _input_vis_producer << std::endl;
-    //     throw larbys();
-    //   }
-    //   vis_v = &(ev_in_vis->image2d_array());
-    // }
+    // input ADC: Whole image
+    larcv::EventChStatus* ev_chstatus  = nullptr;
+    if (_has_chstatus) {
+      ev_chstatus = (larcv::EventChStatus*)(mgr.get_data(larcv::kProductChStatus, _input_chstatus_producer));
+      if ( !ev_chstatus ) {
+        LARCV_CRITICAL() << "No Input EventChStatus found with a name: " << _input_chstatus_producer << std::endl;
+        throw larcv::larbys();
+      }
+      LARCV_DEBUG() << "ChStatus loaded from input file" << std::endl;
+    }
+    else {
+      // create a dummy chstatus with everything ON
+      if ( _dummy_ev_chstatus==nullptr ) {
+        LARCV_DEBUG() << "Creating Dummy ChStatus." << std::endl;        
+        _dummy_ev_chstatus = new larcv::EventChStatus;
+        for ( size_t p=0; p<img_v.size(); p++ ) {
+          std::vector<short> status_v(img_v.at(p).meta().cols(),larcv::chstatus::kGOOD);
+          larcv::ChStatus chstatusobj( (larcv::PlaneID_t)p, std::move(status_v) );
+          _dummy_ev_chstatus->Emplace( std::move(chstatusobj) );
+        }
+      }
+      ev_chstatus = _dummy_ev_chstatus;
+    }
+    LARCV_DEBUG() << "ChStatus loaded" << std::endl;
+    
+    // input visibility/matchability (whole image)
+    larcv::EventImage2D* ev_in_vis = NULL;
+    const std::vector< larcv::Image2D >* vis_v = NULL;    
+    if ( _is_mc && _has_visi ) {
+      ev_in_vis  = (larcv::EventImage2D*)(mgr.get_data(larcv::kProductImage2D, _input_vis_producer));
+      if (!ev_in_vis) {
+        LARCV_CRITICAL() << "No Input VIS Image2D found with a name: " << _input_vis_producer << std::endl;
+        throw larcv::larbys();
+      }
+      vis_v = &(ev_in_vis->Image2DArray());
+      LARCV_DEBUG() << "Number of wholeview visibility images: " << (*vis_v).size() << std::endl;
+    }
+    else {
+      vis_v = new std::vector<larcv::Image2D>;
+    }
     
     // // input flo (whole image)
-    // larcv::EventImage2D* ev_in_flo = NULL;
-    // const std::vector< larcv::Image2D >* flo_v = NULL;
-    // if ( _is_mc ) {
-    //   ev_in_flo  = (larcv::EventImage2D*)(mgr.get_data("image2d", _input_flo_producer));
-    //   if (!ev_in_flo) {
-    //     LARCV_CRITICAL() << "No Input flo Image2D found with a name: " << _input_flo_producer << std::endl;
-    //     throw larbys();
-    //   }
-    //   flo_v = &(ev_in_flo->image2d_array());
-    // }
+    larcv::EventImage2D* ev_in_flo = NULL;
+    const std::vector< larcv::Image2D >* flo_v = NULL;
+    if ( _is_mc ) {
+      ev_in_flo  = (larcv::EventImage2D*)(mgr.get_data(larcv::kProductImage2D, _input_flo_producer));
+      if (!ev_in_flo) {
+        LARCV_CRITICAL() << "No Input flo Image2D found with a name: " << _input_flo_producer << std::endl;
+        throw larcv::larbys();
+      }
+      flo_v = &(ev_in_flo->Image2DArray());
+      LARCV_DEBUG() << "Number of wholeview truth flow images: " << (*flo_v).size() << std::endl;
+    }
+    
+    // input BBox (defines crops. from UBSplitDetector)
+    auto ev_in_bbox  = (larcv::EventROI*)(mgr.get_data(larcv::kProductROI, _input_bbox_producer));
+    if (!ev_in_bbox) {
+      LARCV_CRITICAL() << "No Input BBox2D found with a name: " << _input_bbox_producer << ". make using UBSplitDetector." << std::endl;
+      throw larcv::larbys();
+    }
+    LARCV_DEBUG() << "Number of ROIs to crop with: " << ev_in_bbox->ROIArray().size() << std::endl;
 
-    // // input BBox (defines crops. from UBSplitDetector)
-    // auto ev_in_bbox  = (larcv::EventImage2D*)(mgr.get_data("bbox2d", _input_bbox_producer));
-    // if (!ev_in_bbox) {
-    //   LARCV_CRITICAL() << "No Input BBox2D found with a name: " << _input_bbox_producer << ". make using UBSplitDetector." << std::endl;
-    //   throw larbys();
-    // }
+    // cropped input ADC (from UBSplitDetector)
+    auto ev_in_cropped  = (larcv::EventImage2D*)(mgr.get_data(larcv::kProductImage2D, _input_cropped_producer));
+    if (!ev_in_cropped) {
+      LARCV_CRITICAL() << "No Input Cropped ADC Image2D found with a name: " << _input_cropped_producer << ". make using UBSplitDetector" << std::endl;
+      throw larcv::larbys();
+    }
+    std::vector< larcv::Image2D >& cropped_v = ev_in_cropped->as_mut_vector(); // we use mutable, because we might pass objects to output container
+    LARCV_DEBUG() << "Number of cropped ADC images: " << cropped_v.size() << std::endl;
 
-    // // cropped input ADC (from UBSplitDetector)
-    // auto ev_in_cropped  = (larcv::EventImage2D*)(mgr.get_data("image2d", _input_cropped_producer));
-    // if (!ev_in_cropped) {
-    //   LARCV_CRITICAL() << "No Input Cropped ADC Image2D found with a name: " << _input_cropped_producer << ". make using UBSplitDetector" << std::endl;
-    //   throw larbys();
-    // }
-    // std::vector< larcv::Image2D >& cropped_v = ev_in_cropped->as_mod_vector(); // we use mutable, because we might pass objects to output container
+    if ( cropped_v.size()%img_v.size()!=0 ) {
+      LARCV_CRITICAL() << "Number of cropped ADC images is not a multiple of the number of planes" << std::endl;
+      throw larcv::larbys();
+    }
+    if ( cropped_v.size()/img_v.size()!=ev_in_bbox->ROIArray().size() ) {
+      LARCV_CRITICAL() << "Number of cropped ADC image sets does not equal number of cropped ROIs" << std::endl;
+      throw larcv::larbys();      
+    }
     
 
-    // // ----------------------------------------------------------------
+    // ----------------------------------------------------------------
 
-    // // Output ADC containers
-    // larcv::EventImage2D* ev_out_adc  = NULL;
-    // larcv::EventImage2D* ev_vis_adc  = NULL;
-    // larcv::EventImage2D* ev_flo_adc  = NULL;
+    // Output ADC containers
+    larcv::EventImage2D* ev_out_adc  = NULL;
+    larcv::EventImage2D* ev_vis_adc  = NULL;
+    larcv::EventImage2D* ev_flo_adc  = NULL;
 
-    // if ( _save_output ) {
-    //   ev_out_adc = (larcv::EventImage2D*)foutIO->get_data("image2d",_output_adc_producer);
-    //   if ( _is_mc ) {
-    //     ev_vis_adc = (larcv::EventImage2D*)foutIO->get_data("image2d",_output_vis_producer);
-    //     ev_flo_adc = (larcv::EventImage2D*)foutIO->get_data("image2d",_output_flo_producer);
-    //   }
-    // }
-    // else {
-    //   ev_out_adc = (larcv::EventImage2D*)mgr.get_data("image2d",_output_adc_producer);
-    //   if ( _is_mc ) {
-    //     ev_vis_adc = (larcv::EventImage2D*)mgr.get_data("image2d",_output_vis_producer);
-    //     ev_flo_adc = (larcv::EventImage2D*)mgr.get_data("image2d",_output_flo_producer);
-    //   }
-    // }
-    // ev_out_adc->clear();
-    // if ( _is_mc ) {
-    //   ev_vis_adc->clear();
-    //   ev_flo_adc->clear();
-    // }
+    if ( _save_output ) {
+      LARCV_DEBUG() << "Saving output in separate file" << std::endl;
+      ev_out_adc = (larcv::EventImage2D*)foutIO->get_data(larcv::kProductImage2D,_output_adc_producer);
+      if ( _is_mc ) {
+        ev_vis_adc = (larcv::EventImage2D*)foutIO->get_data(larcv::kProductImage2D,_output_vis_producer);
+        ev_flo_adc = (larcv::EventImage2D*)foutIO->get_data(larcv::kProductImage2D,_output_flo_producer);
+      }
+    }
+    else {
+      LARCV_DEBUG() << "Saving output in same IOManager" << std::endl;
+      ev_out_adc   = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D,_output_adc_producer);
+      if ( _is_mc ) {
+        ev_vis_adc = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D,_output_vis_producer);
+        ev_flo_adc = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D,_output_flo_producer);
+      }
+    }
+    ev_out_adc->clear();
+    if ( _is_mc ) {
+      ev_vis_adc->clear();
+      ev_flo_adc->clear();
+    }
     
-    // // Output Meta containers: meta of each crop
+    // Output Meta containers: meta of each crop
     // larcv::EventMeta* ev_meta = NULL;
     // if ( _save_output ) {
     //   ev_meta = (larcv::EventMeta*)foutIO->get_data("meta",_output_meta_producer);
@@ -184,146 +235,168 @@ namespace ublarcvapp {
     // }
     // ev_meta->clear();    
     
-    // // ----------------------------------------------------------------
-
-    // // Run, subrun, event
-    // int run    = ev_in_adc->run();
-    // int subrun = ev_in_adc->subrun();
-    // int event  = ev_in_adc->event();
+    // ----------------------------------------------------------------
+    // OK, Actually Begin Work now
     
-    // // crop corresponding flow and visibility images from cropped images
-    // const int src_plane = 2;
-    // const larcv::ImageMeta& src_meta = img_v[2].meta();
-    // int ncrops = cropped_v.size()/3;
-    // int nsaved = 0;
-    // //std::cout << "UBCropLArFlow processing " << ncrops << " input crops" << std::endl;
-
-    // std::vector<larcv::Image2D> overlap_img; // store an image used to keep track of previously cropped pixels
-    // if ( _limit_overlap ) {
-    //   larcv::Image2D overlap( img_v[src_plane].meta() );
-    //   overlap.paint(0.0);
-    //   overlap_img.emplace_back( std::move(overlap) );
-    // }
+    // Run, subrun, event
+    int run    = ev_in_adc->run();
+    int subrun = ev_in_adc->subrun();
+    int event  = ev_in_adc->event();
     
-    // for (int icrop=0; icrop<ncrops; icrop++) {
+    // crop corresponding flow and visibility images from cropped images
+    const int src_plane = 2;
+    const larcv::ImageMeta& src_meta = img_v[2].meta();
+    int ncrops = cropped_v.size()/3;
+    int nsaved = 0;
+    LARCV_INFO() << "UBCropLArFlow processing " << ncrops << " input crops" << std::endl;
 
-    //   // this is a pointer to crop_v
-    //   std::vector<const larcv::Image2D*> crop_v; // I guess everyone hates bare pointers now. could use reference wrapper?
-    //   std::vector<larcv::Image2D*> mod_crop_v;
-    //   for (int i=0; i<3; i++) {
-    //     crop_v.push_back( &(cropped_v.at( 3*icrop+i )) );
-    //     mod_crop_v.push_back( &(cropped_v.at( 3*icrop+i )) );	
-    //   }
+    // store an image used to keep track of previously cropped pixels
+    std::vector<larcv::Image2D> overlap_img; 
+    if ( _limit_overlap ) {
+      larcv::Image2D overlap( img_v[src_plane].meta() );
+      overlap.paint(0.0);
+      overlap_img.emplace_back( std::move(overlap) );
+    }
 
-    //   // if limiting overlap, check that we are not overlapping too many pixels
-    //   if ( _limit_overlap ) {
-    //     const larcv::ImageMeta& cropped_src_meta = crop_v[src_plane]->meta();
-    //     float npix_overlap = 0.0;
-    //     int crop_r_start = src_meta.row( cropped_src_meta.min_y() );
-    //     int crop_c_start = src_meta.col( cropped_src_meta.min_x() );
-    //     for (int r=crop_r_start; r<crop_r_start+(int)cropped_src_meta.rows(); r++) {
-    //       for (int c=crop_c_start; c<crop_c_start+(int)cropped_src_meta.cols(); c++) {
-    //         if ( overlap_img[0].pixel(r,c)>0 )
-    //           npix_overlap+=1.0;
-    //       }
-    //     }
-    //     float frac_overlap = npix_overlap/float(cropped_src_meta.rows()*cropped_src_meta.cols());
-    //     if ( frac_overlap>_max_overlap_fraction ) {
-    //       LARCV_INFO() << "Skipping overlapping image. Frac overlap=" << frac_overlap << "." << std::endl;
-    //       continue;
-    //     }
-    //     //std::cout << "Overlap fraction: " << frac_overlap << std::endl;
-    //   }
-
-    //   // Crop of Truth Labels (only if using MC file)
-    //   bool passes_check_filter = true;
-    //   std::vector<larcv::Image2D> cropped_flow; // stores cropped flow image set for this crop
-    //   std::vector<larcv::Image2D> cropped_visi; // stores cropped visi image set for this crop
-    //   std::vector<float> check_results(5,0);    // stores metrics for checking crop quality
-    //   if ( _is_mc ) {
+    // loop over crops
+    for (int icrop=0; icrop<ncrops; icrop++) {
       
-    //     LARCV_DEBUG() << "Start crop of Flow and Visibility images of image #" << icrop << std::endl;
-
-    //     make_cropped_flow_images( src_plane, src_meta,
-    //     			  crop_v, *flo_v, *vis_v,
-    //     			  _thresholds_v,
-    //     			  _do_maxpool, _row_downsample_factor, _col_downsample_factor,
-    //     			  cropped_flow, cropped_visi,
-    //     			  &logger() );
+      const larcv::ROI& crop_roi = ev_in_bbox->ROIArray().at(icrop);
       
-    //     // check the quality of the crop
-    //     if ( _check_flow ) {
-    //       check_results = check_cropped_images( src_plane, crop_v, _thresholds_v, cropped_flow, cropped_visi, _make_check_image, &(logger()), 0 );
-    //       UBCropLArFlow::_check_img_counter++;
+      // get pointers for these sets of images
+      std::vector<const larcv::Image2D*> crop_v; 
+      std::vector<larcv::Image2D*> mod_crop_v;
+      for (int i=0; i<3; i++) {
+        crop_v.push_back( &(cropped_v.at( 3*icrop+i )) );
+        mod_crop_v.push_back( &(cropped_v.at( 3*icrop+i )) );	
+      }
+
+      // if limiting overlap, check that we are not overlapping too many pixels
+      if ( _limit_overlap ) {
+        LARCV_DEBUG() << "Limiting overlap fraction" << std::endl;
+        const larcv::ImageMeta& cropped_src_meta = crop_v[src_plane]->meta();
+        float npix_overlap = 0.0;
+        int crop_r_start = src_meta.row( cropped_src_meta.min_y() );
+        int crop_c_start = src_meta.col( cropped_src_meta.min_x() );
+        for (int r=crop_r_start; r<crop_r_start+(int)cropped_src_meta.rows(); r++) {
+          for (int c=crop_c_start; c<crop_c_start+(int)cropped_src_meta.cols(); c++) {
+            if ( overlap_img[0].pixel(r,c)>0 )
+              npix_overlap+=1.0;
+          }
+        }
+        float frac_overlap = npix_overlap/float(cropped_src_meta.rows()*cropped_src_meta.cols());
+        if ( frac_overlap>_max_overlap_fraction ) {
+          LARCV_INFO() << "Skipping overlapping image. "
+                       << " Frac overlap=" << frac_overlap << " above max (" << _max_overlap_fraction << ")"
+                       << std::endl;
+          continue;
+        }
+        else {
+          LARCV_DEBUG() << "Overlap fraction: " << frac_overlap << std::endl;
+        }
+      }
+      
+      // Crop of Truth Labels (only if using MC file)
+      bool passes_check_filter = true;
+      std::vector<larcv::Image2D> cropped_flow; // stores cropped flow image set for this crop
+      std::vector<larcv::Image2D> cropped_visi; // stores cropped visi image set for this crop
+      std::vector<float> check_results(5,0);    // stores metrics for checking crop quality
+      if ( _is_mc ) {
+        
+        LARCV_DEBUG() << "Start crop of Flow and Visibility images of image #" << icrop << std::endl;
+
+        if ( !_has_visi ) {
+          make_cropped_flow_images( src_plane, crop_roi,
+                                    img_v, *ev_chstatus,
+                                    *flo_v, _thresholds_v,
+                                    cropped_flow );
+        }
+        else {
+          make_cropped_flow_images( src_plane, crop_roi,
+                                    img_v, *ev_chstatus,
+                                    *flo_v, *vis_v, _thresholds_v,
+                                    cropped_flow, cropped_visi, true );
+        }
+        
+      
+        // check the quality of the crop
+        if ( _check_flow ) {
+          //check_results = check_cropped_images( src_plane, crop_v, _thresholds_v, cropped_flow, cropped_visi, _make_check_image, &(logger()), 0 );
+          UBCropLArFlow::_check_img_counter++;
 	  
-    //       // check filter: has minimum visible pixels
-    //       if ( check_results[1]>=100 && check_results[2]>=100 ) {
-    //         passes_check_filter = true;
-    //       }
-    //       else {
-    //         passes_check_filter = false;
-    //       }
-    //     }
-    //   }//end of is mc
+          // check filter: has minimum visible pixels
+          if ( check_results[1]>=100 && check_results[2]>=100 ) {
+            passes_check_filter = true;
+          }
+          else {
+            passes_check_filter = false;
+          }
+        }
+        
+      }//end of is mc
       
-    //   if ( passes_check_filter || !_require_min_goodpixels ) {
+      if ( passes_check_filter || !_require_min_goodpixels ) {
 
 
-    //     // if we are limiting overlaps, we need to mark overlap image
-    //     if ( _limit_overlap ) {
-    //       const larcv::ImageMeta& cropped_src_meta = crop_v[src_plane]->meta();
-    //       int crop_r_start = src_meta.row( cropped_src_meta.min_y() );
-    //       int crop_c_start = src_meta.col( cropped_src_meta.min_x() );
-    //       for (int r=crop_r_start; r<crop_r_start+(int)cropped_src_meta.rows(); r++) {
-    //         for (int c=crop_c_start; c<crop_c_start+(int)cropped_src_meta.cols(); c++) {
-    //           overlap_img[0].set_pixel(r,c,1.0);
-    //         }
-    //       }
-    //     }
+        // if we are limiting overlaps, we need to mark overlap image
+        if ( _limit_overlap ) {
+          const larcv::ImageMeta& cropped_src_meta = crop_v[src_plane]->meta();
+          int crop_r_start = src_meta.row( cropped_src_meta.min_y() );
+          int crop_c_start = src_meta.col( cropped_src_meta.min_x() );
+          for (int r=crop_r_start; r<crop_r_start+(int)cropped_src_meta.rows(); r++) {
+            for (int c=crop_c_start; c<crop_c_start+(int)cropped_src_meta.cols(); c++) {
+              overlap_img[0].set_pixel(r,c,1.0);
+            }
+          }
+        }
 	
-    //     //LARCV_DEBUG() << "Store LArFlow Crop" << std::endl;
-    //     if ( _save_output ) {
-    //       for ( auto& pimg : mod_crop_v )
-    //         ev_out_adc->emplace( std::move(*pimg) );
-    //       if ( _is_mc ) {
-    //         ev_vis_adc->emplace( std::move(cropped_visi) );
-    //     ev_flo_adc->emplace( std::move(cropped_flow) );
-    //       }
-    //     }
-    //     else {
-    //       for ( auto& pimg : mod_crop_v )
-    //         ev_out_adc->emplace( std::move(*pimg) );
+        //LARCV_DEBUG() << "Store LArFlow Crop" << std::endl;
+        if ( _save_output ) {
+          for ( auto& pimg : mod_crop_v )
+            ev_out_adc->Emplace( std::move(*pimg) );
+          if ( _is_mc ) {
+            ev_vis_adc->Emplace( std::move(cropped_visi) );
+            ev_flo_adc->Emplace( std::move(cropped_flow) );
+          }
+        }
+        else {
+          for ( auto& pimg : mod_crop_v )
+            ev_out_adc->Emplace( std::move(*pimg) );
+          
+          if ( _is_mc ) {
+            for ( auto& img : cropped_visi )
+              ev_vis_adc->Emplace( std::move(img) );
+            for ( auto& img : cropped_flow )
+              ev_flo_adc->Emplace( std::move(img) );
+          }
+        }
+        LARCV_DEBUG() << "Store LArFlow Crops (nstored cropped flow=" << ev_flo_adc->Image2DArray().size() << ")" << std::endl;
+      }// passes check filter
 
-    //       if ( _is_mc ) {
-    //         for ( auto& img : cropped_visi )
-    //           ev_vis_adc->emplace( std::move(img) );
-    //         for ( auto& img : cropped_flow )
-    //           ev_flo_adc->emplace( std::move(img) );
-    //       }
-    //     }
-    //     //std::cout << "Store LArFlow Crops (nstored=" << ev_out_adc->image2d_array().size() << ")" << std::endl;
+      // save meta data
+      // ev_meta->store("nabove",int(check_results[0]));
+      // std::vector<int> nvis_v(2);
+      // nvis_v[0] = int(check_results[1]);
+      // nvis_v[1] = int(check_results[2]);
+      // ev_meta->store("nvis",nvis_v);
+      // std::vector<double> ncorrect_v(2);
+      // ncorrect_v[0] = check_results[3];
+      // ncorrect_v[1] = check_results[4];
+      // ev_meta->store("ncorrect",ncorrect_v);
 	
-    //     // save meta
-    //     ev_meta->store("nabove",int(check_results[0]));
-    //     std::vector<int> nvis_v(2);
-    //     nvis_v[0] = int(check_results[1]);
-    //     nvis_v[1] = int(check_results[2]);
-    //     ev_meta->store("nvis",nvis_v);
-    //     std::vector<double> ncorrect_v(2);
-    //     ncorrect_v[0] = check_results[3];
-    //     ncorrect_v[1] = check_results[4];
-    //     ev_meta->store("ncorrect",ncorrect_v);
-	
-    //     if ( _save_output ) {
-    //       foutIO->set_id( run, subrun, 100*event+icrop );
-    //       foutIO->save_entry();
-    //     }
-    //     nsaved++;
-    //   }//end of if passes_check_fiter
-
-    //   if ( _max_images>0 && nsaved>=_max_images )
-    //     break;
-    // }
+      if ( _save_output ) {
+        foutIO->set_id( run, subrun, event*100+icrop );
+        foutIO->save_entry();
+        nsaved++;
+      }//end of if passes_check_fiter
+      
+      if ( _max_images>0 && nsaved>=_max_images )
+        break;
+    }//end of crop loop
+    
+    // delete temporary vis_v vector made
+    if ( !_has_visi || !_is_mc )
+      delete vis_v;
     
     return true;
   }
