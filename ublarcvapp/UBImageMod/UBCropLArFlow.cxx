@@ -321,16 +321,41 @@ namespace ublarcvapp {
       
         // check the quality of the crop
         if ( _check_flow ) {
-          //check_results = check_cropped_images( src_plane, crop_v, _thresholds_v, cropped_flow, cropped_visi, _make_check_image, &(logger()), 0 );
+          std::vector<larcv::Image2D> check_crop_v;
+          std::vector<TH2D> hvis;
+          for ( auto const& pimg : crop_v )
+            check_crop_v.push_back( *pimg );
+          check_results = check_cropped_images( src_plane,
+                                                check_crop_v,
+                                                *ev_chstatus,
+                                                _thresholds_v,
+                                                cropped_flow,
+                                                cropped_visi,
+                                                hvis,
+                                                _has_visi,
+                                                false );
           UBCropLArFlow::_check_img_counter++;
 	  
           // check filter: has minimum visible pixels
-          if ( check_results[1]>=100 && check_results[2]>=100 ) {
+          float frac_correct[2] = {0};
+          for ( size_t i=0; i<2; i++ )
+            frac_correct[i] = check_results[3+i]/check_results[0];
+          
+          LARCV_DEBUG() << "Results of check:" << std::endl;
+          LARCV_DEBUG() << "  ncorrect[0]=" << check_results[3] << " ncorrect[1]=" << check_results[4] << std::endl;
+          LARCV_DEBUG() << "  frac_correct[0]=" << frac_correct[0] << std::endl;
+          LARCV_DEBUG() << "  frac_correct[1]=" << frac_correct[1] << std::endl;
+          
+          if ( check_results[3]>=100 && check_results[3]>=100
+               && frac_correct[0]>0.9 && frac_correct[1]>0.9) {
             passes_check_filter = true;
+            LARCV_DEBUG() << "passes check" << std::endl;
           }
           else {
             passes_check_filter = false;
+            LARCV_DEBUG() << "fails check" << std::endl;
           }
+          
         }
         
       }//end of is mc
