@@ -127,6 +127,7 @@ namespace ublarcvapp {
       throw larcv::larbys();
     }
     const std::vector< larcv::Image2D >& img_v = input_image->Image2DArray();
+    LARCV_DEBUG() << "Number of input images: " << img_v.size() << std::endl;
 
     larcv::EventROI*  output_bbox     = (larcv::EventROI*)     mgr.get_data(larcv::kProductROI,     _output_bbox_producer);
     larcv::EventImage2D* output_imgs  = (larcv::EventImage2D*) mgr.get_data(larcv::kProductImage2D, _output_img_producer);
@@ -155,12 +156,15 @@ namespace ublarcvapp {
 
     std::vector< larcv::ROI > outbbox_v;
     std::vector< larcv::Image2D > outimg_v;
-    output_imgs->Move( outimg_v );
 
-    bool status = process( output_imgs->Image2DArray(), outimg_v, outbbox_v );
+    bool status = process( img_v, outimg_v, outbbox_v );
+
 
     output_imgs->Emplace( std::move(outimg_v) );
     output_bbox->Emplace( std::move(outbbox_v) );
+
+    LARCV_DEBUG() << "output_imgs: " << output_imgs->Image2DArray().size() << std::endl;
+    LARCV_DEBUG() << "output_bbox: " << output_bbox->ROIArray().size() << std::endl;
 
     return status;
   }
@@ -283,17 +287,13 @@ namespace ublarcvapp {
       TRandom3 rand(time(NULL));
       for (int iatt=0; iatt<_randomize_attempts; iatt++) {
 
-	      float z;
-	      if ( !_complete_y_crop )
-	        z = zstart + zspan*rand.Uniform();
-	      else
-	        z = _box_pixel_width + (zcols-2*_box_pixel_width)*rand.Uniform();
+	      float z = zstart + zspan*rand.Uniform();
 
 	      float t = startt + dtickimg*rand.Uniform();
 
 	      std::vector<int> crop_coords = defineImageBoundsFromPosZT( z, t, zwidth, dtick,
-	      							   _box_pixel_width, _box_pixel_height,
-	      							   img_v, _tick_forward );
+                                                                         _box_pixel_width, _box_pixel_height,
+                                                                         img_v, _tick_forward );
 	      m_lattice.emplace_back( std::move(crop_coords) );
       }
       LARCV_INFO() << "Num of randomized cropping points generated: " << m_lattice.size() << std::endl;
