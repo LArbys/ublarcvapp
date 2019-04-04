@@ -5,11 +5,8 @@
 
 #pragma link C++ namespace ublarcvapp+;
 #pragma link C++ class ublarcvapp::UBSplitDetector+;
-<<<<<<< HEAD
 #pragma link C++ class ublarcvapp::UBCropLArFlow+;
-=======
 #pragma link C++ class ublarcvapp::InfillDataCropper+;
->>>>>>> kmason_infill
 
 #endif
 
