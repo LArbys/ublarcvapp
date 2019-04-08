@@ -109,6 +109,11 @@ namespace ublarcvapp {
           else{
             if (ev_chstatus.Status(p).as_vector()[col_index]==4){
                 outputimg.set_pixel(row_index+row_min, col_index+col_min,truevalue);}
+
+          }
+          double finalvalue = outputimg.pixel(row_index+row_min, col_index+col_min);
+          if (finalvalue<10.0){
+            outputimg.set_pixel(row_index+row_min, col_index+col_min,0.0);
           }
         }
       }//end of pixel loop
