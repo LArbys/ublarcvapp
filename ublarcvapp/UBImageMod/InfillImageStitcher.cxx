@@ -2,6 +2,32 @@
 
 namespace ublarcvapp {
 
+    void InfillImageStitcher::PixelScaling(larcv::Image2D& inputimg,
+                    float scalefactor){
+
+        // function to scale pixel values for mcc8/mcc9 conversion
+        larcv::ImageMeta inputimgmeta=inputimg.meta();
+        double x_min = inputimgmeta.min_x();
+        double x_max = inputimgmeta.max_x();
+        double y_min = inputimgmeta.min_y();
+        double y_max = inputimgmeta.max_y();
+
+        size_t row_min = inputimgmeta.row(y_min);
+        size_t col_min = inputimgmeta.col(x_min);
+
+        size_t nrows = (y_max - y_min) / inputimgmeta.pixel_height();
+        size_t ncols = (x_max - x_min) / inputimgmeta.pixel_width();
+        for(size_t col_index=0; col_index < ncols; ++col_index) {
+          for(size_t row_index=0; row_index < nrows; ++row_index) {
+            //change each pixel by scalefactor
+            double original = inputimg.pixel(row_index+row_min, col_index+col_min);
+            double newvalue = original*scalefactor;
+            inputimg.set_pixel(row_index+row_min, col_index+col_min,newvalue);
+          }
+        }//end of loops
+
+    }//end of function
+
     void InfillImageStitcher::Croploop(larcv::ImageMeta& output_meta,
                                         larcv::Image2D& outimg,
                                         larcv::Image2D& outputimg,

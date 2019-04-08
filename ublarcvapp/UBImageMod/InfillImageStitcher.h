@@ -15,6 +15,9 @@ namespace ublarcvapp {
       InfillImageStitcher(){};
       virtual ~InfillImageStitcher(){};
 
+      void PixelScaling(larcv::Image2D& inputimg,
+                      float scalefactor);
+
       void Croploop(larcv::ImageMeta& output_meta,
                       larcv::Image2D& outimg,
                       larcv::Image2D& outputimg,
