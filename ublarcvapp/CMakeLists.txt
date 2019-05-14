@@ -4,6 +4,7 @@ if (HAS_LARLITE)
   add_subdirectory(LArliteHandler)
   add_subdirectory(UBImageMod)
   add_subdirectory(ubdllee)
+  add_subdirectory(Filter)
 endif()
 
 

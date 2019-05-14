@@ -27,17 +27,21 @@ endif()
 # use it if env variables defined
 if (DEFINED ENV{GEO2D_BASEDIR})
   set(LARCV_USE_GEO2D 1)
-  file( GLOB GEO2D_LIBS "$ENV{GEO2D_LIBDIR}/*.so" )
-  set( GEO2D_INC_DIR "$ENV{GEO2D_INCDIR}" )
-  set( GEO2D_LIB_DIR "$ENV{GEO2D_LIBDIR}" )
+
+  # unless explicitly told no
+  if (DEFINED ENV{USE_GEO2D} AND NOT $USE_GEO2D)
+    set(LARCV_USE_GEO2D 0)
+    message("DISABLING modules that need Geo2D")
+  else()
+    file( GLOB GEO2D_LIBS "$ENV{GEO2D_LIBDIR}/*.so" )
+    set( GEO2D_INC_DIR "$ENV{GEO2D_INCDIR}" )
+    set( GEO2D_LIB_DIR "$ENV{GEO2D_LIBDIR}" )
+  endif()
 else()
   set(LARCV_USE_GEO2D 0)
+  message("DISABLING modules needing Geo2D")  
 endif()
 
-# unless explicitly told no
-if (NOT USE_GEO2D)
-  set(LARCV_USE_GEO2D 0)
-endif()
 
 #---LArLite
 set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" )

@@ -1,4 +1,4 @@
-set(MODULE_NAME LArOpenCVHandle)
+set(MODULE_NAME Filter)
 
 # Collect the headers
 file(GLOB HEADERS "*.h")
@@ -13,7 +13,7 @@ file(GLOB SOURCES "*.cxx")
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # includes
-include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${LARLITE_INCDIRS} ${GEO2D_INC_DIR} ${LAROPENCV_INC_DIR} )
+include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${LARLITE_INCDIRS})
 
 if (HAS_LARLITE)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")
