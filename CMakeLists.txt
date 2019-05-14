@@ -17,7 +17,7 @@ find_package( larcv REQUIRED )
 
 #---OPENCV (optional)
 if (USE_OPENCV)
-  find_package(OpenCV)
+  find_package(OpenCV REQUIRED)
   if (NOT OpenCV_FOUND)
     set(USE_OPENCV 0)
   endif()
