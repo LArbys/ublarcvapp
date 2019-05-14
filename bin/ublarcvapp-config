@@ -40,6 +40,7 @@ while test $# -gt 0; do
 	      out+=" -L${OPENCV_LIBDIR} -lopencv_core -lopencv_highgui -lopencv_imgproc -lopencv_imgcodecs "
 	  fi
 	  out+=" -L${UBLARCVAPP_LIBDIR} -lLArCVApp_LArOpenCVHandle -lLArCVApp_UBImageMod -lLArCVApp_ubdllee -lLArCVApp_LArliteHandler"
+          out+=" -lLArCVApp_UBWireTool -lLArCVApp_Filter"
 	  ;;
       --help)
 	  ### Print a help message
