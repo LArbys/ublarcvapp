@@ -7,7 +7,8 @@
 #pragma link C++ class ublarcvapp::UBSplitDetector+;
 #pragma link C++ class ublarcvapp::UBCropLArFlow+;
 #pragma link C++ class ublarcvapp::InfillDataCropper+;
-
+#pragma link C++ class ublarcvapp::InfillSparsifyImage+;
+#pragma link C++ class ublarcvapp::InfillImageStitcher+;
 #endif
 
 
