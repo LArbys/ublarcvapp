@@ -11,6 +11,7 @@ endif()
 
 if (LARCV_USE_GEO2D)
   add_subdirectory(LArOpenCVHandle)
+  add_subdirectory(ContourTools)
 endif()  
 
 add_subdirectory(Stitchers)
