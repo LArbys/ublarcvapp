@@ -32,8 +32,8 @@ namespace ublarcvapp {
 
     // main function
     void analyzeImages( const std::vector<larcv::Image2D>& img_v,
-                        const float threshold, const int iterations,
-                        const int min_defect_dize=5,
+                        const float threshold=10.0, const int iterations=2,
+                        const int min_defect_size=5,
                         const int hull_edge_pts_split=50,
                         const int n_allowed_breaks=10,
                         const int verbosity=2 );
@@ -47,6 +47,8 @@ namespace ublarcvapp {
 
     void _clear();
 
+  public:
+    
     std::vector<cv::Mat> cvimg_stage0_v; // unchanged images
     std::vector<cv::Mat> cvimg_stage1_v; // contour points over time scan
     std::vector<cv::Mat> cvimg_stage2_v; // 3D-matched contour points

@@ -75,7 +75,7 @@ namespace ublarcvapp {
       ContourList_t contour_v;
       cv::findContours( cvimg_stage1_v[p], contour_v, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE );
 
-      std::cout << "Plane " << p << " number of contours: " << contour_v.size() << std::endl;
+      //std::cout << "Plane " << p << " number of contours: " << contour_v.size() << std::endl;
       
       // for each contour, find convex hull, find defect points
       std::vector< ContourIndices_t > hull_v( contour_v.size() );
@@ -118,7 +118,10 @@ namespace ublarcvapp {
 
     // split contours based on their defects, leaving only convex contours
     _splitContour( img_v, min_defect_size, hull_edge_pts_split, n_allowed_breaks );
-        
+
+    // mark image so we can look up contour via position in image
+    //_makeContourIndexImage();
+
   }// end of findBoundarySpacePoints
 
 
@@ -180,6 +183,42 @@ namespace ublarcvapp {
     
   }//splitContour
 
+  /**
+   * make images with index stored in cluster
+   *
+   * @param[in] img_v original larcv images
+   * @param[in] threshold pixel value threshold
+   * 
+   * output stored in m_plane_indeximg_v
+   *
+   */
+  /*
+  void ContourClusterAlgo::_makeContourIndexImage( const std::vector<larcv::Image2D>& img_v,
+                                                   const float threshold )
+  {
+    
+    m_plane_indeximg_v.clear();
+
+    for ( auto const& img : img_v ) {
+      larcv::Image2D out(img.meta());
+      out.paint(0);
+
+      for ( size_t r=0; r<img.meta().rows(); r++ ) {
+        for ( size_t c=0; c<img.meta().cols(); c++ ) {
+          if ( img.pixel(r,c)>threshold ) {
+            cv::Point pt( c,r );
+            for ( auto& ctr : m_plane_atomics_v.at((size_t)img.plane()) ) {
+              double result =  cv::pointPolygonTest( ctr, pt, false );
+              
+            }
+            
+          }
+        }
+      }
+    
+  }//makeContourIndexImage
+  */
+  
   /*
   bool BMTCV::isPointInContour( const std::vector<float>& pos3d, const float maxdist, const int minsize ) {
     // provides a simple test

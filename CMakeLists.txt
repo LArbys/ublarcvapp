@@ -19,15 +19,19 @@ find_package( larcv REQUIRED )
 if (USE_OPENCV)
   find_package(OpenCV REQUIRED)
   if (NOT OpenCV_FOUND)
+    message("OpenCV NOT FOUND")
     set(USE_OPENCV 0)
   endif()
+  message("OpenCV FOUND")
+else()
+  message("OpenCV not activated")
 endif()
 
 #---larbys GEO2D
 # use it if env variables defined
 if (DEFINED ENV{GEO2D_BASEDIR})
   set(LARCV_USE_GEO2D 1)
-
+  
   # unless explicitly told no
   if (DEFINED ENV{USE_GEO2D} AND NOT $USE_GEO2D)
     set(LARCV_USE_GEO2D 0)
