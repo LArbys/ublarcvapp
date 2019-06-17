@@ -5,11 +5,11 @@ from ublarcvapp import ublarcvapp
 import sys
 sys.argv.append("-b")
 
-datafile = "cropinfill_data.root"
+datafile = "crop_train.root"
 
 io = larcv.IOManager(larcv.IOManager.kBOTH,"IOManager")
 io.add_in_file( datafile )
-io.set_out_file( "sparseinfill_data.root" )
+io.set_out_file( "sparseinfill_data_train.root" )
 io.initialize()
 
 # -------------------------------------
@@ -25,7 +25,7 @@ OutputADCProducer:  \"ADC\"
 OutputADCMaskedProducer:  \"ADCMasked\"
 
 OutputCroppedMetaProducer: \"meta\"
-OutputFilename: \"sparseinfill_data.root\"
+OutputFilename: \"sparseinfill_data_train.root\"
 """
 
 lfcfg = open("InfillSparsifyImage.cfg",'w')

@@ -29,7 +29,7 @@ ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
 add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS})
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor)
+target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor ${LARLITE_LIBS})
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}
