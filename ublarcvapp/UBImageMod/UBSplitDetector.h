@@ -88,6 +88,7 @@ namespace ublarcvapp {
 
     void printElapsedTime();
     void clearElapsedTime();
+    bool willRandomize() { return _randomize_crops; };
 
   private:
 
