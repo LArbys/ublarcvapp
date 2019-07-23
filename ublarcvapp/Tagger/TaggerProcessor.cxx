@@ -5,6 +5,7 @@
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/EventChStatus.h"
 
+#include "ublarcvapp/UBImageMod/EmptyChannelAlgo.h"
 
 namespace ublarcvapp {
   namespace tagger {
@@ -47,9 +48,6 @@ namespace ublarcvapp {
       }
       _larlite_io->syncEntry( io );
 
-      // algos
-      ///larlitecv::EmptyChannelAlgo emptyalgo;
-      
       // prepare inputs
       InputPayload input;
       input.clear();
@@ -103,7 +101,10 @@ namespace ublarcvapp {
 
       // ------------------------------------------------------------------------------------------//
       // MODIFY IMAGES
-      
+
+      // algos
+      ublarcvapp::EmptyChannelAlgo emptyalgo;
+            
       try {
         // MCC8 modification 
         if ( m_config.DeJebWires ) {
@@ -165,20 +166,18 @@ namespace ublarcvapp {
       // ------------------------------------------------------------------------------------------//
       // LABEL BAD CHANNELS
 
-      // larlitecv::EmptyChannelAlgo emptyalgo;
-      
       input.badch_v.clear();
       try {
         if ( m_config.chstatus_datatype=="LARCV" ) {
           larcv::EventChStatus* ev_status = (larcv::EventChStatus*)io_larcv.get_data( larcv::kProductChStatus, m_config.larcv_chstatus_producer );
-          //input.badch_v = emptyalgo.makeBadChImage( 4, 3, 2400, 6048, 3456, 6, 1, *ev_status );
+          input.badch_v = emptyalgo.makeBadChImage( 4, 3, 2400, 6048, 3456, 6, 1, *ev_status );
           ev_status->clear(); // clear, we copied the info
         }
-        // else if ( m_config.chstatus_datatype=="LARLITE" ) {
-        //   larlite::event_chstatus* ev_status = (larlite::event_chstatus*)dataco_input.get_larlite_data( larlite::data::kChStatus, "chstatus" );
-        //   input.badch_v = emptyalgo.makeBadChImage( 4, 3, 2400, 6048, 3456, 6, 1, *ev_status );
-        //   ev_status->clear(); // clear, we copied the info
-        // }        
+        else if ( m_config.chstatus_datatype=="LARLITE" ) {
+          larlite::event_chstatus* ev_status = (larlite::event_chstatus*)io_larlite.get_data( larlite::data::kChStatus, "chstatus" );
+          input.badch_v = emptyalgo.makeBadChImage( 4, 3, 2400, 6048, 3456, 6, 1, *ev_status );
+          ev_status->clear(); // clear, we copied the info
+        }        
         else if ( m_config.chstatus_datatype=="NONE" ) {
           for ( auto const& img : input.img_v ) {
             larcv::Image2D badch( img.meta() );
@@ -205,7 +204,7 @@ namespace ublarcvapp {
       int maxgap = 200; // this seems bad to have this parameter here and not in a config file
       std::vector< larcv::Image2D> gapchimgs_v;
       try {
-        //gapchimgs_v = emptyalgo.findMissingBadChs( input.img_v, input.badch_v, 5, maxgap );
+        gapchimgs_v = emptyalgo.findMissingBadChs( input.img_v, input.badch_v, 5, maxgap );
         // combine with badchs
         for ( size_t p=0; p<gapchimgs_v.size(); p++ ) {
           larcv::Image2D& gapchimg = gapchimgs_v[p];
