@@ -7,6 +7,9 @@
 
 #include "ublarcvapp/LArliteHandler/LArliteManager.h"
 
+#include "TaggerCROITypes.h"
+#include "TaggerCROIAlgoConfig.h"
+
 namespace ublarcvapp {
   namespace tagger {
 
@@ -26,6 +29,17 @@ namespace ublarcvapp {
       
       ublarcvapp::LArliteManager* _larlite_io; //< handles interface/sync to larlite info
       void add_larlite_input( std::string llinput );
+
+
+      // primary functions
+      void loadInput( larcv::IOManager& io_larcv,
+                      ublarcvapp::LArliteManager& io_larlite,
+                      InputPayload& input );
+      
+      
+      // config parameters
+      TaggerCROIAlgoConfig m_config;
+      
       
     };
     
