@@ -23,6 +23,7 @@ namespace ublarcvapp {
       // required implementations of pure virtual functions from larcv::ProcessBase
       virtual void configure(const larcv::PSet&);
       virtual bool process(larcv::IOManager& io);
+      virtual void initialize();      
       virtual void finalize();
       
       std::string _cfg_path; //< path to configuration file (if done directly)

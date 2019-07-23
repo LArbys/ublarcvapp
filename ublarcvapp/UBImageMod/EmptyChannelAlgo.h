@@ -4,7 +4,7 @@
 #include <vector>
 
 // larlite
-#include "Base/DataFormatConstants.h"
+#include "core/Base/DataFormatConstants.h"
 #include "core/DataFormat/chstatus.h" // needed because of duplicate name!
 
 // larcv

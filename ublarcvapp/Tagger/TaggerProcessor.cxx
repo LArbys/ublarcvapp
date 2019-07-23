@@ -26,11 +26,13 @@ namespace ublarcvapp {
     }
     
     void TaggerProcessor::configure(const larcv::PSet&) {
-
-      
-      
+           
     }
 
+    void TaggerProcessor::initialize() {
+           
+    }
+    
     void TaggerProcessor::add_larlite_input( std::string llinput ) {
       if ( !_larlite_io ) {
         LARCV_CRITICAL() << "Adding larlite file before creating manager. Must run configure first." << std::endl;

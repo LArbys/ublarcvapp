@@ -17,6 +17,12 @@ message("laropencv libs: ${LAROPENCV_LIBS}")
 set(LARLITE_INCLUDES $ENV{LARLITE_USERDEVDIR} $ENV{LARLITE_COREDIR})
 message("larlite inc: ${LARLITE_INCLUDES}")
 
+# larcv libs used
+set(LARCV_LIBS_USED LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil)
+
+# ublarcvapp libraries
+set(UBLARCVAPP_LIBS_USED LArCVApp_ContourTools LArCVApp_UBImageMod)
+
 # includes
 include_directories(${LARCV_INCLUDE_DIR} $ENV{UBLARCVAPP_BASEDIR} $ENV{LAROPENCV_BASEDIR} ${OpenCV_INCLUDE_DIRS} ${GEO2D_INC_DIR} ${LARLITE_INCLUDES} )
 
@@ -27,7 +33,7 @@ ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
 add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} ${LARLITE_INCLUDES} )
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil LArCVApp_ContourTools ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
+target_link_libraries(${LIBNAME} ${LARCV_LIBS_USED} ${UBLARCVAPP_LIBS_USED} ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}
