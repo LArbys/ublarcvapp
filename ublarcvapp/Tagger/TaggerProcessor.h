@@ -16,6 +16,7 @@
 #include "TaggerCROITypes.h"
 #include "TaggerCROIAlgoConfig.h"
 #include "BMTCV.h"
+#include "BoundaryMuonTaggerAlgo.h"
 
 namespace ublarcvapp {
   namespace tagger {

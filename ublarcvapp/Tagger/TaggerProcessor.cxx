@@ -385,6 +385,7 @@ namespace ublarcvapp {
       
 
       // configure different stages of the Thrumu Tagger
+      std::clock_t timer_total;
       std::clock_t timer;
 
       // (0) make contours
@@ -392,13 +393,12 @@ namespace ublarcvapp {
       m_bmtcv_algo.analyzeImages( input.img_v, input.badch_v, 10.0, 2 );
       m_time_tracker[kThruMuContour] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
 
-      /*
-      
       // (1) side tagger
       timer = std::clock();
-      larlitecv::BoundaryMuonTaggerAlgo sidetagger;
+      BoundaryMuonTaggerAlgo sidetagger;
       sidetagger.configure( m_config.sidetagger_cfg );
       //sidetagger.printConfiguration();
+      /*
 
       // (2) flash tagger
       larlitecv::FlashMuonTaggerAlgo anode_flash_tagger(   larlitecv::FlashMuonTaggerAlgo::kAnode );
