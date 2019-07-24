@@ -103,6 +103,9 @@ namespace ublarcvapp {
                                      ublarcvapp::LArliteManager& io_larlite,
                                      InputPayload& input ) {
 
+      // timing variables
+      std::clock_t timer;
+      
       // get images (from larcv)
       larcv::EventImage2D* event_imgs = NULL;
       try {
@@ -302,18 +305,28 @@ namespace ublarcvapp {
         std::cerr << "Error retrieving MC track information upon request: " << e.what() << std::endl;
         input.p_ev_trigger = NULL;
         throw std::runtime_error("[TaggerCROIAlgo::loadInput] ERROR");
-      }    
+      }
+
+      // ----------------------------------
+      // RECORD TIMING FOR THIS PROCESS
+      m_time_tracker[kInputTotal] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
       
     }
     
     /**
      *
      * run precuts
+     *
+     * the pmt precut algorithm requires larlite::ophit objects
      * 
+     * @param[in] llio pointer to larlite storage manager with event data
      */
     void TaggerProcessor::runPMTPrecuts( larlite::storage_manager* llio) {
 
-      LARCV_INFO() << "runPMTPrecuts" << std::endl;
+      LARCV_INFO() << "== Run PMT Precuts  ===============================" << std::endl;
+
+      // timing variables
+      std::clock_t timer;
       
       // conversion into larlite fcllite::PSet
       fcllite::PSet tmp( "tmp",m_config.precut_cfg.data_string() );
@@ -357,8 +370,178 @@ namespace ublarcvapp {
         // ev_precutresults->emplace_back( std::move(precut_results) );
       }
 
+      m_time_tracker[kPMTPrecuts] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
+      
       return;
     }// end of runpmtprecuts
+
+    // void TaggerProcessor::runBoundaryPointFinder() {
+
+    // }
+
+    void TaggerProcessor::runBoundaryTagger( const InputPayload& input, ThruMuPayload& output ) {
+
+      LARCV_INFO() << "== Run Boundary Tagger ===============================" << std::endl;
+      
+
+      // configure different stages of the Thrumu Tagger
+      std::clock_t timer;
+
+      // (0) make contours
+      timer = std::clock();
+      m_bmtcv_algo.analyzeImages( input.img_v, input.badch_v, 10.0, 2 );
+      m_time_tracker[kThruMuContour] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
+
+      /*
+      
+      // (1) side tagger
+      timer = std::clock();
+      larlitecv::BoundaryMuonTaggerAlgo sidetagger;
+      sidetagger.configure( m_config.sidetagger_cfg );
+      //sidetagger.printConfiguration();
+
+      // (2) flash tagger
+      larlitecv::FlashMuonTaggerAlgo anode_flash_tagger(   larlitecv::FlashMuonTaggerAlgo::kAnode );
+      larlitecv::FlashMuonTaggerAlgo cathode_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kCathode );
+      larlitecv::FlashMuonTaggerAlgo imgends_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kOutOfImage );
     
+      anode_flash_tagger.configure(   m_config.flashtagger_cfg );
+      cathode_flash_tagger.configure( m_config.flashtagger_cfg );
+      imgends_flash_tagger.configure( m_config.flashtagger_cfg );
+      
+      // loading time
+      m_time_tracker[kThruMuConfig] = ( std::clock()-timer )/(double)CLOCKS_PER_SEC;
+
+      // run side tagger
+      timer = std::clock();
+      sidetagger.searchforboundarypixels3D( input.img_v, input.badch_v, output.side_spacepoint_v, output.boundarypixel_image_v, output.realspacehit_image_v );
+      int nsides[4] = {0};
+      for ( auto const& sp : output.side_spacepoint_v ) {
+        nsides[ sp.at(0).type ]++;
+      }
+      if ( m_config.verbosity>=0 ) {
+        std::cout << " Side Tagger End Points: " << output.side_spacepoint_v.size() << std::endl;
+        std::cout << "   Top: "        << nsides[0] << std::endl;
+        std::cout << "   Bottom: "     << nsides[1] << std::endl;
+        std::cout << "   Upstream: "   << nsides[2] << std::endl;
+        std::cout << "   Downstream: " << nsides[3] << std::endl;
+      }
+      m_time_tracker[kThruMuBMT] += (std::clock()-timer)/(double)CLOCKS_PER_SEC;
+
+      // run flash tagger
+      timer = std::clock();
+      anode_flash_tagger.flashMatchTrackEnds(   input.opflashes_v, input.img_v, input.badch_v, output.anode_spacepoint_v );
+      cathode_flash_tagger.flashMatchTrackEnds( input.opflashes_v, input.img_v, input.badch_v, output.cathode_spacepoint_v  );
+      imgends_flash_tagger.findImageTrackEnds( input.img_v, input.badch_v, output.imgends_spacepoint_v  );
+      
+      int totalflashes = (int)output.anode_spacepoint_v.size() + (int)output.cathode_spacepoint_v.size() + (int)output.imgends_spacepoint_v.size();
+      if ( m_config.verbosity>=0 ) {
+        std::cout << " Flash Tagger End Points: " << totalflashes << std::endl;
+        std::cout << "  Anode: "      << output.anode_spacepoint_v.size() << std::endl;
+        std::cout << "  Cathode: "    << output.cathode_spacepoint_v.size() << std::endl;
+        std::cout << "  Image Ends: " << output.imgends_spacepoint_v.size() << std::endl;
+      }
+      std::cout << "Anode spacepoint flash indices: " << std::endl;
+      for (int i=0; i<(int)output.anode_spacepoint_v.size(); i++) {
+        std::cout << "    [" << i << "] flashidx="
+                  << "(" << output.anode_spacepoint_v.at(i).getFlashIndex().ivec << ","
+                  << output.anode_spacepoint_v.at(i).getFlashIndex().idx << ")"	
+                  << std::endl;
+      }
+      std::cout << "Cathode spacepoint flash indices: " << std::endl;
+      for (int i=0; i<(int)output.cathode_spacepoint_v.size(); i++) {
+        std::cout << "    [" << i << "] flashidx="
+                  << "(" << output.cathode_spacepoint_v.at(i).getFlashIndex().ivec << ","
+                  << output.cathode_spacepoint_v.at(i).getFlashIndex().idx << ")"	
+                  << std::endl;
+      }
+      
+      m_time_tracker[kThruMuFlash] += (std::clock()-timer)/(double)CLOCKS_PER_SEC;
+
+      // run end point filters
+
+      //larlitecv::RadialEndpointFilter radialfilter;  // remove end points that cannot form a 3d segment nearby [deprecated]
+      //larlitecv::PushBoundarySpacePoint endptpusher; // remove endpt [deprecated]
+      //larlitecv::EndPointFilter endptfilter; // removes duplicates [deprecated]
+      timer = std::clock();
+      larlitecv::CACAEndPtFilter cacaalgo;
+      cacaalgo.setVerbosity(0);
+
+      // we collect pointers to all the end points (make a copy for now)
+      std::vector< larlitecv::BoundarySpacePoint > all_endpoints;
+
+      // gather endpoints from space points
+      for (int isp=0; isp<(int)output.side_spacepoint_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.side_spacepoint_v.at( isp ));
+        all_endpoints.push_back( *pts );
+      }
+      for (int isp=0; isp<(int)output.anode_spacepoint_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.anode_spacepoint_v.at(isp));
+        all_endpoints.push_back( *pts );
+      }
+      for (int isp=0; isp<(int)output.cathode_spacepoint_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.cathode_spacepoint_v.at(isp));
+        all_endpoints.push_back( *pts );
+      }
+      for (int isp=0; isp<(int)output.imgends_spacepoint_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.imgends_spacepoint_v.at(isp));
+        all_endpoints.push_back( *pts );
+      }
+      if ( m_config.verbosity>0 )
+        std::cout << "number of endpoints pre-filters: " << all_endpoints.size() << std::endl;
+
+      std::vector< const std::vector<larlitecv::BoundarySpacePoint>* > sp_v;
+      sp_v.push_back( &all_endpoints );
+      std::vector< std::vector<int> > caca_results;    
+      cacaalgo.evaluateEndPoints( sp_v, input.opflashes_v, input.img_v, input.badch_v, m_bmtcv_algo.m_plane_atomicmeta_v, 150.0, caca_results );
+      
+      // prepare the boundary points that pass
+      std::vector<larlitecv::BoundarySpacePoint> cacapassing_moved_v = cacaalgo.regenerateFitleredBoundaryPoints( input.img_v );
+      
+      // clean up
+      all_endpoints.clear();
+      sp_v.clear();
+      m_time_tracker[kThruMuFilter] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
+    
+
+      // collect output
+      // remove the filtered end points
+      for ( size_t idx=0; idx<cacapassing_moved_v.size(); idx++ ) {
+        larlitecv::BoundarySpacePoint& sp = cacapassing_moved_v[idx];
+        
+        if (sp.type()<=larlitecv::kDownstream ) {
+          output.side_filtered_v.emplace_back( std::move(sp) );
+        }
+        else if (sp.type()==larlitecv::kAnode) {
+          output.anode_filtered_v.emplace_back( std::move(sp) );
+        }
+        else if (sp.type()==larlitecv::kCathode) {
+          output.cathode_filtered_v.emplace_back( std::move(sp) );
+        }
+        else if (sp.type()==larlitecv::kImageEnd) {
+          output.imgends_filtered_v.emplace_back( std::move(sp) );
+        }
+        else {
+          std::stringstream ss;
+          ss << __FILE__ << ":" << __LINE__ << " unrecognized boundary type" << std::endl;
+          throw std::runtime_error(ss.str());
+        }
+      }
+
+      if ( m_config.verbosity>=0 ) {
+        std::cout << " Filtered Side Tagger End Points: " << cacapassing_moved_v.size() << std::endl;
+        std::cout << "   Side: "        << output.side_filtered_v.size() << std::endl;
+        std::cout << "   Anode: "       << output.anode_filtered_v.size() << std::endl;
+        std::cout << "   Cathode: "     << output.cathode_filtered_v.size() << std::endl;
+        std::cout << "   ImageEnds: "   << output.imgends_filtered_v.size() << std::endl;
+      }
+      
+      */
+      
+      LARCV_INFO() << "== End of Boundary Tagger ===============================" << std::endl;
+      
+      return;
+    }//end of runBoundaryTagger
+
   }
 }

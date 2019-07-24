@@ -12,9 +12,27 @@ The cosmic tagger consists of the following components:
 3) find end points
 4) thrumu tagger connecting cadidate endpoints
 
+# Code notes
+
+The class deploying the Tagger algorithms is `TaggerProcessor`.
+It inherits from `larcv::Process`, allowing it to be folded into
+a `larcv::ProcessDriver`.
+
 # Running the Tagger
 
+An executable which runs the `TaggerProcessor` class can be found
+at `bin/run_tagger.cxx`.
+
 ## Inputs
+
+The `larcv` data products needed are
+* `Image2D` containing the deconvolved wire response for whole detector view
+* `ChStatus` containing the status of the channels
+
+The `larlite` data products needed are
+* `ophit` individual optical photon hits for both in and out of the beam readout window
+* `opflash` cluster of optical photon hits for both in and out of the beam readout window
+* `trigger` event trigger information
 
 ## Outputs
 

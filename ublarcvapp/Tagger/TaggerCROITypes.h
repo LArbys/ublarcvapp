@@ -18,13 +18,17 @@
 #include "DataFormat/opflash.h"
 #include "DataFormat/trigger.h"
 #include "DataFormat/mctrack.h"
+#include "DataFormat/track.h"
 
 // larcv
 #include "larcv/core/DataFormat/EventPixel2D.h"
 #include "larcv/core/DataFormat/Image2D.h"
 
 // tagger types
-/* #include "TaggerTypes/BoundarySpacePoint.h" */
+#include "BoundaryMuonTaggerTypes.h"
+#include "BoundaryEndPt.h"
+#include "BoundaryFlashIndex.h"
+#include "BoundarySpacePoint.h"
 /* #include "TaggerTypes/BMTrackCluster3D.h" */
 /* #include "ContainedROI/TaggerFlashMatchTypes.h" */
 /* #include "UntaggedClustering/ClusterGroupMatchingTypes.h" */
@@ -75,72 +79,73 @@ namespace ublarcvapp {
 
     };
 
-    /*
-  class ThruMuPayload : public TaggerCROIVPayload {
-  public:
 
-  ThruMuPayload() : TaggerCROIVPayload("ThruMu") { clear(); };
-    virtual ~ThruMuPayload() {};
+    class ThruMuPayload : public TaggerCROIVPayload {
+    public:
+      
+    ThruMuPayload() : TaggerCROIVPayload("ThruMu") { clear(); };
+      virtual ~ThruMuPayload() {};
+      
+      std::vector< larcv::Image2D >     boundarypixel_image_v;
+      std::vector< larcv::Image2D >     realspacehit_image_v;
+      std::vector< larcv::Image2D >     tagged_v;
 
-    std::vector< larcv::Image2D >     boundarypixel_image_v;
-    std::vector< larcv::Image2D >     realspacehit_image_v;
-    std::vector< larcv::Image2D >     tagged_v;
-
-    // raw spacepoints from side and flash end point taggers
-    std::vector< BoundarySpacePoint > side_spacepoint_v;
-    std::vector< BoundarySpacePoint > anode_spacepoint_v;
-    std::vector< BoundarySpacePoint > cathode_spacepoint_v;
-    std::vector< BoundarySpacePoint > imgends_spacepoint_v;
+      // raw spacepoints from side and flash end point taggers
+      std::vector< BoundarySpacePoint > side_spacepoint_v;
+      std::vector< BoundarySpacePoint > anode_spacepoint_v;
+      std::vector< BoundarySpacePoint > cathode_spacepoint_v;
+      std::vector< BoundarySpacePoint > imgends_spacepoint_v;
     
-    // filtered spacepoints
-    std::vector< BoundarySpacePoint > side_filtered_v;
-    std::vector< BoundarySpacePoint > anode_filtered_v;
-    std::vector< BoundarySpacePoint > cathode_filtered_v;
-    std::vector< BoundarySpacePoint > imgends_filtered_v;
+      // filtered spacepoints
+      std::vector< BoundarySpacePoint > side_filtered_v;
+      std::vector< BoundarySpacePoint > anode_filtered_v;
+      std::vector< BoundarySpacePoint > cathode_filtered_v;
+      std::vector< BoundarySpacePoint > imgends_filtered_v;
+      
+      // track objects
+      //std::vector< BMTrackCluster3D >      trackcluster3d_v;
+      std::vector< larlite::track >        track_v;
+      std::vector< std::vector<larcv::Pixel2DCluster> > pixelcluster_v;
 
-    // track objects
-    std::vector< BMTrackCluster3D >      trackcluster3d_v;
-    std::vector< larlite::track >        track_v;
-    std::vector< std::vector<larcv::Pixel2DCluster> > pixelcluster_v;
+      std::vector< BoundarySpacePoint > used_spacepoint_v;
+      std::vector< BoundarySpacePoint > unused_spacepoint_v;
 
-    std::vector< BoundarySpacePoint > used_spacepoint_v;
-    std::vector< BoundarySpacePoint > unused_spacepoint_v;
+      void saveSpace() {
+        // clears out data unneeded downstream
+        boundarypixel_image_v.clear();
+        realspacehit_image_v.clear();
+        side_spacepoint_v.clear();
+        anode_spacepoint_v.clear();
+        cathode_spacepoint_v.clear();
+        imgends_spacepoint_v.clear();
+        used_spacepoint_v.clear();
+      };
 
-    void saveSpace() {
-      // clears out data unneeded downstream
-      boundarypixel_image_v.clear();
-      realspacehit_image_v.clear();
-      side_spacepoint_v.clear();
-      anode_spacepoint_v.clear();
-      cathode_spacepoint_v.clear();
-      imgends_spacepoint_v.clear();
-      used_spacepoint_v.clear();
+      void clear() {
+        boundarypixel_image_v.clear();
+        realspacehit_image_v.clear();
+        tagged_v.clear();
+        
+        side_spacepoint_v.clear();
+        anode_spacepoint_v.clear();
+        cathode_spacepoint_v.clear();
+        imgends_spacepoint_v.clear();
+        
+        side_filtered_v.clear();
+        anode_filtered_v.clear();
+        cathode_filtered_v.clear();
+        imgends_filtered_v.clear();
+        
+        //trackcluster3d_v.clear();
+        track_v.clear();
+        pixelcluster_v.clear();
+        used_spacepoint_v.clear();
+        unused_spacepoint_v.clear();
+      }
+
     };
 
-    void clear() {
-      boundarypixel_image_v.clear();
-      realspacehit_image_v.clear();
-      tagged_v.clear();
-
-      side_spacepoint_v.clear();
-      anode_spacepoint_v.clear();
-      cathode_spacepoint_v.clear();
-      imgends_spacepoint_v.clear();
-
-      side_filtered_v.clear();
-      anode_filtered_v.clear();
-      cathode_filtered_v.clear();
-      imgends_filtered_v.clear();
-      
-      trackcluster3d_v.clear();
-      track_v.clear();
-      pixelcluster_v.clear();
-      used_spacepoint_v.clear();
-      unused_spacepoint_v.clear();
-    }
-
-  };
-
+    /*
   class StopMuPayload : public TaggerCROIVPayload {
   public:
   StopMuPayload() : TaggerCROIVPayload("StopMu") {};

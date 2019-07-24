@@ -15,6 +15,7 @@
 
 #include "TaggerCROITypes.h"
 #include "TaggerCROIAlgoConfig.h"
+#include "BMTCV.h"
 
 namespace ublarcvapp {
   namespace tagger {
@@ -44,12 +45,24 @@ namespace ublarcvapp {
                       ublarcvapp::LArliteManager& io_larlite,
                       InputPayload& input );
       void runPMTPrecuts( larlite::storage_manager* llio );
+      void runBoundaryTagger( const InputPayload& input, ThruMuPayload& output );
       
       
       // config parameters
       TaggerCROIAlgoConfig m_config; //< holds configuration parameters
       bool _RunPMTPrecuts;
       bool _ApplyPMTPrecuts;
+
+      // timing monitor
+      std::vector<float> m_time_tracker;
+      enum Stages_t { kInputTotal=0, kPMTPrecuts, kThruMuContour, kThruMuBMT,
+                      kThruMuFlash, kThruMuFilter, kThruMuTracker,
+                      kStopMuTracker, kRecluster,
+                      kUntagged, kPCAmerge, kCROI, kNumStages };
+
+      
+      // sub-algorithms
+      BMTCV m_bmtcv_algo;
       
     };
     
