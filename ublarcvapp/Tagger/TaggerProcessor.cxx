@@ -13,8 +13,14 @@ namespace ublarcvapp {
     TaggerProcessor::TaggerProcessor( std::string cfg_path )
       : larcv::ProcessBase( "TaggerProcessor" ),
       _cfg_path(cfg_path),
-      _larlite_io(nullptr)
+      _larlite_io(nullptr),
+      _RunPMTPrecuts(false),
+      _ApplyPMTPrecuts(false)
     {
+
+      // setup larlite file manager
+      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );
+      
       if (_cfg_path!="")
         configure(_cfg_path);
     }
@@ -25,8 +31,10 @@ namespace ublarcvapp {
       }
     }
     
-    void TaggerProcessor::configure(const larcv::PSet&) {
-      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );      
+    void TaggerProcessor::configure(const larcv::PSet& pset) {
+      set_verbosity( (larcv::msg::Level_t) pset.get<int>("Verbosity") );
+      _RunPMTPrecuts   = pset.get<bool>("RunPreCuts");   // run the precuts
+      _ApplyPMTPrecuts = pset.get<bool>("ApplyPreCuts"); // if True: if precuts fail, we do not run rest of algos (e.g. produce CROIs, thrumu mask)
     }
 
     /**
@@ -41,6 +49,7 @@ namespace ublarcvapp {
     void TaggerProcessor::configure(const std::string cfg_path) {
       m_config = TaggerCROIAlgoConfig::makeConfigFromFile( cfg_path );
       _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );
+      configure( m_config.main_cfg );
     }
 
     void TaggerProcessor::initialize() {
@@ -77,7 +86,7 @@ namespace ublarcvapp {
       loadInput( io, *_larlite_io, input );
 
       // precuts
-      
+      runPMTPrecuts( _larlite_io );
       
     }
     
@@ -257,8 +266,14 @@ namespace ublarcvapp {
       try {
         for ( auto &flashproducer : m_config.opflash_producers ) {
           larlite::event_opflash* opdata = (larlite::event_opflash*)io_larlite.get_data(larlite::data::kOpFlash, flashproducer );
-          std::cout << "search for flash hits from " << flashproducer << ": " << opdata->size() << " flashes" << std::endl;
+          LARCV_INFO() << "search for flash hits from " << flashproducer << ": " << opdata->size() << " flashes" << std::endl;
           input.opflashes_v.push_back( opdata );
+          for ( auto const& opflash : *opdata ) {
+            LARCV_DEBUG() << "  flashtime: usec=" << opflash.Time()
+                          << " tick=" << opflash.Time()/0.015625
+                          << " pe=" << opflash.TotalPE()
+                          << std::endl;
+          }
         }
       }
       catch ( const std::exception& e ) {
@@ -291,6 +306,59 @@ namespace ublarcvapp {
       
     }
     
+    /**
+     *
+     * run precuts
+     * 
+     */
+    void TaggerProcessor::runPMTPrecuts( larlite::storage_manager* llio) {
+
+      LARCV_INFO() << "runPMTPrecuts" << std::endl;
+      
+      // conversion into larlite fcllite::PSet
+      fcllite::PSet tmp( "tmp",m_config.precut_cfg.data_string() );
+      fcllite::PSet precutcfg( tmp.get<fcllite::PSet>("LEEPreCut") );
+      larlite::LEEPreCut  precutalgo;
+      precutalgo.configure( precutcfg ); 
+      precutalgo.initialize();
+
+      if ( _RunPMTPrecuts ) {
+        precutalgo.analyze( llio );
+        // save data in larlite user data structure
+        //larlite::event_user* ev_precutresults = (larlite::event_user*)dataco_out.get_larlite_data( larlite::data::kUserInfo, "precutresults" );
+        //larlite::user_info precut_results;
+        LARCV_INFO() << "==== PRECUT RESULTS ===============" << std::endl;
+        LARCV_INFO() << " PASS: "     << precutalgo.passes() << std::endl;
+        LARCV_INFO() << " vetope:   " << precutalgo.vetoPE() << std::endl;
+        LARCV_INFO() << " beampe:   " << precutalgo.beamPE() << std::endl;
+        LARCV_INFO() << " maxfrac:  " << precutalgo.maxFrac() << std::endl;
+        LARCV_INFO() << " beamTick: " << precutalgo.beamFirstTick() << std::endl;
+        LARCV_INFO() << " vetoTick: " << precutalgo.vetoFirstTick() << std::endl;
+        LARCV_INFO() << "===================================" << std::endl;
+	
+        // precut_results.store( "pass",    precutalgo.passes() );
+        // precut_results.store( "vetoPE",  precutalgo.vetoPE() );
+        // precut_results.store( "beamPE",  precutalgo.beamPE() );
+        // precut_results.store( "maxFrac", precutalgo.maxFrac() );
+        // precut_results.store( "beamFirstTick", precutalgo.beamFirstTick() );
+        // precut_results.store( "vetoFirstTick", precutalgo.vetoFirstTick() );      
+        // ev_precutresults->emplace_back( std::move(precut_results) );
+      }
+      else {
+        // create dummy values
+        // larlite::event_user* ev_precutresults = (larlite::event_user*)dataco_out.get_larlite_data( larlite::data::kUserInfo, "precutresults" );
+        // larlite::user_info precut_results;      
+        // precut_results.store( "pass",     1   );
+        // precut_results.store( "vetoPE",  -1.0 );
+        // precut_results.store( "beamPE",  -1.0 );
+        // precut_results.store( "maxFrac", -1.0 );
+        // precut_results.store( "beamFirstTick", -1 );
+        // precut_results.store( "vetoFirstTick", -1 );
+        // ev_precutresults->emplace_back( std::move(precut_results) );
+      }
+
+      return;
+    }// end of runpmtprecuts
     
   }
 }

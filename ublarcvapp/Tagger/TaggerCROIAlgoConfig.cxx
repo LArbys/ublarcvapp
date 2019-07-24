@@ -8,7 +8,9 @@ namespace ublarcvapp {
 namespace tagger {
 
   TaggerCROIAlgoConfig::TaggerCROIAlgoConfig()
-    : input_write_cfg(larcv::PSet("input")),
+    : main_cfg(larcv::PSet("TaggerCROI")),
+      precut_cfg(larcv::PSet("LEEPreCut")),
+      input_write_cfg(larcv::PSet("input")),
       thrumu_write_cfg(larcv::PSet("thrumu")),
       stopmu_write_cfg(larcv::PSet("stopmu")),
       croi_write_cfg(larcv::PSet("croi"))
@@ -36,6 +38,8 @@ namespace tagger {
     larcv::PSet untagged_match_pset      = tagger_pset.get<larcv::PSet>("TaggerFlashMatchAlgo");
     //larcv::PSet general_flash_match_pset = tagger_pset.get<larcv::PSet>("GeneralFlashMatchAlgo"); // new for the general flash matching occurring between the tracks and the flashes of light.
 
+    cfg.main_cfg         = tagger_pset;
+    cfg.precut_cfg       = tagger_pset.get<larcv::PSet>("LEEPreCut");
     cfg.input_write_cfg  = tagger_pset.get<larcv::PSet>("InputWriteConfig");
     cfg.thrumu_write_cfg = tagger_pset.get<larcv::PSet>("ThruMuWriteConfig");
     cfg.stopmu_write_cfg = tagger_pset.get<larcv::PSet>("StopMuWriteConfig");

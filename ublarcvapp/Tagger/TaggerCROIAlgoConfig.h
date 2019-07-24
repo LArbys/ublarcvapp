@@ -34,6 +34,8 @@ namespace tagger {
     /* ClusterGroupAlgoConfig        untagged_cluster_cfg; */
     /* TaggerFlashMatchAlgoConfig    croi_selection_cfg; */
 
+    larcv::PSet main_cfg;
+    larcv::PSet precut_cfg;
     larcv::PSet input_write_cfg;
     larcv::PSet thrumu_write_cfg;
     larcv::PSet stopmu_write_cfg;

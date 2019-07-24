@@ -14,8 +14,11 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 message("laropencv libs: ${LAROPENCV_LIBS}")
 
 # larlite includes
-set(LARLITE_INCLUDES $ENV{LARLITE_USERDEVDIR} $ENV{LARLITE_COREDIR})
+set(LARLITE_INCLUDES $ENV{LARLITE_USERDEVDIR} $ENV{LARLITE_COREDIR} $ENV{LARLITE_USERDEVDIR}/BasicTool )
 message("larlite inc: ${LARLITE_INCLUDES}")
+
+# larlite libs used
+#set(LARLITE_LIBS_USED SelectionTool_LEEPreCuts
 
 # larcv libs used
 set(LARCV_LIBS_USED LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil)

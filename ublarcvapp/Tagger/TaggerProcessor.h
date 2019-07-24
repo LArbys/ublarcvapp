@@ -1,10 +1,16 @@
 #ifndef __TAGGER_PROCESSOR_H__
 #define __TAGGER_PROCESSOR_H__
 
+//larlite
+#include "DataFormat/storage_manager.h"
+#include "SelectionTool/LEEPreCuts/LEEPreCut.h"
+
+// larcv
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/DataFormat/IOManager.h"
 #include "larcv/core/Base/PSet.h"
 
+// ublarcvapp
 #include "ublarcvapp/LArliteHandler/LArliteManager.h"
 
 #include "TaggerCROITypes.h"
@@ -37,11 +43,13 @@ namespace ublarcvapp {
       void loadInput( larcv::IOManager& io_larcv,
                       ublarcvapp::LArliteManager& io_larlite,
                       InputPayload& input );
+      void runPMTPrecuts( larlite::storage_manager* llio );
       
       
       // config parameters
       TaggerCROIAlgoConfig m_config; //< holds configuration parameters
-      
+      bool _RunPMTPrecuts;
+      bool _ApplyPMTPrecuts;
       
     };
     
