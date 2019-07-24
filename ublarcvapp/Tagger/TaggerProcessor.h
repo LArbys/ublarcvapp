@@ -56,7 +56,8 @@ namespace ublarcvapp {
 
       // timing monitor
       std::vector<float> m_time_tracker;
-      enum Stages_t { kInputTotal=0, kPMTPrecuts, kThruMuContour, kThruMuBMT,
+      enum Stages_t { kInputTotal=0, kPMTPrecuts,
+                      kThruMuConfig, kThruMuContour, kThruMuBMT,
                       kThruMuFlash, kThruMuFilter, kThruMuTracker,
                       kStopMuTracker, kRecluster,
                       kUntagged, kPCAmerge, kCROI, kNumStages };

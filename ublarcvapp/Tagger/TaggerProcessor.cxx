@@ -87,6 +87,12 @@ namespace ublarcvapp {
 
       // precuts
       runPMTPrecuts( _larlite_io );
+
+      // ThruMu
+      ThruMuPayload thrumu;
+      
+      // boudary end point finder
+      runBoundaryTagger( input, thrumu );
       
     }
     
@@ -398,16 +404,15 @@ namespace ublarcvapp {
       BoundaryMuonTaggerAlgo sidetagger;
       sidetagger.configure( m_config.sidetagger_cfg );
       //sidetagger.printConfiguration();
-      /*
 
       // (2) flash tagger
-      larlitecv::FlashMuonTaggerAlgo anode_flash_tagger(   larlitecv::FlashMuonTaggerAlgo::kAnode );
-      larlitecv::FlashMuonTaggerAlgo cathode_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kCathode );
-      larlitecv::FlashMuonTaggerAlgo imgends_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kOutOfImage );
+      // larlitecv::FlashMuonTaggerAlgo anode_flash_tagger(   larlitecv::FlashMuonTaggerAlgo::kAnode );
+      // larlitecv::FlashMuonTaggerAlgo cathode_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kCathode );
+      // larlitecv::FlashMuonTaggerAlgo imgends_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kOutOfImage );
     
-      anode_flash_tagger.configure(   m_config.flashtagger_cfg );
-      cathode_flash_tagger.configure( m_config.flashtagger_cfg );
-      imgends_flash_tagger.configure( m_config.flashtagger_cfg );
+      // anode_flash_tagger.configure(   m_config.flashtagger_cfg );
+      // cathode_flash_tagger.configure( m_config.flashtagger_cfg );
+      // imgends_flash_tagger.configure( m_config.flashtagger_cfg );
       
       // loading time
       m_time_tracker[kThruMuConfig] = ( std::clock()-timer )/(double)CLOCKS_PER_SEC;
@@ -419,14 +424,16 @@ namespace ublarcvapp {
       for ( auto const& sp : output.side_spacepoint_v ) {
         nsides[ sp.at(0).type ]++;
       }
-      if ( m_config.verbosity>=0 ) {
-        std::cout << " Side Tagger End Points: " << output.side_spacepoint_v.size() << std::endl;
-        std::cout << "   Top: "        << nsides[0] << std::endl;
-        std::cout << "   Bottom: "     << nsides[1] << std::endl;
-        std::cout << "   Upstream: "   << nsides[2] << std::endl;
-        std::cout << "   Downstream: " << nsides[3] << std::endl;
-      }
+
+      LARCV_INFO() << " Side Tagger End Points: " << output.side_spacepoint_v.size() << std::endl;
+      LARCV_INFO() << "   Top: "        << nsides[0] << std::endl;
+      LARCV_INFO() << "   Bottom: "     << nsides[1] << std::endl;
+      LARCV_INFO() << "   Upstream: "   << nsides[2] << std::endl;
+      LARCV_INFO() << "   Downstream: " << nsides[3] << std::endl;
+
       m_time_tracker[kThruMuBMT] += (std::clock()-timer)/(double)CLOCKS_PER_SEC;
+
+      /*
 
       // run flash tagger
       timer = std::clock();
