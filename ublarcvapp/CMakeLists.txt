@@ -16,4 +16,5 @@ if (LARCV_USE_GEO2D)
 endif()  
 
 add_subdirectory(Stitchers)
+add_subdirectory(dbscan)
 

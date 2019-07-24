@@ -58,6 +58,10 @@ set( LAROPENCV_INC_DIR "$ENV{LAROPENCV_BASEDIR}" )
 set( LAROPENCV_LIB_DIR "$ENV{LARLITE_LIBDIR}" )
 file( GLOB LAROPENCV_LIBS "$ENV{LARLITE_LIBDIR}/libLArOpenCV_*.so" )
 
+#---Cilantro
+set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
+find_package( cilantro REQUIRED )
+
 
 ## Setup
 
