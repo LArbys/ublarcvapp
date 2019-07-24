@@ -9,6 +9,7 @@
 #include "BMTCV.h"
 #include "BoundaryMuonTaggerAlgo.h"
 #include "FlashMuonTaggerAlgo.h"
+#include "CACAEndPtFilter.h"
 
 namespace ublarcvapp {
   namespace tagger {
@@ -469,46 +470,45 @@ namespace ublarcvapp {
       
       m_time_tracker[kThruMuFlash] += (std::clock()-timer)/(double)CLOCKS_PER_SEC;
 
-      /*
       // run end point filters
 
       //larlitecv::RadialEndpointFilter radialfilter;  // remove end points that cannot form a 3d segment nearby [deprecated]
       //larlitecv::PushBoundarySpacePoint endptpusher; // remove endpt [deprecated]
       //larlitecv::EndPointFilter endptfilter; // removes duplicates [deprecated]
       timer = std::clock();
-      larlitecv::CACAEndPtFilter cacaalgo;
+      CACAEndPtFilter cacaalgo;
       cacaalgo.setVerbosity(0);
 
       // we collect pointers to all the end points (make a copy for now)
-      std::vector< larlitecv::BoundarySpacePoint > all_endpoints;
+      std::vector< BoundarySpacePoint > all_endpoints;
 
       // gather endpoints from space points
       for (int isp=0; isp<(int)output.side_spacepoint_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.side_spacepoint_v.at( isp ));
+        const BoundarySpacePoint* pts = &(output.side_spacepoint_v.at( isp ));
         all_endpoints.push_back( *pts );
       }
       for (int isp=0; isp<(int)output.anode_spacepoint_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.anode_spacepoint_v.at(isp));
+        const BoundarySpacePoint* pts = &(output.anode_spacepoint_v.at(isp));
         all_endpoints.push_back( *pts );
       }
       for (int isp=0; isp<(int)output.cathode_spacepoint_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.cathode_spacepoint_v.at(isp));
+        const BoundarySpacePoint* pts = &(output.cathode_spacepoint_v.at(isp));
         all_endpoints.push_back( *pts );
       }
       for (int isp=0; isp<(int)output.imgends_spacepoint_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.imgends_spacepoint_v.at(isp));
+        const BoundarySpacePoint* pts = &(output.imgends_spacepoint_v.at(isp));
         all_endpoints.push_back( *pts );
       }
       if ( m_config.verbosity>0 )
         std::cout << "number of endpoints pre-filters: " << all_endpoints.size() << std::endl;
 
-      std::vector< const std::vector<larlitecv::BoundarySpacePoint>* > sp_v;
+      std::vector< const std::vector<BoundarySpacePoint>* > sp_v;
       sp_v.push_back( &all_endpoints );
       std::vector< std::vector<int> > caca_results;    
       cacaalgo.evaluateEndPoints( sp_v, input.opflashes_v, input.img_v, input.badch_v, m_bmtcv_algo.m_plane_atomicmeta_v, 150.0, caca_results );
       
       // prepare the boundary points that pass
-      std::vector<larlitecv::BoundarySpacePoint> cacapassing_moved_v = cacaalgo.regenerateFitleredBoundaryPoints( input.img_v );
+      std::vector<BoundarySpacePoint> cacapassing_moved_v = cacaalgo.regenerateFitleredBoundaryPoints( input.img_v );
       
       // clean up
       all_endpoints.clear();
@@ -519,18 +519,18 @@ namespace ublarcvapp {
       // collect output
       // remove the filtered end points
       for ( size_t idx=0; idx<cacapassing_moved_v.size(); idx++ ) {
-        larlitecv::BoundarySpacePoint& sp = cacapassing_moved_v[idx];
+        BoundarySpacePoint& sp = cacapassing_moved_v[idx];
         
-        if (sp.type()<=larlitecv::kDownstream ) {
+        if (sp.type()<=kDownstream ) {
           output.side_filtered_v.emplace_back( std::move(sp) );
         }
-        else if (sp.type()==larlitecv::kAnode) {
+        else if (sp.type()==kAnode) {
           output.anode_filtered_v.emplace_back( std::move(sp) );
         }
-        else if (sp.type()==larlitecv::kCathode) {
+        else if (sp.type()==kCathode) {
           output.cathode_filtered_v.emplace_back( std::move(sp) );
         }
-        else if (sp.type()==larlitecv::kImageEnd) {
+        else if (sp.type()==kImageEnd) {
           output.imgends_filtered_v.emplace_back( std::move(sp) );
         }
         else {
@@ -540,15 +540,12 @@ namespace ublarcvapp {
         }
       }
 
-      if ( m_config.verbosity>=0 ) {
-        std::cout << " Filtered Side Tagger End Points: " << cacapassing_moved_v.size() << std::endl;
-        std::cout << "   Side: "        << output.side_filtered_v.size() << std::endl;
-        std::cout << "   Anode: "       << output.anode_filtered_v.size() << std::endl;
-        std::cout << "   Cathode: "     << output.cathode_filtered_v.size() << std::endl;
-        std::cout << "   ImageEnds: "   << output.imgends_filtered_v.size() << std::endl;
-      }
+      LARCV_INFO() << " Filtered Side Tagger End Points: " << cacapassing_moved_v.size() << std::endl;
+      LARCV_INFO() << "   Side: "        << output.side_filtered_v.size() << std::endl;
+      LARCV_INFO() << "   Anode: "       << output.anode_filtered_v.size() << std::endl;
+      LARCV_INFO() << "   Cathode: "     << output.cathode_filtered_v.size() << std::endl;
+      LARCV_INFO() << "   ImageEnds: "   << output.imgends_filtered_v.size() << std::endl;
       
-      */
       
       LARCV_INFO() << "== End of Boundary Tagger ===============================" << std::endl;
       

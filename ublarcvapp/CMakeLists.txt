@@ -1,6 +1,8 @@
 
 
+
 add_subdirectory(dbscan)
+add_subdirectory(Reco3D)
 
 if (HAS_LARLITE)
   add_subdirectory(LArliteHandler)
