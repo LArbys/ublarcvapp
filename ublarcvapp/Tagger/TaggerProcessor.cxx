@@ -6,6 +6,9 @@
 #include "larcv/core/DataFormat/EventChStatus.h"
 
 #include "ublarcvapp/UBImageMod/EmptyChannelAlgo.h"
+#include "BMTCV.h"
+#include "BoundaryMuonTaggerAlgo.h"
+#include "FlashMuonTaggerAlgo.h"
 
 namespace ublarcvapp {
   namespace tagger {
@@ -410,13 +413,13 @@ namespace ublarcvapp {
       //sidetagger.printConfiguration();
 
       // (2) flash tagger
-      // larlitecv::FlashMuonTaggerAlgo anode_flash_tagger(   larlitecv::FlashMuonTaggerAlgo::kAnode );
-      // larlitecv::FlashMuonTaggerAlgo cathode_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kCathode );
-      // larlitecv::FlashMuonTaggerAlgo imgends_flash_tagger( larlitecv::FlashMuonTaggerAlgo::kOutOfImage );
+      FlashMuonTaggerAlgo anode_flash_tagger(   FlashMuonTaggerAlgo::kSearchAnode );
+      FlashMuonTaggerAlgo cathode_flash_tagger( FlashMuonTaggerAlgo::kSearchCathode );
+      FlashMuonTaggerAlgo imgends_flash_tagger( FlashMuonTaggerAlgo::kSearchOutOfImage );
     
-      // anode_flash_tagger.configure(   m_config.flashtagger_cfg );
-      // cathode_flash_tagger.configure( m_config.flashtagger_cfg );
-      // imgends_flash_tagger.configure( m_config.flashtagger_cfg );
+      anode_flash_tagger.configure(   m_config.flashtagger_cfg );
+      cathode_flash_tagger.configure( m_config.flashtagger_cfg );
+      imgends_flash_tagger.configure( m_config.flashtagger_cfg );
       
       // loading time
       m_time_tracker[kThruMuConfig] = ( std::clock()-timer )/(double)CLOCKS_PER_SEC;
@@ -437,38 +440,36 @@ namespace ublarcvapp {
 
       m_time_tracker[kThruMuBMT] += (std::clock()-timer)/(double)CLOCKS_PER_SEC;
 
-      /*
-
       // run flash tagger
       timer = std::clock();
       anode_flash_tagger.flashMatchTrackEnds(   input.opflashes_v, input.img_v, input.badch_v, output.anode_spacepoint_v );
       cathode_flash_tagger.flashMatchTrackEnds( input.opflashes_v, input.img_v, input.badch_v, output.cathode_spacepoint_v  );
-      imgends_flash_tagger.findImageTrackEnds( input.img_v, input.badch_v, output.imgends_spacepoint_v  );
-      
+      imgends_flash_tagger.findImageTrackEnds(  input.img_v, input.badch_v, output.imgends_spacepoint_v  );
+
       int totalflashes = (int)output.anode_spacepoint_v.size() + (int)output.cathode_spacepoint_v.size() + (int)output.imgends_spacepoint_v.size();
-      if ( m_config.verbosity>=0 ) {
-        std::cout << " Flash Tagger End Points: " << totalflashes << std::endl;
-        std::cout << "  Anode: "      << output.anode_spacepoint_v.size() << std::endl;
-        std::cout << "  Cathode: "    << output.cathode_spacepoint_v.size() << std::endl;
-        std::cout << "  Image Ends: " << output.imgends_spacepoint_v.size() << std::endl;
-      }
-      std::cout << "Anode spacepoint flash indices: " << std::endl;
+      LARCV_INFO() << " Flash Tagger End Points: " << totalflashes << std::endl;
+      LARCV_INFO() << "  Anode: "      << output.anode_spacepoint_v.size() << std::endl;
+      LARCV_INFO() << "  Cathode: "    << output.cathode_spacepoint_v.size() << std::endl;
+      LARCV_INFO() << "  Image Ends: " << output.imgends_spacepoint_v.size() << std::endl;
+
+      LARCV_INFO() << "Anode spacepoint flash indices: " << std::endl;
       for (int i=0; i<(int)output.anode_spacepoint_v.size(); i++) {
-        std::cout << "    [" << i << "] flashidx="
-                  << "(" << output.anode_spacepoint_v.at(i).getFlashIndex().ivec << ","
-                  << output.anode_spacepoint_v.at(i).getFlashIndex().idx << ")"	
-                  << std::endl;
+        LARCV_INFO() << "    [" << i << "] flashidx="
+                     << "(" << output.anode_spacepoint_v.at(i).getFlashIndex().ivec << ","
+                     << output.anode_spacepoint_v.at(i).getFlashIndex().idx << ")"	
+                     << std::endl;
       }
-      std::cout << "Cathode spacepoint flash indices: " << std::endl;
+      LARCV_INFO() << "Cathode spacepoint flash indices: " << std::endl;
       for (int i=0; i<(int)output.cathode_spacepoint_v.size(); i++) {
-        std::cout << "    [" << i << "] flashidx="
-                  << "(" << output.cathode_spacepoint_v.at(i).getFlashIndex().ivec << ","
-                  << output.cathode_spacepoint_v.at(i).getFlashIndex().idx << ")"	
-                  << std::endl;
+        LARCV_INFO() << "    [" << i << "] flashidx="
+                     << "(" << output.cathode_spacepoint_v.at(i).getFlashIndex().ivec << ","
+                     << output.cathode_spacepoint_v.at(i).getFlashIndex().idx << ")"	
+                     << std::endl;
       }
       
       m_time_tracker[kThruMuFlash] += (std::clock()-timer)/(double)CLOCKS_PER_SEC;
 
+      /*
       // run end point filters
 
       //larlitecv::RadialEndpointFilter radialfilter;  // remove end points that cannot form a 3d segment nearby [deprecated]

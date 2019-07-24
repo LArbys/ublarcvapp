@@ -29,7 +29,7 @@
 #include "BoundaryEndPt.h"
 #include "BoundaryFlashIndex.h"
 #include "BoundarySpacePoint.h"
-/* #include "TaggerTypes/BMTrackCluster3D.h" */
+#include "BMTrackCluster3D.h"
 /* #include "ContainedROI/TaggerFlashMatchTypes.h" */
 /* #include "UntaggedClustering/ClusterGroupMatchingTypes.h" */
 /* #include "T3DMerge/T3DCluster.h" */
