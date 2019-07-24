@@ -47,7 +47,9 @@ namespace ublarcvapp {
      **/
     class InputPayload : public TaggerCROIVPayload {
     public:
-    InputPayload() : TaggerCROIVPayload("Input") {};
+    InputPayload() : TaggerCROIVPayload("Input") {
+        clear();
+      };
       virtual ~InputPayload() {};
 
       // required inputs

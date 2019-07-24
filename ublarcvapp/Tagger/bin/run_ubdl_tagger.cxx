@@ -33,6 +33,7 @@ int main( int nargs, char** argv ) {
     std::cout << "ENTRY [" << ientry << " of " << nentries << "]" << std::endl;
     io.read_entry(ientry);
     tagger.process(io);
+    break;
   }
 
   std::cout << "----------" << std::endl;

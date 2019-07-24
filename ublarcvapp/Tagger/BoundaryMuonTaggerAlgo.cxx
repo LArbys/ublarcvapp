@@ -11,8 +11,9 @@
 #include "LArUtil/LArProperties.h"
 #include "BasicTool/GeoAlgo/GeoAlgo.h"
 
-// larcv
+// ublarcvapp
 #include "ublarcvapp/UBWireTool/UBWireTool.h"
+#include "ublarcvapp/dbscan/DBScan.h"
 
 //#include "Linear3DChargeTagger.h"
 //#include "Linear3DPostProcessor.h"
@@ -130,12 +131,10 @@ namespace tagger {
       }
     }
 
-    /*
-
     // storage for boundary combination
     clock_t begin_pixel_search = clock();
     std::cout << "Begin Boundary Pixel Search..." << std::endl;
-    std::vector< dbscan::dbPoints > combo_points(ncrossings); // these points are in detector space
+    std::vector< ublarcvapp::dbscan::dbPoints > combo_points(ncrossings); // these points are in detector space. vector over planes.
     std::vector< std::vector< std::vector<int> > > combo_cols(ncrossings); // [ncrossings][number of combos][column combination]
     CollectCandidateBoundaryPixels( binblur_v, badchs, combo_points, combo_cols, matchedspacepts );
     int total_combos = 0;
@@ -145,6 +144,7 @@ namespace tagger {
     float elapsed_hitsearch = float( clock()-begin_pixel_search )/CLOCKS_PER_SEC;
     std::cout << "... hit search time: " << elapsed_hitsearch << " secs" << std::endl;
 
+    
     // cluster each boundary type pixel (cluster of points in detector space)
     clock_t begin_clustering = clock();
     std::cout << "Begin Clustering..." << std::endl;
@@ -157,6 +157,7 @@ namespace tagger {
     for ( int endpt_idx=0; endpt_idx<(int)candidate_endpts.size(); endpt_idx++ ) {
       end_points.emplace_back( std::move( candidate_endpts.at(endpt_idx) ) );
     }
+
 
     // generate the meta data we will use to filter end points
     //std::vector< std::vector<ClusterExtrema_t> > candidate_metadata; 
@@ -182,14 +183,13 @@ namespace tagger {
     std::cout << "  hit collecting: " << elapsed_hitsearch << " secs" << std::endl;
     std::cout << "  clustering time: " << elapsed_clustering << " secs" << std::endl;
     std::cout << "  total number of combos found: " << total_combos << std::endl;
-    */
     
     return kOK;
   }
 
   void BoundaryMuonTaggerAlgo::loadGeoInfo() {
 
-    TFile fGeoFile( Form("%s/app/PMTWeights/dat/geoinfo.root",getenv("LARCV_BASEDIR")), "OPEN" );
+    TFile fGeoFile( Form("%s/ublarcvapp/Tagger/dat/pmt_geo_info.root",getenv("UBLARCVAPP_BASEDIR")), "OPEN" );
 
     // Get the PMT Info
     fNPMTs = 32;
@@ -213,10 +213,12 @@ namespace tagger {
     
   }
   
-  /*
-  void BoundaryMuonTaggerAlgo::CollectCandidateBoundaryPixels( const std::vector<larcv::Image2D>& imgs, const std::vector<larcv::Image2D>& badchs,
-    std::vector< dbscan::dbPoints >& combo_points, std::vector< std::vector< std::vector<int> > >& combo_cols,
-    std::vector< larcv::Image2D >& matchedspacepts ) {
+
+  void BoundaryMuonTaggerAlgo::CollectCandidateBoundaryPixels( const std::vector<larcv::Image2D>& imgs,
+                                                               const std::vector<larcv::Image2D>& badchs,
+                                                               std::vector< dbscan::dbPoints >& combo_points,
+                                                               std::vector< std::vector< std::vector<int> > >& combo_cols,
+                                                               std::vector< larcv::Image2D >& matchedspacepts ) {
     // goal of this method is to search the images for pixels consistent with boundary crossings
     // (U,V,Y) combinations that meet at the edges of the detector are stored in class attributes matchalgo_loose, matchalgo_tight
     // for each row in the image, we send in information about which columns have charge above it
@@ -229,7 +231,7 @@ namespace tagger {
 
     const int ncrossings = (int)BoundaryMuonTaggerAlgo::kNumCrossings;
     const larcv::ImageMeta& meta = imgs.at(0).meta();
-    TRandom3 rand( time(NULL) );
+    //TRandom3 rand( time(NULL) );
     //TRandom3 rand( 12345 );        
 
     // we need the wire downsampling factor
@@ -372,10 +374,10 @@ namespace tagger {
               //}
             }
             // save (x,y) point for clustering
-            std::vector<double> pt_combo(2,0.0); // this is (z,y)
-            //pt_combo[0] = x;
+            std::vector<double> pt_combo(3,0.0); // this is (z,y,0). last dim necessary, but unused
+            pt_combo[0] = x;
             //pt_combo[1] = r + 0.1*float(idx_combo%10);
-            pt_combo[0] = x + 1.0e-6*(1.0+rand.Uniform()); // prevents exact sample point from messing up spatial search tree
+            //pt_combo[0] = x + 1.0e-6*(1.0+rand.Uniform()); // prevents exact sample point from messing up spatial search tree
 	    pt_combo[1] = r;
             combo_points[pt].emplace_back( std::move(pt_combo) );
             // save (u,v,y) column
@@ -418,7 +420,7 @@ namespace tagger {
     for (int pt=0; pt<ncrossings; pt++) {
 
       // We cluster the matched points
-      dbscan::DBSCANAlgo dbalgo;
+      dbscan::DBScan dbalgo;
       //std::cout << "  starting dbscan for boundary type: " << pt << ". number of points: " << combo_points[pt].size() << std::endl;
       if ( (int)combo_points[pt].size()<_config.boundary_cluster_minpixels.at(0)) {
         //for (int i=0; i<combo_points[pt].size(); i++) {
@@ -427,8 +429,12 @@ namespace tagger {
         //std::cout << "   not enough points to make a cluster: skipping clustering" << std::endl;
         continue;
       }
-      dbscan::dbscanOutput clout = dbalgo.scan( combo_points[pt], _config.boundary_cluster_minpixels.at(0), _config.boundary_cluster_radius.at(0), false, 0.0 );
+      //dbscan::dbscanOutput clout = dbalgo.scan( combo_points[pt], _config.boundary_cluster_minpixels.at(0), _config.boundary_cluster_radius.at(0), false, 0.0 );
       //ann::ANNAlgo::cleanup();
+      dbscan::dbClusters clout = dbalgo.makeCluster( _config.boundary_cluster_radius.at(0),
+                                                     _config.boundary_cluster_minpixels.at(0),
+                                                     5,
+                                                     combo_points[pt] );
 
       //std::cout << "  number of clusters: " << clout.clusters.size() << std::endl;
       // for each cluster we want to place an endpoint in image space
@@ -437,13 +443,13 @@ namespace tagger {
       //   2) each cluster will have an endpoint for each plane
       //   3) we should pick end points that sit on a cluster of charge in image-space that are similar
       //   4) 
-      for (size_t ic=0; ic<clout.clusters.size(); ic++) {
+      for (size_t ic=0; ic<clout.size()-1; ic++) {
         // loop over clusters in the real space points
         
-        if ( (int)clout.clusters.at(ic).size() >= _config.boundary_cluster_minpixels.at(0) ) {
+        if ( (int)clout.at(ic).size() >= _config.boundary_cluster_minpixels.at(0) ) {
           //std::cout << "Find the endpoints for cluster pt=" << pt << " id=" << ic << " size=" << clout.clusters.at(ic).size() << std::endl;
 
-          const dbscan::dbCluster& detspace_cluster = clout.clusters.at(ic);
+          const dbscan::dbCluster& detspace_cluster = clout.at(ic);
           BoundarySpacePoint sppt = DefineEndpointFromBoundaryCluster( (BoundaryMuonTaggerAlgo::Crossings_t)pt, detspace_cluster, imgs, badchs, 
 								       combo_points.at(pt), combo_cols.at(pt), matchedpixels );
           if (nplanes==(int)sppt.size()) {
@@ -455,6 +461,7 @@ namespace tagger {
     }//end of boundary point type
 
   }//end of clustering function
+
 
   BoundarySpacePoint BoundaryMuonTaggerAlgo::DefineEndpointFromBoundaryCluster( const BoundaryMuonTaggerAlgo::Crossings_t crossing_type, 
 										const dbscan::dbCluster& detspace_cluster, 
@@ -611,6 +618,7 @@ namespace tagger {
     
     return spacepoint;
   }//end of end point definition
+  /*
 
   void BoundaryMuonTaggerAlgo::GenerateEndPointMetaData( const std::vector< std::vector< BoundaryEndPt > >& endpts, const std::vector<larcv::Image2D>& img_v,
     const int rmax_window, const int rmin_window, const int col_window, 

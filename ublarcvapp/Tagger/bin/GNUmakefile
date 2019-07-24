@@ -6,7 +6,9 @@ INCLUDES += `larlite-config --includes` -I${LARLITE_USERDEVDIR} -I${LARLITE_USER
 INCLUDES += `ublarcvapp-config --includes`-I${UBLARCVAPP_INCDIR}/ublarcvapp/Tagger
 
 LDLIBS =
-LDLIBS += `ublarcvapp-config --libs` -lLArCVApp_UBImageMod -lLArCVApp_Tagger -lLArCVApp_LArliteHandler -lLArCVApp_UBWireTool
+LDLIBS += `ublarcvapp-config --libs`
+LDLIBS += -lLArCVApp_UBImageMod -lLArCVApp_Tagger -lLArCVApp_LArliteHandler -lLArCVApp_UBWireTool
+LDLIBS += -lLArCVApp_dbscan
 LDLIBS += `larcv-config --libs`  -lLArCVCoreCVUtil
 LDLIBS += `laropencv-config --libs`
 LDLIBS += `geo2d-config --libs`

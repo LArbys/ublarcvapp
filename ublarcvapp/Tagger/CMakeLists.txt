@@ -11,11 +11,11 @@ file(GLOB SOURCES "*.cxx")
 
 # library name
 set(LIBNAME LArCVApp_${MODULE_NAME})
-message("laropencv libs: ${LAROPENCV_LIBS}")
+#message("laropencv libs: ${LAROPENCV_LIBS}")
 
 # larlite includes
 set(LARLITE_INCLUDES $ENV{LARLITE_USERDEVDIR} $ENV{LARLITE_COREDIR} $ENV{LARLITE_USERDEVDIR}/BasicTool )
-message("larlite inc: ${LARLITE_INCLUDES}")
+#message("larlite inc: ${LARLITE_INCLUDES}")
 
 # larlite libs used
 #set(LARLITE_LIBS_USED SelectionTool_LEEPreCuts
@@ -27,7 +27,7 @@ set(LARCV_LIBS_USED LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil)
 set(UBLARCVAPP_LIBS_USED LArCVApp_ContourTools LArCVApp_UBImageMod)
 
 # includes
-include_directories(${LARCV_INCLUDE_DIR} $ENV{UBLARCVAPP_INCDIR} $ENV{LAROPENCV_BASEDIR} ${OpenCV_INCLUDE_DIRS} ${GEO2D_INC_DIR} ${LARLITE_INCLUDES} )
+include_directories(${LARCV_INCLUDE_DIR} $ENV{UBLARCVAPP_BASEDIR} $ENV{LAROPENCV_BASEDIR} ${OpenCV_INCLUDE_DIRS} ${GEO2D_INC_DIR} ${LARLITE_INCLUDES} )
 
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)

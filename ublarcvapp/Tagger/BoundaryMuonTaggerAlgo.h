@@ -10,6 +10,7 @@
 #include "larcv/core/DataFormat/Pixel2DCluster.h"
 //#include "dbscan/DBSCANAlgo.h"
 #include "ublarcvapp/UBWireTool/WireData.h"
+#include "ublarcvapp/dbscan/DBScan.h"
 
 // BMT
 #include "TaggerCROITypes.h"
@@ -65,17 +66,20 @@ namespace tagger {
     BoundaryMatchAlgo* matchalgo_tight;
     BoundaryMatchAlgo* matchalgo_loose;
     
-    /* void CollectCandidateBoundaryPixels( const std::vector<larcv::Image2D>& imgs, const std::vector<larcv::Image2D>& badchs, */
-    /*   std::vector< dbscan::dbPoints >& combo_points, std::vector< std::vector< std::vector<int> > >& combo_cols, */
-    /*   std::vector< larcv::Image2D >& matchedspacepts ); */
+    void CollectCandidateBoundaryPixels( const std::vector<larcv::Image2D>& imgs,
+                                         const std::vector<larcv::Image2D>& badchs,
+                                         std::vector< dbscan::dbPoints >& combo_points,
+                                         std::vector< std::vector< std::vector<int> > >& combo_cols,
+                                         std::vector< larcv::Image2D >& matchedspacepts );
 
-    /* void ClusterBoundaryHitsIntoEndpointCandidates( const std::vector<larcv::Image2D>& imgs, const std::vector<larcv::Image2D>& badchs,  */
-    /*   const std::vector< dbscan::dbPoints >& combo_points, const std::vector< std::vector< std::vector<int> > >& combo_cols,  */
-    /*   std::vector< BoundarySpacePoint >& end_points, std::vector< larcv::Image2D>& matchedpixels ); */
+    void ClusterBoundaryHitsIntoEndpointCandidates( const std::vector<larcv::Image2D>& imgs, const std::vector<larcv::Image2D>& badchs,
+      const std::vector< dbscan::dbPoints >& combo_points, const std::vector< std::vector< std::vector<int> > >& combo_cols,
+      std::vector< BoundarySpacePoint >& end_points, std::vector< larcv::Image2D>& matchedpixels );
 
-    /* BoundarySpacePoint DefineEndpointFromBoundaryCluster(  const BoundaryMuonTaggerAlgo::Crossings_t crossing_type, const dbscan::dbCluster& detspace_cluster,  */
-    /*   const std::vector<larcv::Image2D>& imgs, const std::vector<larcv::Image2D>& badchs,       */
-    /*   const dbscan::dbPoints& combo_points, const std::vector< std::vector<int> >& combo_cols, std::vector<larcv::Image2D>& matchedpixels );     */
+    BoundarySpacePoint DefineEndpointFromBoundaryCluster(  const BoundaryMuonTaggerAlgo::Crossings_t crossing_type,
+      const dbscan::dbCluster& detspace_cluster,
+      const std::vector<larcv::Image2D>& imgs, const std::vector<larcv::Image2D>& badchs,
+      const dbscan::dbPoints& combo_points, const std::vector< std::vector<int> >& combo_cols, std::vector<larcv::Image2D>& matchedpixels );
 
  
     /* void GenerateEndPointMetaData( const std::vector< std::vector< BoundaryEndPt > >& endpts, const std::vector<larcv::Image2D>& img_v, */

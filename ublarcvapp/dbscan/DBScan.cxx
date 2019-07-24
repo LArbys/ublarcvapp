@@ -5,17 +5,18 @@
 #include <cilantro/kd_tree.hpp>
 
 namespace ublarcvapp {
+namespace dbscan {
 
-
-  std::vector< dbscan::Cluster_t > DBScan::makeCluster( const float maxdist, const float minhits, const int maxkdneighbors,
-							const std::vector<std::vector<float> >& clust ) {
+  template <typename T>
+  std::vector< dbCluster > DBScan::makeCluster( const float maxdist, const float minhits, const int maxkdneighbors,
+                                                const std::vector<std::vector<T> >& points_xyz ) {
     
     // get points (maybe one day I figure out how to do this without copying
     std::vector<Eigen::Vector3f> _points;
-    _points.reserve( clust.size() );
+    _points.reserve( points_xyz.size() );
     std::map<int,int> indexmap; // 
-    for ( int iorig=0; iorig<(int)clust.size(); iorig++) {
-      const std::vector<float>& hit = clust[iorig];
+    for ( int iorig=0; iorig<(int)points_xyz.size(); iorig++) {
+      const std::vector<T>& hit = points_xyz[iorig];
       if (hit.size()!=3 ) {
         std::stringstream msg;
         msg << __FILE__  << "::" << __FUNCTION__ << ".cxx:" << __LINE__ << "::"
@@ -41,7 +42,7 @@ namespace ublarcvapp {
     enum { kNoise=-2, kUnlabeled=-1 };    
     int iidx = -1;
     std::vector<int> clusterlabel_v(npoints,kUnlabeled); // -2=noise, -1=unvisited
-    std::vector<dbscan::Cluster_t> dbscan_clust_v;
+    std::vector<dbCluster> dbscan_clust_v;
     
     // visit every point at least once
     for ( int ipt=0; ipt<npoints; ipt++ ) {
@@ -68,7 +69,7 @@ namespace ublarcvapp {
       // dense enough, get a new cluster label and define new cluster
       int clustlabel = dbscan_clust_v.size();
       clusterlabel_v[ipt] = clustlabel; // assign the new id to itself
-      dbscan::Cluster_t cluster;
+      dbCluster cluster;
       cluster.clear();
       cluster.reserve(100);
       // add current point
@@ -133,7 +134,7 @@ namespace ublarcvapp {
     }//end of outer point loop
 
     // collect noise points
-    dbscan::Cluster_t noise;
+    dbCluster noise;
     noise.clear();
     for ( int ipt=0; ipt<npoints; ipt++ ) {
       if ( clusterlabel_v[ipt]==kNoise )
@@ -144,7 +145,7 @@ namespace ublarcvapp {
     dbscan_clust_v.emplace_back( std::move(noise) );
 
     // now translate cluster back to original indexes (if needed)
-    if ( _points.size()!=clust.size() ){
+    if ( _points.size()!=points_xyz.size() ){
       for ( auto& dbscanclust : dbscan_clust_v ) {
 	for (int ii=0; ii<(int)dbscanclust.size(); ii++) {
 	  // translation
@@ -164,7 +165,7 @@ namespace ublarcvapp {
     if ( ntotpts!=npoints ) {
       std::stringstream ss;
       ss << "[larflow::DBSCAN::makeCluster][ERROR] number of (good) points provided does not equal the number clustered!"
-	 << " input=" << clust.size()
+	 << " input=" << points_xyz.size()
 	 << " ngood=" << npoints
 	 << " labeled=" << ntotpts
 	 << std::endl;
@@ -173,5 +174,22 @@ namespace ublarcvapp {
     
     return dbscan_clust_v;
   }
+  std::vector< dbCluster > DBScan::makeCluster3f( const float maxdist, const float minhits, const int maxkdneighbors,
+                                                  const std::vector<std::vector<float> >& pointsxyz ) {
+    return makeCluster(maxdist,minhits,maxkdneighbors,pointsxyz);
+  }
   
+  std::vector< dbCluster > DBScan::makeCluster3d( const float maxdist, const float minhits, const int maxkdneighbors,
+                                                  const std::vector<std::vector<double> >& pointsxyz ) {
+    return makeCluster(maxdist,minhits,maxkdneighbors,pointsxyz);
+  }
+  
+  
+
+  // Implementations
+  template std::vector< dbCluster > DBScan::makeCluster( const float maxdist, const float minhits, const int maxkdneighbors,
+                                                         const std::vector<std::vector<float> >& pointsxyz );
+  template std::vector< dbCluster > DBScan::makeCluster( const float maxdist, const float minhits, const int maxkdneighbors,
+                                                         const std::vector<std::vector<double> >& pointsxyz );
+}  
 }

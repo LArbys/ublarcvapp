@@ -18,11 +18,15 @@ namespace ublarcvapp {
       _ApplyPMTPrecuts(false)
     {
 
+      m_time_tracker.resize(kNumStages,0);
+      
       // setup larlite file manager
       _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );
       
       if (_cfg_path!="")
         configure(_cfg_path);
+
+
     }
 
     TaggerProcessor::~TaggerProcessor() {
@@ -48,7 +52,6 @@ namespace ublarcvapp {
      */
     void TaggerProcessor::configure(const std::string cfg_path) {
       m_config = TaggerCROIAlgoConfig::makeConfigFromFile( cfg_path );
-      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );
       configure( m_config.main_cfg );
     }
 
@@ -82,7 +85,6 @@ namespace ublarcvapp {
 
       // prepare inputs
       InputPayload input;
-      input.clear();
       loadInput( io, *_larlite_io, input );
 
       // precuts
@@ -394,6 +396,8 @@ namespace ublarcvapp {
       std::clock_t timer_total;
       std::clock_t timer;
 
+      BMTCV m_bmtcv_algo;
+      
       // (0) make contours
       timer = std::clock();
       m_bmtcv_algo.analyzeImages( input.img_v, input.badch_v, 10.0, 2 );

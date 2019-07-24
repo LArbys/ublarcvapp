@@ -1,5 +1,7 @@
 
 
+add_subdirectory(dbscan)
+
 if (HAS_LARLITE)
   add_subdirectory(LArliteHandler)
   add_subdirectory(UBImageMod)
@@ -16,5 +18,5 @@ if (LARCV_USE_GEO2D)
 endif()  
 
 add_subdirectory(Stitchers)
-add_subdirectory(dbscan)
+
 

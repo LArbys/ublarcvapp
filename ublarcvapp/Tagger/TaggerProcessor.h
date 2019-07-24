@@ -64,7 +64,7 @@ namespace ublarcvapp {
 
       
       // sub-algorithms
-      BMTCV m_bmtcv_algo;
+      //BMTCV m_bmtcv_algo;
       
     };
     

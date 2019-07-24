@@ -5,6 +5,7 @@ from ROOT import std
 
 from ublarcvapp import ublarcvapp
 
+
 """ Test DBScan implementation """
 
 # Create gaussians
@@ -37,10 +38,10 @@ for npts,pars,color in zip(npts_per_gaus,gaus_clusters,color_v):
 print "generated {} points".format( data_v.size() )
 
 # algo
-dbscan = ublarcvapp.DBScan()
+dbscan = ublarcvapp.dbscan.DBScan()
 print dbscan
 
-cluster_v = dbscan.makeCluster( 0.2, 3, 5, data_v )
+cluster_v = dbscan.makeCluster3f( 0.2, 3, 5, data_v )
 
 reco_graphs = []
 for iclust in xrange(cluster_v.size()):
