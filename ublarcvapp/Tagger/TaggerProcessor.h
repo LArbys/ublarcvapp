@@ -21,7 +21,8 @@ namespace ublarcvapp {
       virtual ~TaggerProcessor();
       
       // required implementations of pure virtual functions from larcv::ProcessBase
-      virtual void configure(const larcv::PSet&);
+      virtual void configure(const larcv::PSet&); //< configure from a PSet object
+      virtual void configure(const std::string);  //< configure from a file
       virtual bool process(larcv::IOManager& io);
       virtual void initialize();      
       virtual void finalize();
@@ -39,7 +40,7 @@ namespace ublarcvapp {
       
       
       // config parameters
-      TaggerCROIAlgoConfig m_config;
+      TaggerCROIAlgoConfig m_config; //< holds configuration parameters
       
       
     };

@@ -28,6 +28,13 @@ namespace ublarcvapp {
               << "(" << rse_larcv[0] << "," << rse_larcv[1] << "," << rse_larcv[2] << ")"
               << std::endl;
 
+    if ( rse_larcv[0]==-1 || rse_larcv[1]==-1 || rse_larcv[2]==-1 ) {
+      LARCV_CRITICAL() << "Syncing to invalid (run,subrun,event)="
+                       << "(" << rse_larcv[0] << "," << rse_larcv[1] << "," << rse_larcv[2] << ")"
+                       << std::endl;
+      throw std::runtime_error("syncing to invalid (run,subrun,event)");
+    }
+
     // if current_entry<0, we haven't read an entry yet. read first one
     if ( m_current_entry<0 ) {
       LARCV_DEBUG() << " load first entry" << std::endl;

@@ -15,22 +15,36 @@ namespace ublarcvapp {
       _cfg_path(cfg_path),
       _larlite_io(nullptr)
     {
-      
+      if (_cfg_path!="")
+        configure(_cfg_path);
     }
 
     TaggerProcessor::~TaggerProcessor() {
       if ( _larlite_io ) {
-        _larlite_io->close();
         delete _larlite_io;
       }
     }
     
     void TaggerProcessor::configure(const larcv::PSet&) {
-           
+      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );      
+    }
+
+    /**
+     * configure class using a config file
+     *
+     * affect is to modify the class member, m_config,
+     * which holds the configuration parameters.
+     *
+     * @param[in] cfg_path path to configuration file
+     *
+     */
+    void TaggerProcessor::configure(const std::string cfg_path) {
+      m_config = TaggerCROIAlgoConfig::makeConfigFromFile( cfg_path );
+      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );
     }
 
     void TaggerProcessor::initialize() {
-           
+      _larlite_io->open();
     }
     
     void TaggerProcessor::add_larlite_input( std::string llinput ) {
@@ -43,23 +57,33 @@ namespace ublarcvapp {
     
     bool TaggerProcessor::process(larcv::IOManager& io) {
 
+      // we have to get a piece of data first, before the run, subrun, event
+      // in the iomanager gets updated. we need it to sync with the larlite file
+
+      auto event_imgs    = (larcv::EventImage2D*)io.get_data( larcv::kProductImage2D, m_config.larcv_image_producer );
+      
       // sync larlite
       if ( !_larlite_io ) {
         LARCV_CRITICAL() << "Processing entry before creating manager. Must run configure first." << std::endl;
         throw std::runtime_error( "adding larlite file before creating manager" );
       }
+      //_larlite_io->set_verbosity( larcv::msg::kDEBUG );
+      _larlite_io->set_verbosity( larcv::msg::kINFO );
       _larlite_io->syncEntry( io );
 
       // prepare inputs
       InputPayload input;
       input.clear();
-
       loadInput( io, *_larlite_io, input );
+
+      // precuts
+      
       
     }
     
     void TaggerProcessor::finalize() {
-      
+      if (_larlite_io)
+        _larlite_io->close();
     }
 
     /**
@@ -69,12 +93,6 @@ namespace ublarcvapp {
     void TaggerProcessor::loadInput( larcv::IOManager& io_larcv,
                                      ublarcvapp::LArliteManager& io_larlite,
                                      InputPayload& input ) {
-
-      // Get run, subrun, event, entry
-      input.run    = io_larcv.event_id().run();
-      input.subrun = io_larcv.event_id().subrun();
-      input.event  = io_larcv.event_id().event();      
-      input.entry  = io_larcv.current_entry();
 
       // get images (from larcv)
       larcv::EventImage2D* event_imgs = NULL;
@@ -100,6 +118,14 @@ namespace ublarcvapp {
       input.img_v.clear();
       for ( auto const& img : event_imgs->Image2DArray() )
         input.img_v.push_back( img );
+
+      // Get run, subrun, event, entry
+      // quirk of larcv iomanager that this is not filled until first data product loaded
+      input.run    = io_larcv.event_id().run();
+      input.subrun = io_larcv.event_id().subrun();
+      input.event  = io_larcv.event_id().event();      
+      input.entry  = io_larcv.current_entry();
+      
 
       // ------------------------------------------------------------------------------------------//
       // MODIFY IMAGES
