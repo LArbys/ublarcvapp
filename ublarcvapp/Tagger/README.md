@@ -12,16 +12,16 @@ The cosmic tagger consists of the following components:
 3) find end points
 4) thrumu tagger connecting cadidate endpoints
 
-# Code notes
-
-The class deploying the Tagger algorithms is `TaggerProcessor`.
-It inherits from `larcv::Process`, allowing it to be folded into
-a `larcv::ProcessDriver`.
 
 # Running the Tagger
 
 An executable which runs the `TaggerProcessor` class can be found
 at `bin/run_tagger.cxx`.
+
+The program creates an instance of the class, `TaggerProcessor`,
+which deploys the various collection of Tagger algorithms.
+It inherits from `larcv::Process`, allowing it to be folded into
+a `larcv::ProcessDriver`.
 
 ## Inputs
 
@@ -39,3 +39,5 @@ The `larlite` data products needed are
 ## Inspecting the outputs for a given event
 
 To inspect ouputs of each stage use the following notebook ...
+
+## 

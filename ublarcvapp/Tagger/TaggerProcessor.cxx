@@ -10,6 +10,7 @@
 #include "BoundaryMuonTaggerAlgo.h"
 #include "FlashMuonTaggerAlgo.h"
 #include "CACAEndPtFilter.h"
+#include "ThruMuTracker.h"
 
 #include "TH2D.h"
 #include "TStyle.h"
@@ -571,8 +572,8 @@ namespace ublarcvapp {
       return;
     }//end of runBoundaryTagger
 
-    /*
-    void TaggerProcessor::runThrumu( InputPayload& input, ThruMuPayload& thrumu ) {
+
+    void TaggerProcessor::runThrumu( InputPayload& input, ThruMuPayload& output ) {
 
       LARCV_INFO() << "== Run ThruMu Tracker ===============================" << std::endl;
       
@@ -581,7 +582,7 @@ namespace ublarcvapp {
 
       // thrumu tracker
       ThruMuTracker thrumu_tracker( m_config.thrumu_tracker_cfg );
-
+      
       m_time_tracker[kThruMuConfig] = ( std::clock()-timer )/(double)CLOCKS_PER_SEC;
 
       // RUN THE THRUMU ALGOS
@@ -607,19 +608,19 @@ namespace ublarcvapp {
 
       // gather endpoints from space points
       for (int isp=0; isp<(int)output.side_filtered_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.side_filtered_v.at( isp ));
+        const BoundarySpacePoint* pts = &(output.side_filtered_v.at( isp ));
         all_endpoints.push_back( pts );
       }
       for (int isp=0; isp<(int)output.anode_filtered_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.anode_filtered_v.at(isp));
+        const BoundarySpacePoint* pts = &(output.anode_filtered_v.at(isp));
         all_endpoints.push_back( pts );
       }
       for (int isp=0; isp<(int)output.cathode_filtered_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.cathode_filtered_v.at(isp));
+        const BoundarySpacePoint* pts = &(output.cathode_filtered_v.at(isp));
         all_endpoints.push_back( pts );
       }
       for (int isp=0; isp<(int)output.imgends_filtered_v.size(); isp++) {
-        const larlitecv::BoundarySpacePoint* pts = &(output.imgends_filtered_v.at(isp));
+        const BoundarySpacePoint* pts = &(output.imgends_filtered_v.at(isp));
         all_endpoints.push_back( pts );
       }
       LARCV_INFO() << "number of endpoints to search for thrumu: " << all_endpoints.size() << std::endl;
@@ -631,7 +632,7 @@ namespace ublarcvapp {
         output.trackcluster3d_v.clear();
         output.tagged_v.clear();
         
-        thrumu_tracker.makeTrackClusters3D( m_config.croi_selection_cfg.genflashmatch_cfg, input.img_v, input.gapch_v,
+        thrumu_tracker.makeTrackClusters3D( input.img_v, input.gapch_v,
                                             all_endpoints, output.trackcluster3d_v, 
                                             output.tagged_v, used_endpoints, input.opflashes_v ); 
         
@@ -669,10 +670,10 @@ namespace ublarcvapp {
         output.pixelcluster_v.emplace_back( std::move(cluster_v) );
       }
       
-      LARCV_INOF() << "== End of ThruMu Tracker ===============================" << std::endl;
+      LARCV_INFO() << "== End of ThruMu Tracker ===============================" << std::endl;
 
     }
-    */
+
     
     void TaggerProcessor::saveBoundaryEndpointImage( InputPayload& input, ThruMuPayload& thrumu ) {
       gStyle->SetOptStat(0);

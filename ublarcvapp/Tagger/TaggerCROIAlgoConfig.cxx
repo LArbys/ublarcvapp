@@ -47,7 +47,7 @@ namespace tagger {
 
     cfg.sidetagger_cfg          = MakeBoundaryMuonTaggerAlgoConfigFromPSet( sidetagger_pset );
     cfg.flashtagger_cfg         = MakeFlashMuonTaggerAlgoConfigFromPSet(    flashtagger_pset );
-    // cfg.thrumu_tracker_cfg      = larlitecv::ThruMuTrackerConfig::MakeFromPSet( thrumu_tracker_pset );
+    cfg.thrumu_tracker_cfg      = ThruMuTrackerConfig::MakeFromPSet( thrumu_tracker_pset );
     // cfg.stopmu_filterpts_cfg    = larlitecv::MakeStopMuFilterSpacePointsConfigFromPSet( stopmu_filter_pset );
     // cfg.stopmu_cluster_cfg      = larlitecv::makeStopMuClusterConfigFromPSet( stopmu_cluster_pset );
     // cfg.stopmu_foxtrot_cfg      = larlitecv::StopMuFoxTrotConfig::makeFromPSet( stopmu_foxtrot_pset );

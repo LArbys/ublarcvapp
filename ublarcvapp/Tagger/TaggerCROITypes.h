@@ -105,7 +105,7 @@ namespace ublarcvapp {
       std::vector< BoundarySpacePoint > imgends_filtered_v;
       
       // track objects
-      //std::vector< BMTrackCluster3D >      trackcluster3d_v;
+      std::vector< BMTrackCluster3D >      trackcluster3d_v;
       std::vector< larlite::track >        track_v;
       std::vector< std::vector<larcv::Pixel2DCluster> > pixelcluster_v;
 
@@ -138,7 +138,7 @@ namespace ublarcvapp {
         cathode_filtered_v.clear();
         imgends_filtered_v.clear();
         
-        //trackcluster3d_v.clear();
+        trackcluster3d_v.clear();
         track_v.clear();
         pixelcluster_v.clear();
         used_spacepoint_v.clear();

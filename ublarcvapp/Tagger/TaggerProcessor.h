@@ -47,7 +47,6 @@ namespace ublarcvapp {
       void runBoundaryTagger( const InputPayload& input, ThruMuPayload& output );
       void runThrumu( InputPayload& input, ThruMuPayload& thrumu );
 
-
       // visualization tools
       void saveBoundaryEndpointImage( InputPayload& input, ThruMuPayload& thrumu );
       
