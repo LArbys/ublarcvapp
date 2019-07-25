@@ -16,7 +16,7 @@ int main( int nargs, char** argv ) {
   std::string supera = argv[1];
   std::string opreco = argv[2];
 
-  larcv::IOManager io(larcv::IOManager::kBOTH,"tagger_larcv_input");
+  larcv::IOManager io(larcv::IOManager::kBOTH,"tagger_larcv_input",larcv::IOManager::kTickBackward);
   io.set_out_file( "output_tagger.root" );
   io.add_in_file( supera );
   io.initialize();

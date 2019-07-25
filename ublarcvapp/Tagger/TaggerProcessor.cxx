@@ -11,6 +11,11 @@
 #include "FlashMuonTaggerAlgo.h"
 #include "CACAEndPtFilter.h"
 
+#include "TH2D.h"
+#include "TStyle.h"
+#include "TLine.h"
+#include "larcv/core/ROOTUtil/ROOTUtils.h"
+
 namespace ublarcvapp {
   namespace tagger {
     
@@ -19,7 +24,8 @@ namespace ublarcvapp {
       _cfg_path(cfg_path),
       _larlite_io(nullptr),
       _RunPMTPrecuts(false),
-      _ApplyPMTPrecuts(false)
+      _ApplyPMTPrecuts(false),
+      _FilterBoundaryPoints(true)
     {
 
       m_time_tracker.resize(kNumStages,0);
@@ -99,6 +105,9 @@ namespace ublarcvapp {
       
       // boudary end point finder
       runBoundaryTagger( input, thrumu );
+
+      // visualize
+      saveBoundaryEndpointImage( input, thrumu );
       
     }
     
@@ -475,72 +484,82 @@ namespace ublarcvapp {
       //larlitecv::RadialEndpointFilter radialfilter;  // remove end points that cannot form a 3d segment nearby [deprecated]
       //larlitecv::PushBoundarySpacePoint endptpusher; // remove endpt [deprecated]
       //larlitecv::EndPointFilter endptfilter; // removes duplicates [deprecated]
-      timer = std::clock();
-      CACAEndPtFilter cacaalgo;
-      cacaalgo.setVerbosity(0);
 
-      // we collect pointers to all the end points (make a copy for now)
-      std::vector< BoundarySpacePoint > all_endpoints;
+      if ( _FilterBoundaryPoints ) {
+        timer = std::clock();
+        CACAEndPtFilter cacaalgo;
+        cacaalgo.setVerbosity(0);
 
-      // gather endpoints from space points
-      for (int isp=0; isp<(int)output.side_spacepoint_v.size(); isp++) {
-        const BoundarySpacePoint* pts = &(output.side_spacepoint_v.at( isp ));
-        all_endpoints.push_back( *pts );
-      }
-      for (int isp=0; isp<(int)output.anode_spacepoint_v.size(); isp++) {
-        const BoundarySpacePoint* pts = &(output.anode_spacepoint_v.at(isp));
-        all_endpoints.push_back( *pts );
-      }
-      for (int isp=0; isp<(int)output.cathode_spacepoint_v.size(); isp++) {
-        const BoundarySpacePoint* pts = &(output.cathode_spacepoint_v.at(isp));
-        all_endpoints.push_back( *pts );
-      }
-      for (int isp=0; isp<(int)output.imgends_spacepoint_v.size(); isp++) {
-        const BoundarySpacePoint* pts = &(output.imgends_spacepoint_v.at(isp));
-        all_endpoints.push_back( *pts );
-      }
-      if ( m_config.verbosity>0 )
-        std::cout << "number of endpoints pre-filters: " << all_endpoints.size() << std::endl;
-
-      std::vector< const std::vector<BoundarySpacePoint>* > sp_v;
-      sp_v.push_back( &all_endpoints );
-      std::vector< std::vector<int> > caca_results;    
-      cacaalgo.evaluateEndPoints( sp_v, input.opflashes_v, input.img_v, input.badch_v, m_bmtcv_algo.m_plane_atomicmeta_v, 150.0, caca_results );
-      
-      // prepare the boundary points that pass
-      std::vector<BoundarySpacePoint> cacapassing_moved_v = cacaalgo.regenerateFitleredBoundaryPoints( input.img_v );
-      
-      // clean up
-      all_endpoints.clear();
-      sp_v.clear();
-      m_time_tracker[kThruMuFilter] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
-    
-
-      // collect output
-      // remove the filtered end points
-      for ( size_t idx=0; idx<cacapassing_moved_v.size(); idx++ ) {
-        BoundarySpacePoint& sp = cacapassing_moved_v[idx];
+        // we collect pointers to all the end points (make a copy for now)
+        std::vector< BoundarySpacePoint > all_endpoints;
         
-        if (sp.type()<=kDownstream ) {
-          output.side_filtered_v.emplace_back( std::move(sp) );
+        // gather endpoints from space points
+        for (int isp=0; isp<(int)output.side_spacepoint_v.size(); isp++) {
+          const BoundarySpacePoint* pts = &(output.side_spacepoint_v.at( isp ));
+          all_endpoints.push_back( *pts );
         }
-        else if (sp.type()==kAnode) {
-          output.anode_filtered_v.emplace_back( std::move(sp) );
+        for (int isp=0; isp<(int)output.anode_spacepoint_v.size(); isp++) {
+          const BoundarySpacePoint* pts = &(output.anode_spacepoint_v.at(isp));
+          all_endpoints.push_back( *pts );
         }
-        else if (sp.type()==kCathode) {
-          output.cathode_filtered_v.emplace_back( std::move(sp) );
+        for (int isp=0; isp<(int)output.cathode_spacepoint_v.size(); isp++) {
+          const BoundarySpacePoint* pts = &(output.cathode_spacepoint_v.at(isp));
+          all_endpoints.push_back( *pts );
         }
-        else if (sp.type()==kImageEnd) {
-          output.imgends_filtered_v.emplace_back( std::move(sp) );
+        for (int isp=0; isp<(int)output.imgends_spacepoint_v.size(); isp++) {
+          const BoundarySpacePoint* pts = &(output.imgends_spacepoint_v.at(isp));
+          all_endpoints.push_back( *pts );
         }
-        else {
-          std::stringstream ss;
-          ss << __FILE__ << ":" << __LINE__ << " unrecognized boundary type" << std::endl;
-          throw std::runtime_error(ss.str());
+        if ( m_config.verbosity>0 )
+          std::cout << "number of endpoints pre-filters: " << all_endpoints.size() << std::endl;
+
+        std::vector< const std::vector<BoundarySpacePoint>* > sp_v;
+        sp_v.push_back( &all_endpoints );
+        std::vector< std::vector<int> > caca_results;    
+        cacaalgo.evaluateEndPoints( sp_v, input.opflashes_v, input.img_v, input.badch_v, m_bmtcv_algo.m_plane_atomicmeta_v, 150.0, caca_results );
+      
+        // prepare the boundary points that pass
+        std::vector<BoundarySpacePoint> cacapassing_moved_v = cacaalgo.regenerateFitleredBoundaryPoints( input.img_v );
+      
+        // clean up
+        all_endpoints.clear();
+        sp_v.clear();
+        m_time_tracker[kThruMuFilter] += double(std::clock()-timer)/(double)CLOCKS_PER_SEC;
+    
+        
+        // collect output
+        // remove the filtered end points
+        for ( size_t idx=0; idx<cacapassing_moved_v.size(); idx++ ) {
+          BoundarySpacePoint& sp = cacapassing_moved_v[idx];
+          
+          if (sp.type()<=kDownstream ) {
+            output.side_filtered_v.emplace_back( std::move(sp) );
+          }
+          else if (sp.type()==kAnode) {
+            output.anode_filtered_v.emplace_back( std::move(sp) );
+          }
+          else if (sp.type()==kCathode) {
+            output.cathode_filtered_v.emplace_back( std::move(sp) );
+          }
+          else if (sp.type()==kImageEnd) {
+            output.imgends_filtered_v.emplace_back( std::move(sp) );
+          }
+          else {
+            std::stringstream ss;
+            ss << __FILE__ << ":" << __LINE__ << " unrecognized boundary type" << std::endl;
+            throw std::runtime_error(ss.str());
+          }
         }
       }
+      else {
+        // just copy over, if not filtering
+        output.side_filtered_v    = output.side_spacepoint_v;
+        output.anode_filtered_v   = output.anode_spacepoint_v;
+        output.cathode_filtered_v = output.cathode_spacepoint_v;
+        output.imgends_filtered_v = output.imgends_spacepoint_v;
+      }
 
-      LARCV_INFO() << " Filtered Side Tagger End Points: " << cacapassing_moved_v.size() << std::endl;
+      LARCV_INFO() << " Filtered Side Tagger End Points -----" << std::endl;      
       LARCV_INFO() << "   Side: "        << output.side_filtered_v.size() << std::endl;
       LARCV_INFO() << "   Anode: "       << output.anode_filtered_v.size() << std::endl;
       LARCV_INFO() << "   Cathode: "     << output.cathode_filtered_v.size() << std::endl;
@@ -552,5 +571,184 @@ namespace ublarcvapp {
       return;
     }//end of runBoundaryTagger
 
-  }
-}
+    /*
+    void TaggerProcessor::runThrumu( InputPayload& input, ThruMuPayload& thrumu ) {
+
+      LARCV_INFO() << "== Run ThruMu Tracker ===============================" << std::endl;
+      
+      // configure different stages of the Thrumu Tagger
+      std::clock_t timer = std::clock();
+
+      // thrumu tracker
+      ThruMuTracker thrumu_tracker( m_config.thrumu_tracker_cfg );
+
+      m_time_tracker[kThruMuConfig] = ( std::clock()-timer )/(double)CLOCKS_PER_SEC;
+
+      // RUN THE THRUMU ALGOS
+
+      // run side tagger
+      timer = std::clock();
+
+      // we collect pointers to all the end points
+      std::vector< const BoundarySpacePoint* > all_endpoints;
+
+      // Collect the indices for the flash that determines each of the endpoints and
+      // the index for the producer that makes each of the endpoints as well.
+      // This is a precaution to ensure that we are collecting this information properly.
+      std::vector< int > all_endpoints_flash_idx_v;
+      all_endpoints_flash_idx_v.clear();
+
+      std::vector< int > all_endpoints_boundary_type_idx_v;
+      all_endpoints_boundary_type_idx_v.clear();
+
+      // When filling the 'all_endpoints_flash_idx_v' and 'all_endpoints_boundary_type_idx_v',
+      // the correct flash indices have already been matched to the correct endpoint.
+      // The important thing is that these two vectors are filled at the same point as their corresponding endpoint in 'all_endpoints'.
+
+      // gather endpoints from space points
+      for (int isp=0; isp<(int)output.side_filtered_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.side_filtered_v.at( isp ));
+        all_endpoints.push_back( pts );
+      }
+      for (int isp=0; isp<(int)output.anode_filtered_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.anode_filtered_v.at(isp));
+        all_endpoints.push_back( pts );
+      }
+      for (int isp=0; isp<(int)output.cathode_filtered_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.cathode_filtered_v.at(isp));
+        all_endpoints.push_back( pts );
+      }
+      for (int isp=0; isp<(int)output.imgends_filtered_v.size(); isp++) {
+        const larlitecv::BoundarySpacePoint* pts = &(output.imgends_filtered_v.at(isp));
+        all_endpoints.push_back( pts );
+      }
+      LARCV_INFO() << "number of endpoints to search for thrumu: " << all_endpoints.size() << std::endl;
+
+      // make track clusters
+      std::vector<int> used_endpoints( all_endpoints.size(), 0 );
+      if ( m_config.run_thrumu_tracker ) {
+        timer = std::clock();
+        output.trackcluster3d_v.clear();
+        output.tagged_v.clear();
+        
+        thrumu_tracker.makeTrackClusters3D( m_config.croi_selection_cfg.genflashmatch_cfg, input.img_v, input.gapch_v,
+                                            all_endpoints, output.trackcluster3d_v, 
+                                            output.tagged_v, used_endpoints, input.opflashes_v ); 
+        
+        m_time_tracker[kThruMuTracker]  +=  (std::clock()-timer)/(double)CLOCKS_PER_SEC;
+        if ( m_config.verbosity>0 )
+          std::cout << "thrumu tracker search " << all_endpoints.size() << " end points in " << m_time_tracker[kThruMuTracker] << " sec" << std::endl;
+      }
+      else {
+        if ( m_config.verbosity>0 )
+          std::cout << "config tells us to skip thrumu track." << std::endl;
+      }
+    
+      // collect unused endpoints
+      output.used_spacepoint_v.clear();
+      output.unused_spacepoint_v.clear();
+      for ( size_t isp=0; isp<all_endpoints.size(); isp++ ) {
+        if ( used_endpoints.at(isp)==1 )
+          output.used_spacepoint_v.push_back( *(all_endpoints.at(isp)) );
+        else {
+          const BoundarySpacePoint& sp = *(all_endpoints.at(isp));
+          if ( m_config.verbosity>1 )
+            std::cout << "unused spacepoint for StopMu: (" << sp.pos()[0] << "," << sp.pos()[1] << "," << sp.pos()[2] << ")" << std::endl;
+          output.unused_spacepoint_v.push_back( *(all_endpoints.at(isp)) );
+        }
+      }
+      
+      // copy track and pixels into separate containers.
+      output.track_v.clear();
+      output.pixelcluster_v.clear();
+      for ( auto const& bmtrack : output.trackcluster3d_v ) {
+        output.track_v.push_back( bmtrack.makeTrack() );
+        std::vector< larcv::Pixel2DCluster > cluster_v;
+        for ( auto const& track2d : bmtrack.plane_pixels )
+          cluster_v.push_back( track2d );
+        output.pixelcluster_v.emplace_back( std::move(cluster_v) );
+      }
+      
+      LARCV_INOF() << "== End of ThruMu Tracker ===============================" << std::endl;
+
+    }
+    */
+    
+    void TaggerProcessor::saveBoundaryEndpointImage( InputPayload& input, ThruMuPayload& thrumu ) {
+      gStyle->SetOptStat(0);
+      for ( size_t p=0; p<3; p++ ) {
+
+        TCanvas c("c","c",1200,600);
+
+        char histname[20];
+        sprintf( histname, "hadc_plane%d", (int)p );
+        TH2D hadc = larcv::as_th2d( input.img_v.at(p), histname );
+        hadc.Draw("colz");
+        hadc.GetZaxis()->SetRangeUser(10,100);
+
+        std::vector<TGraph*> g_v;
+        std::vector< const std::vector<BoundarySpacePoint>* > sp_vv
+          = { &thrumu.side_filtered_v,
+              &thrumu.anode_filtered_v,
+              &thrumu.cathode_filtered_v,
+              &thrumu.imgends_filtered_v };
+        int marker_v[4] = { 24, 25, 26, 27 };
+
+        size_t pt_t = 0;
+        for ( auto const& p_sp_v : sp_vv ) {
+          
+          TGraph* g = new TGraph( p_sp_v->size() );
+          g->SetMarkerStyle( marker_v[pt_t] );
+          for ( size_t ipt=0; ipt<p_sp_v->size(); ipt++ ) {
+            auto const& sp = p_sp_v->at(ipt);
+            int tick = sp.tick( input.img_v.at(p).meta() );
+            std::vector<int> wires = sp.wires( input.img_v.at(p).meta() );
+            g->SetPoint( ipt, wires[p], tick );
+          }
+          g_v.push_back( g );
+          pt_t++;
+        }
+
+        // draw lines for flashes
+        std::vector< TLine* > line_cathode_v;
+        std::vector< TLine* > line_anode_v;        
+        for ( auto const& p_opdata : input.opflashes_v ) {
+
+          for ( auto const& opflash : *p_opdata ) {
+            int tick = 3200 + opflash.Time()*2;
+            TLine* lanode  = new TLine( 0, tick, 3455, tick );
+            line_anode_v.push_back( lanode );
+            TLine* lcathode  = new TLine( 0, tick+255.0/0.114*2, 3455, tick+255.0/0.114*2 );
+            line_cathode_v.push_back( lcathode );
+          }
+
+        }
+
+        for ( auto& p_line : line_anode_v ) {
+          p_line->SetLineColor(kMagenta);
+          p_line->Draw("L");
+        }
+        for ( auto& p_line : line_cathode_v ) {
+          p_line->SetLineColor(kCyan);
+          p_line->Draw("L");
+        }
+        for ( auto& p_g : g_v ) p_g->Draw("P");   
+        
+        c.Draw();
+        c.Update();
+        
+        char canvname[100];
+        sprintf( canvname, "bmt_plane%d.pdf", (int)p );
+        c.SaveAs( canvname );
+        c.Close();
+
+        for ( auto& p_g : g_v )
+          delete p_g;
+      }
+      
+    }//end of saveboundary image
+
+    
+    
+  }//end of tagger namespace
+}// end of ublarcvapp namespace

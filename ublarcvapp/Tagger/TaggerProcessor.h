@@ -45,12 +45,17 @@ namespace ublarcvapp {
                       InputPayload& input );
       void runPMTPrecuts( larlite::storage_manager* llio );
       void runBoundaryTagger( const InputPayload& input, ThruMuPayload& output );
-      
+      void runThrumu( InputPayload& input, ThruMuPayload& thrumu );
+
+
+      // visualization tools
+      void saveBoundaryEndpointImage( InputPayload& input, ThruMuPayload& thrumu );
       
       // config parameters
       TaggerCROIAlgoConfig m_config; //< holds configuration parameters
       bool _RunPMTPrecuts;
       bool _ApplyPMTPrecuts;
+      bool _FilterBoundaryPoints;
 
       // timing monitor
       std::vector<float> m_time_tracker;
