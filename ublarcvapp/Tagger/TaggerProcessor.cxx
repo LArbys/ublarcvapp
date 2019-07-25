@@ -3,6 +3,7 @@
 #include "TaggerCROITypes.h"
 
 #include "larcv/core/DataFormat/EventImage2D.h"
+#include "larcv/core/DataFormat/EventPixel2D.h"
 #include "larcv/core/DataFormat/EventChStatus.h"
 
 #include "ublarcvapp/UBImageMod/EmptyChannelAlgo.h"
@@ -11,6 +12,7 @@
 #include "FlashMuonTaggerAlgo.h"
 #include "CACAEndPtFilter.h"
 #include "ThruMuTracker.h"
+#include "Pixel2SpacePoint.h"
 
 #include "TH2D.h"
 #include "TStyle.h"
@@ -26,7 +28,9 @@ namespace ublarcvapp {
       _larlite_io(nullptr),
       _RunPMTPrecuts(false),
       _ApplyPMTPrecuts(false),
-      _FilterBoundaryPoints(true)
+      _FilterBoundaryPoints(true),
+      _RunThruMuTracker(true),
+      _RunBoundaryTagger(true)
     {
 
       m_time_tracker.resize(kNumStages,0);
@@ -48,8 +52,10 @@ namespace ublarcvapp {
     
     void TaggerProcessor::configure(const larcv::PSet& pset) {
       set_verbosity( (larcv::msg::Level_t) pset.get<int>("Verbosity") );
-      _RunPMTPrecuts   = pset.get<bool>("RunPreCuts");   // run the precuts
-      _ApplyPMTPrecuts = pset.get<bool>("ApplyPreCuts"); // if True: if precuts fail, we do not run rest of algos (e.g. produce CROIs, thrumu mask)
+      _RunPMTPrecuts     = pset.get<bool>("RunPreCuts");   // run the precuts
+      _ApplyPMTPrecuts   = pset.get<bool>("ApplyPreCuts"); // if True: if precuts fail, we do not run rest of algos (e.g. produce CROIs, thrumu mask)
+      _RunThruMuTracker  = pset.get<bool>("RunThruMuTracker");
+      _RunBoundaryTagger = pset.get<bool>("RunBoundaryTagger"); // else load from file
     }
 
     /**
@@ -105,10 +111,21 @@ namespace ublarcvapp {
       ThruMuPayload thrumu;
       
       // boudary end point finder
-      runBoundaryTagger( input, thrumu );
+      if ( _RunBoundaryTagger )
+        runBoundaryTagger( input, thrumu );
+      else
+        loadBoundaryTaggerDataFromTree( io, input, thrumu );
+
+      // Thrumu Tracker
+      if ( _RunThruMuTracker )
+        runThruMu( input, thrumu );
+
+      // persistency
+      saveBoundaryTaggerDataToTree( io, thrumu, false );
 
       // visualize
-      saveBoundaryEndpointImage( input, thrumu );
+      if (false)
+        saveBoundaryEndpointImage( input, thrumu );
       
     }
     
@@ -572,8 +589,7 @@ namespace ublarcvapp {
       return;
     }//end of runBoundaryTagger
 
-
-    void TaggerProcessor::runThrumu( InputPayload& input, ThruMuPayload& output ) {
+    void TaggerProcessor::runThruMu( InputPayload& input, ThruMuPayload& output ) {
 
       LARCV_INFO() << "== Run ThruMu Tracker ===============================" << std::endl;
       
@@ -749,6 +765,287 @@ namespace ublarcvapp {
       
     }//end of saveboundary image
 
+    /**
+     * save output of boundary crossing tagger used by later stages
+     *
+     */
+    void TaggerProcessor::saveBoundaryTaggerDataToTree( larcv::IOManager& larcvio,
+                                                        ThruMuPayload& data,
+                                                        bool fillempty ) {
+
+      // event containers
+      //larcv::EventImage2D* realspace_imgs = (larcv::EventImage2D*)larcvio.get_data( larcv::kProductImage2D, "realspacehits" );
+      //larcv::EventImage2D* boundarypixels_imgs = (larcv::EventImage2D*)larcvio.get_data( larcv::kProductImage2D, "boundarypixels" );
+      //larcv::EventPixel2D* ev_prefilter_endpts = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "prefilterpts" );
+      larcv::EventPixel2D* realspace_endpts[kNumEndTypes];
+      realspace_endpts[kTop]        = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "topspacepts" );
+      realspace_endpts[kBottom]     = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "botspacepts" );
+      realspace_endpts[kUpstream]   = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "upspacepts" );
+      realspace_endpts[kDownstream] = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "downspacepts" );
+      realspace_endpts[kAnode]      = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "anodepts" );
+      realspace_endpts[kCathode]    = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "cathodepts" );
+      realspace_endpts[kImageEnd]   = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "imgendpts" );
+      larcv::EventPixel2D* unused_endpts[kNumEndTypes];
+      unused_endpts[kTop]        = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_topspacepts" );
+      unused_endpts[kBottom]     = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_botspacepts" );
+      unused_endpts[kUpstream]   = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_upspacepts" );
+      unused_endpts[kDownstream] = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_downspacepts" );
+      unused_endpts[kAnode]      = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_anodepts" );
+      unused_endpts[kCathode]    = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_cathodepts" );
+      unused_endpts[kImageEnd]   = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "unused_imgendpts" );
+      //larcv::EventPixel2D* ev_tracks2d = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "thrumupixels" );
+      //larcv::EventImage2D* event_markedimgs = (larcv::EventImage2D*)larcvio.get_data( larcv::kProductImage2D, "marked3d" );
+      //larlite::event_track* ev_tracks = (larlite::event_track*)dataco.get_larlite_data( larlite::data::kTrack, "thrumu3d" );    
+    
+    
+    // clear containers
+      //realspace_imgs->clear();
+      //boundarypixels_imgs->clear();
+      //ev_prefilter_endpts->clear();
+      for ( int i=0; i<(int)kNumEndTypes; i++) {
+        //realspace_endpts[i]->clear();
+        unused_endpts[i]->clear();
+      }
+      //ev_tracks2d->clear();
+      //ev_tracks->clear();
+      //event_markedimgs->clear();
+
+      if ( fillempty )
+        return;
+      
+      // fill containers
+      // ---------------
+      
+
+      // Save All (post-filter) End-Points
+      std::vector< const std::vector<BoundarySpacePoint>* > spacepoint_lists;
+      // spacepoint_lists.push_back( &(data.used_spacepoint_v) );
+      spacepoint_lists.push_back( &(data.side_filtered_v) );
+      spacepoint_lists.push_back( &(data.anode_filtered_v) );
+      spacepoint_lists.push_back( &(data.cathode_filtered_v) );
+      spacepoint_lists.push_back( &(data.imgends_filtered_v) );            
+
+      // spacepoint_lists.push_back( &(data.unused_spacepoint_v) );
+      for ( auto const& plist : spacepoint_lists ) {
+      	for ( auto const& sp_v : *plist ) {
+          int sptype = (int)sp_v.type();
+          if ( sptype<0 ) continue; // should
+          for (size_t p=0; p<sp_v.size(); p++) {
+            const BoundaryEndPt& sp = sp_v.at(p);
+            larcv::Pixel2D pixel( sp.col, sp.row );
+            pixel.Intensity( sptype ); // using intensity to label pixel
+            if ( plist==&(data.used_spacepoint_v) )
+              pixel.Width( 1 ); // using width to mark if used
+            else
+              pixel.Width( 0 ); // using width to mark if unused
+            realspace_endpts[sptype]->Emplace( (larcv::PlaneID_t)p, std::move(pixel) );
+          }
+        }
+      }
+      
+      // Save Unused End-Points: for downstream steps
+      for ( auto const& sp_v : data.unused_spacepoint_v ) {
+        int sptype = (int)sp_v.type();
+        for (int p=0; p<3; p++) {
+          const BoundaryEndPt& sp = sp_v.at(p);
+          larcv::Pixel2D pixel( sp.col, sp.row );
+          pixel.Intensity( sptype ); // using intensity to label pixel
+          pixel.Width( 0 ); // using width to mark if used
+          unused_endpts[sptype]->Emplace( (larcv::PlaneID_t)p, std::move(pixel) );
+        }
+      }
+      
+    }//end of save boundary tagger data
+
+    /**
+     * load output of boundary crossing tagger from file into IOManager.
+     *
+     * we assume the user has set the desired state of the thrumupayload object.
+     *
+     */    
+    void TaggerProcessor::loadBoundaryTaggerDataFromTree( larcv::IOManager& larcvio,
+                                                          const InputPayload& input,
+                                                          ThruMuPayload& data ) {
+
+      // reload ThruMu payload data: need track points and pixels. and tagged image.
+      //m_thrumu_data.clear(); 
+
+      bool has_thrumu_unusedspts  = false;
+      bool has_thrumu_tagged      = false;
+      const larcv::ImageMeta& meta = input.img_v.front().meta();
+      
+      larcv::EventPixel2D* postfilter_endpts[kNumEndTypes];
+      std::string endpt_prod_names[7] = { "topspacepts",
+                                          "botspacepts",
+                                          "upspacepts",
+                                          "downspacepts",
+                                          "anodepts",
+                                          "cathodepts",
+                                          "imgendpts" };
+    
+      for (int endpt_t=0; endpt_t<(int)kNumEndTypes; endpt_t++) {
+        postfilter_endpts[endpt_t] = NULL;
+        try {
+          postfilter_endpts[endpt_t] = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, endpt_prod_names[endpt_t] );
+        }
+        catch (...) {
+          postfilter_endpts[endpt_t] = NULL;
+        }
+        if ( postfilter_endpts[endpt_t]==NULL )
+          continue;
+        int nendpts = postfilter_endpts[endpt_t]->Pixel2DArray(0).size();
+        for (int ipt=0; ipt<nendpts; ipt++) {
+          std::vector< larcv::Pixel2D > pixels;
+          for (int p=0; p<(int)postfilter_endpts[endpt_t]->Pixel2DArray().size(); p++) {
+            pixels.push_back( postfilter_endpts[endpt_t]->Pixel2DArray(p).at(ipt) );
+          }
+          
+          LARCV_INFO() << endpt_prod_names[endpt_t] << " #" << ipt << ": "
+                       << " (" << pixels[0].X() << "," << pixels[0].Y() << ")"
+                       << " (" << pixels[1].X() << "," << pixels[1].Y() << ")"
+                       << " (" << pixels[2].X() << "," << pixels[2].Y() << ")"
+                       << std::endl;
+	  
+          BoundarySpacePoint sp = Pixel2SpacePoint( pixels, (BoundaryEnd_t)endpt_t, meta );
+          if ( (BoundaryEnd_t)endpt_t<=kDownstream )
+            data.side_filtered_v.push_back( sp );
+          else if ( endpt_t==kAnode )
+            data.anode_filtered_v.push_back( sp );
+          else if ( endpt_t==kCathode )
+            data.cathode_filtered_v.push_back( sp );
+          else if ( endpt_t==kImageEnd )
+            data.imgends_filtered_v.push_back( sp );
+          else
+            continue;
+        }
+      }
+      
+      // Fill EndPts
+      larcv::EventPixel2D* unused_endpts[kNumEndTypes];
+      for (int endpt_t=0; endpt_t<(int)kNumEndTypes; endpt_t++) {
+        unused_endpts[endpt_t] = NULL;
+        try {
+          unused_endpts[endpt_t] = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D,
+                                                                           std::string("unused_"+endpt_prod_names[endpt_t]) );
+        }
+        catch (...) {
+          unused_endpts[endpt_t] = NULL;
+        }
+        if ( unused_endpts[endpt_t]==NULL )
+          continue;      
+        int nendpts = unused_endpts[endpt_t]->Pixel2DArray(0).size();
+        for (int ipt=0; ipt<nendpts; ipt++) {
+          std::vector< larcv::Pixel2D > pixels;
+          for (int p=0; p<(int)unused_endpts[endpt_t]->Pixel2DArray().size(); p++) {
+            pixels.push_back( unused_endpts[endpt_t]->Pixel2DArray(p).at(ipt) );
+          }
+          BoundarySpacePoint sp = Pixel2SpacePoint( pixels, (BoundaryEnd_t)endpt_t, meta );	
+          if ( (BoundaryEnd_t)endpt_t<=kDownstream )
+            data.side_spacepoint_v.push_back( sp );
+          else if ( endpt_t==kAnode )
+            data.anode_spacepoint_v.push_back( sp );
+          else if ( endpt_t==kCathode )
+            data.cathode_spacepoint_v.push_back( sp );
+          else if ( endpt_t==kImageEnd )
+            data.imgends_spacepoint_v.push_back( sp );
+          else
+            continue;	
+          data.unused_spacepoint_v.push_back( sp );
+        }
+        if ( data.unused_spacepoint_v.size()>0 )
+          has_thrumu_unusedspts = true;
+      }
+    
+      // larlite::event_track* ev_thrumu_tracks = (larlite::event_track*)m_dataco_input.get_larlite_data( larlite::data::kTrack, "thrumu3d" );
+      // if ( ev_thrumu_tracks!=NULL ) {
+      //   for (size_t itrack=0; itrack<ev_thrumu_tracks->size(); itrack++) {
+      //     data.track_v.push_back( ev_thrumu_tracks->at(itrack) );
+      //   }
+      // }
+
+      // larcv::EventPixel2D*  ev_thrumu_pixels = NULL;
+      // try {
+      //   ev_thrumu_pixels = (larcv::EventPixel2D*)larcvio.get_data( larcv::kProductPixel2D, "thrumupixels" );
+      // }
+      // catch (...) {
+      //   ev_thrumu_pixels = NULL;
+      // }
+      // if ( ev_thrumu_pixels!=NULL ) {
+      //   for (size_t itrack=0; itrack<ev_thrumu_pixels->Pixel2DClusterArray(0).size(); itrack++) {
+      //     std::vector< larcv::Pixel2DCluster > pixel_v;
+      //     for (int p=0; p<3; p++) {
+      //       pixel_v.push_back( ev_thrumu_pixels->Pixel2DClusterArray(p).at(itrack) );
+      //     }
+      //     data.pixelcluster_v.emplace_back( pixel_v );
+      //   }
+      // }
+
+      // larcv::EventImage2D* ev_thrumu_marked = NULL;
+      // try {
+      //   ev_thrumu_marked = (larcv::EventImage2D*)larcvio.get_data( larcv::kProductImage2D, "marked3d" );
+      // }
+      // catch (...) {
+      //   ev_thrumu_marked = NULL;
+      // }
+      // if ( ev_thrumu_marked!=NULL ) {
+      //   ev_thrumu_marked->Move( data.tagged_v );
+      //   has_thrumu_tagged = true;      
+      // }//end of plane loop
+      // else if ( meta.rows()!=0 ) {
+      //   // we have a meta to make images
+      //   for (int p=0; p<3; p++) {
+      //     larcv::Image2D marked( meta );
+      //     marked.paint(0);
+      //     data.tagged_v.emplace_back( marked );
+      //   }
+      //   if ( data.pixelcluster_v.size()>0 ) {      
+      //     // can make a tagged image using saved pixel clusters      	
+      //     for (int itrack=0; itrack<(int)data.pixelcluster_v.size(); itrack++) {
+      //       for (int p=0; p<3; p++) {
+      //         const larcv::Pixel2DCluster& pixels = data.pixelcluster_v.at(itrack).at(p);
+      //         for ( auto const& pix : pixels ) {
+      //           data.tagged_v[p].set_pixel( pix.Y(), pix.X(), 10.0 );
+      //         }
+      //       }
+      //     }
+      //     has_thrumu_tagged = true;
+      //   }
+      //   else if ( data.track_v.size()>0 && m_input_data.img_v.size()>0) {
+      //     // make tagged image from larlite tracks
+      //     bool also_fill_pixel_v = false;
+      //     if ( data.pixelcluster_v.size()==0 )
+      //       also_fill_pixel_v = true;
+      //     for (int itrack=0; itrack<(int)data.track_v.size(); itrack++) {
+      //       const larlite::track& lltrack = data.track_v[itrack];
+      //       std::vector< std::vector<double> > path3d( lltrack.NumberTrajectoryPoints());
+      //       for (size_t n=0; n<lltrack.NumberTrajectoryPoints(); n++) {
+      //         path3d[n].resize(3,0.0);
+      //         const TVector3& pos = lltrack.LocationAtPoint(n);
+      //         for (int i=0; i<3; i++)
+      //           path3d[n][i] = pos[i];
+      //       }
+      //       std::vector<larcv::Pixel2DCluster> pixels = getTrackPixelsFromImages( path3d, m_input_data.img_v, m_input_data.gapch_v,
+      //                                                                           m_tagger_cfg.thrumu_tracker_cfg.pixel_threshold, m_tagger_cfg.thrumu_tracker_cfg.tag_neighborhood,
+      //                                                                             0.3 );
+      //       if ( also_fill_pixel_v ) {
+      //         data.pixelcluster_v.emplace_back( std::move(pixels) );
+      //       }
+      //       for (size_t p=0; p<pixels.size(); p++) {
+      //         for ( auto const& pix : pixels[p] ) {
+      //           data.tagged_v[p].set_pixel( pix.Y(), pix.X(), 10.0 );
+      //         }
+      //       }
+      //       has_thrumu_tagged = true;	  
+      //     }//end of track look
+      //   }
+      // }//end of if meta available to define images
+      
+      // if ( has_thrumu_unusedspts && has_thrumu_tagged ) {
+      //   // we have the thrumu info needed to run stopmu
+      //   m_state.thrumu_run = true;
+      // }
+      
+    }// loadboundarydata function
     
     
   }//end of tagger namespace

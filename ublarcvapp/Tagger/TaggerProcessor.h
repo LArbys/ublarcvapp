@@ -45,7 +45,16 @@ namespace ublarcvapp {
                       InputPayload& input );
       void runPMTPrecuts( larlite::storage_manager* llio );
       void runBoundaryTagger( const InputPayload& input, ThruMuPayload& output );
-      void runThrumu( InputPayload& input, ThruMuPayload& thrumu );
+      void runThruMu( InputPayload& input, ThruMuPayload& thrumu );
+
+      // persistency
+      void saveBoundaryTaggerDataToTree( larcv::IOManager& larcvio,
+                                         ThruMuPayload& data,
+                                         bool fillempty=false );      
+      void loadBoundaryTaggerDataFromTree( larcv::IOManager& larcvio,
+                                           const InputPayload& input,
+                                           ThruMuPayload& data );
+
 
       // visualization tools
       void saveBoundaryEndpointImage( InputPayload& input, ThruMuPayload& thrumu );
@@ -55,6 +64,8 @@ namespace ublarcvapp {
       bool _RunPMTPrecuts;
       bool _ApplyPMTPrecuts;
       bool _FilterBoundaryPoints;
+      bool _RunThruMuTracker;
+      bool _RunBoundaryTagger;
 
       // timing monitor
       std::vector<float> m_time_tracker;
