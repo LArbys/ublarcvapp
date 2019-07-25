@@ -803,15 +803,17 @@ namespace ublarcvapp {
       //boundarypixels_imgs->clear();
       //ev_prefilter_endpts->clear();
       for ( int i=0; i<(int)kNumEndTypes; i++) {
-        //realspace_endpts[i]->clear();
+        realspace_endpts[i]->clear();
         unused_endpts[i]->clear();
       }
       //ev_tracks2d->clear();
       //ev_tracks->clear();
       //event_markedimgs->clear();
 
-      if ( fillempty )
+      if ( fillempty ) {
+        LARCV_INFO() << "Saving empty boundary endpoint containers" << std::endl;
         return;
+      }
       
       // fill containers
       // ---------------
@@ -868,7 +870,8 @@ namespace ublarcvapp {
                                                           ThruMuPayload& data ) {
 
       // reload ThruMu payload data: need track points and pixels. and tagged image.
-      //m_thrumu_data.clear(); 
+      //m_thrumu_data.clear();
+      LARCV_INFO() << "Loading boundary tagger result from file" << std::endl;
 
       bool has_thrumu_unusedspts  = false;
       bool has_thrumu_tagged      = false;
