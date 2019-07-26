@@ -36,7 +36,7 @@ namespace ublarcvapp {
       m_time_tracker.resize(kNumStages,0);
       
       // setup larlite file manager
-      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "tagger_larlite_input" );
+      _larlite_io = new ublarcvapp::LArliteManager( larlite::storage_manager::kBOTH, "tagger_larlite_input" );
       
       if (_cfg_path!="")
         configure(_cfg_path);
@@ -83,6 +83,14 @@ namespace ublarcvapp {
       }
       _larlite_io->add_in_filename( llinput );
     }
+
+    void TaggerProcessor::set_larlite_output( std::string lloutput ) {
+      if ( !_larlite_io ) {
+        LARCV_CRITICAL() << "Adding larlite file before creating manager. Must run configure first." << std::endl;
+        throw std::runtime_error( "adding larlite file before creating manager" );
+      }
+      _larlite_io->set_out_filename( lloutput );
+    }
     
     bool TaggerProcessor::process(larcv::IOManager& io) {
 
@@ -122,6 +130,7 @@ namespace ublarcvapp {
 
       // persistency
       saveBoundaryTaggerDataToTree( io, thrumu, false );
+      saveThruMuDataToTree( io, *_larlite_io, input, thrumu, false );
 
       // visualize
       if (false)
@@ -134,6 +143,9 @@ namespace ublarcvapp {
         _larlite_io->close();
     }
 
+    // ==========================================================================================
+    //  RUN DIFFERENT SUB-ROUTINES OF THE TAGGER
+    
     /**
      * load data into InputPayload class
      *
@@ -690,6 +702,9 @@ namespace ublarcvapp {
 
     }
 
+    // ============================================================================================
+    //  PERSISTENCY ROUTINES
+    //  --------------------
     
     void TaggerProcessor::saveBoundaryEndpointImage( InputPayload& input, ThruMuPayload& thrumu ) {
       gStyle->SetOptStat(0);
@@ -858,6 +873,51 @@ namespace ublarcvapp {
       }
       
     }//end of save boundary tagger data
+
+    /**
+     * save output of boundary crossing tagger used by later stages
+     *
+     */
+    void TaggerProcessor::saveThruMuDataToTree( larcv::IOManager& larcvio,
+                                                larlite::storage_manager& larliteio,
+                                                InputPayload& input, 
+                                                ThruMuPayload& data,
+                                                bool fillempty ) {
+
+      larcv::EventPixel2D* ev_tracks2d = (larcv::EventPixel2D*) larcvio.get_data( larcv::kProductPixel2D,  "thrumupixels" );
+      larlite::event_track* ev_tracks  = (larlite::event_track*)larliteio.get_data( larlite::data::kTrack, "thrumu3d" );    
+      //larcv::EventImage2D* event_markedimgs = (larcv::EventImage2D*)dataco.get_larcv_data( larcv::kProductImage2D, "marked3d" );
+
+      if ( fillempty )
+        return;
+      
+      for (int i3d=0; i3d<(int)data.trackcluster3d_v.size(); i3d++) {
+        const BMTrackCluster3D& track3d = data.trackcluster3d_v.at(i3d);
+        std::vector< larcv::Pixel2DCluster > trackcluster2d
+          = track3d.getTrackPixelsFromImages( input.img_v, input.badch_v,
+                                              m_config.thrumu_tracker_cfg.pixel_threshold,
+                                              m_config.thrumu_tracker_cfg.tag_neighborhood, 0.3 );
+        for (int p=0; p<3; p++) {
+          ev_tracks2d->Append( (larcv::PlaneID_t)p, trackcluster2d.at(p), input.img_v.at(p).meta() );
+        }
+      }
+
+      // convert BMTrackCluster3D to larlite::track
+      int id = 0;
+      for ( int itrack=0; itrack<(int)data.trackcluster3d_v.size(); itrack++ ) {
+        const BMTrackCluster3D& track3d = data.trackcluster3d_v.at(itrack);
+        larlite::track lltrack = track3d.makeTrack();
+        lltrack.set_track_id( id );
+        ev_tracks->emplace_back( std::move(lltrack) );
+      }
+
+      //for ( auto const& tagged : data.tagged_v ) event_markedimgs->Append( tagged );
+      
+    }
+    
+    // ===================
+    //  LOADING ROUTINES
+    // ===================
 
     /**
      * load output of boundary crossing tagger from file into IOManager.

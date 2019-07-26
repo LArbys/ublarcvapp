@@ -37,6 +37,7 @@ namespace ublarcvapp {
       
       ublarcvapp::LArliteManager* _larlite_io; //< handles interface/sync to larlite info
       void add_larlite_input( std::string llinput );
+      void set_larlite_output( std::string lloutput );
 
 
       // primary functions
@@ -54,6 +55,13 @@ namespace ublarcvapp {
       void loadBoundaryTaggerDataFromTree( larcv::IOManager& larcvio,
                                            const InputPayload& input,
                                            ThruMuPayload& data );
+
+      void saveThruMuDataToTree( larcv::IOManager& larcvio,
+                                 larlite::storage_manager& larliteio,
+                                 InputPayload& input, 
+                                 ThruMuPayload& data,
+                                 bool fillempty=false );
+      
 
 
       // visualization tools

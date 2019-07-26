@@ -40,6 +40,10 @@ namespace tagger {
       if ( max_row<0 || max_row<(int)pix.Y() )
         max_row = pix.Y();
       pixlist.push_back( pix );
+      if ( pix.Intensity()>maxval ) {
+        maxval = pix.Intensity();
+        max_idx = pixlist.size()-1;
+      }
     };
     void set_end( int idx ) {
       end_idx = idx;

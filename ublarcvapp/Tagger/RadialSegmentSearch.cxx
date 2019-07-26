@@ -13,6 +13,9 @@
 namespace ublarcvapp {
 namespace tagger {
 
+  // switch that can be used to turn on verbosity of this algorithm (from anywhere...)
+  int RadialSegmentSearch::_global_verbosity = -1;
+  
   std::vector< std::vector<RadialHit_t > >
   RadialSegmentSearch::findIntersectingChargeClusters( const std::vector<larcv::Image2D>& img_v,
                                                        const std::vector<larcv::Image2D>& badch_v,
@@ -51,9 +54,16 @@ namespace tagger {
       }
     }
 
-    //std::cout << "starting ring index: " << idx_start << std::endl;
+    if ( verbosity>=kDEBUG )
+      std::cout << "[" << __FILE__ << ":" << __LINE__ << "] "
+                << " starting ring index @ " << idx_start
+                << " -- hit threshold=" << threshold
+                << std::endl;
+    
     if ( idx_start<0 ) {
       // everything is above threshold...
+      if ( verbosity>=kDEBUG )
+        std::cout << "[" << __FILE__ << ":" << __LINE__ << "] everything above threshold -- return empty " << idx_start << std::endl;
       std::vector< RadialHit_t > empty;
       return empty;
     }
@@ -71,37 +81,37 @@ namespace tagger {
           // start a hit
           RadialHit_t hit;
           hit.reset();
-          hit.start_idx = idx;
-          hit.max_idx = idx;
-          hit.maxval = pixelring[idx].Intensity();
-          hit.pixlist.push_back( pixelring[idx] );
+          hit.add_pixel( pixelring[idx] );
           hitlist.emplace_back( std::move(hit) );
           inhit = true;
           loopedaround = false;
-          //std::cout << "start hit at " << idx << " of " << pixelring.size() << " val=" << hit.maxval << " idx_start=" << idx_start << std::endl;
+          if (verbosity>=kDEBUG)
+            std::cout << "[" << __FILE__ << ":" << __LINE__ << "] "
+                      << "start hit at " << idx << " of " << pixelring.size() << " val=" << hit.maxval << " idx_start=" << idx_start << std::endl;
         }
         else {
           // do nothing
-          //std::cout << " inhit: idx=" << idx << " val=" << pixelring[idx].Intensity() << std::endl;
+          if (verbosity>=kDEBUG)
+            std::cout << "[" << __FILE__ << ":" << __LINE__ << "] "
+                      << "inhit: idx=" << idx << " val=" << pixelring[idx].Intensity() << std::endl;
         }
       }
       else if (inhit) {
+
+        // update the max hit
+        hitlist.back().add_pixel( pixelring[idx] );
+
+        // end the hit if falls below threhsold or end of ring
         if ( pixelring[idx].Intensity()<threshold || idx+1==idx_start) {
           // end the hit
-          if ( !loopedaround )
-            hitlist.back().set_end( idx-1 );
-          else
-            hitlist.back().set_end( idx-1+(int)pixelring.size() );
+          // if ( !loopedaround )
+          //   hitlist.back().set_end( idx-1 );
+          // else
+          //   hitlist.back().set_end( idx-1+(int)pixelring.size() );
           inhit = false;
-          //std::cout << "end hit at " << idx << " of " << pixelring.size() << std::endl;
-        }
-        else {
-          // update the max hit
-          if ( !loopedaround )
-            hitlist.back().update_max( idx, pixelring[idx].Intensity() );
-          else
-            hitlist.back().update_max( idx+(int)pixelring.size(), pixelring[idx].Intensity() );
-          hitlist.back().add_pixel( pixelring[idx] );
+          if ( verbosity>=kDEBUG )
+            std::cout << "[" << __FILE__ << ":" << __LINE__ << "] "
+                      << " end hit at " << idx << " of " << pixelring.size() << std::endl;
         }
       }
       idx++;
@@ -111,10 +121,11 @@ namespace tagger {
         loopedaround = true;
       }
     }
-    //std::cout << "return hitlist" << std::endl;
+    if ( verbosity>=kDEBUG )
+      std::cout << "[" << __FILE__ << ":" << __LINE__ << "] return hitlist. size=" << hitlist.size() << std::endl;
     return hitlist;
   }
-
+  
   std::vector< std::vector< larcv::Pixel2D > > RadialSegmentSearch::defineProjectedDiamondBoundary( const std::vector<float>& center3d, const std::vector<larcv::Image2D>& img_v, const float radius ) {
     // we define a rhombus around the center3d point.
     // it is formed from the intersection of the U,V wires
@@ -147,7 +158,7 @@ namespace tagger {
     int rowbounds[2] = {0};
     for (int i=0; i<2; i++) {
       if ( tickbounds[i]<=meta.min_y() ) tickbounds[i] = meta.min_y()+1;
-      if ( tickbounds[i]>meta.max_y()  ) tickbounds[i] = meta.max_y();
+      if ( tickbounds[i]>=meta.max_y()  ) tickbounds[i] = meta.max_y()-1;
       rowbounds[i] = meta.row( tickbounds[i] );
     }
     // rows and ticks are in reverse order, switch it

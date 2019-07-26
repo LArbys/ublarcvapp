@@ -19,8 +19,15 @@ namespace ublarcvapp {
 namespace tagger {
 
   class RadialSegmentSearch {
+
   public:
-    RadialSegmentSearch() {};
+    static int _global_verbosity;
+    
+    enum { kQUIET=-1, kNORMAL=0, kINFO, kDEBUG };
+    
+    RadialSegmentSearch()
+    : verbosity( _global_verbosity )
+    {};
     virtual ~RadialSegmentSearch() {};
 
     // Primary Method
@@ -51,6 +58,11 @@ namespace tagger {
     // -------------------------------------------------------------------------------------
     std::vector< std::vector<RadialHit_t> > m_planehits; //< hits found along the box/diamond boundary for each plane
     
+
+    // verbosity flag
+    // ---------------
+    int verbosity;
+
     
   };
 
