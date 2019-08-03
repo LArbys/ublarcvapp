@@ -318,6 +318,14 @@ namespace ublarcvapp {
     return image_label_v;
   }
 
+  std::vector<larcv::Image2D> InfillDataCropper::ChStatusToLabelsX(larcv::EventChStatus& ev_chstatus) {
+    std::vector<larcv::Image2D> label_v;
+    InfillDataCropper::ChStatusToLabels( label_v, &ev_chstatus );
+    return label_v;
+  }
+								  
+
+
 // =============================================================================
   std::map<int, std::vector<int>> InfillDataCropper::DeadChannelAnalyzer(
         const std::vector<larcv::Image2D>& image_label_v,
