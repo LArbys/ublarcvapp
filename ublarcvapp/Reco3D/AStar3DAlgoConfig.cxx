@@ -6,6 +6,23 @@
 namespace ublarcvapp {
 namespace reco3d {
 
+  AStar3DAlgoConfig::AStar3DAlgoConfig()
+    : astar_threshold(3,10.0),
+      astar_neighborhood(3,10)
+  {
+    astar_start_padding = 5;
+    astar_end_padding   = 5;
+    lattice_padding = 5;
+    accept_badch_nodes = true;
+    min_nplanes_w_hitpixel = 3;
+    min_nplanes_w_charge   = 2;
+    restrict_path = true;
+    path_restriction_radius = 50.0;
+    compression_mode  = 2;
+    verbosity = 0;
+    store_score_image = false;
+  };
+
   AStar3DAlgoConfig AStar3DAlgoConfig::MakeFromPSet( const larcv::PSet& pset ) {
     AStar3DAlgoConfig cfg;
 

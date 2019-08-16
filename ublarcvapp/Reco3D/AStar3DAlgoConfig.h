@@ -22,15 +22,7 @@ namespace reco3d {
   // ALGO CONFIGURATION
   class AStar3DAlgoConfig {
   public:
-    AStar3DAlgoConfig() {
-      astar_start_padding = 0;
-      astar_end_padding = 0;
-      restrict_path = false;
-      path_restriction_radius = 10.0;
-      compression_mode = 2;
-      store_score_image = false;
-      lattice_padding = 5;
-    };
+    AStar3DAlgoConfig();
     virtual ~AStar3DAlgoConfig() {};
 
     std::vector<float> astar_threshold; // pixel intensity threshold per plane
