@@ -42,7 +42,8 @@ namespace ublarcvapp {
         assert(false);
       }
 
-      larcv::ImageMeta meta( nchannels, nticks, nticks, nchannels, 0.0, start_tick+nticks, p );
+      //larcv::ImageMeta meta( nchannels, nticks, nticks, nchannels, 0.0, start_tick+nticks, p );
+      larcv::ImageMeta meta( nchannels, nticks, nticks, nchannels, 0.0, start_tick, p );      
       larcv::Image2D img(meta);
       img.paint(0.0);
       
@@ -75,7 +76,7 @@ namespace ublarcvapp {
 
     for (int p=0; p<nplanes; p++) {
 
-      larcv::ImageMeta meta( nchannels, nticks, nticks, nchannels, 0.0, start_tick+nticks, p );
+      larcv::ImageMeta meta( nchannels, nticks, nticks, nchannels, 0.0, start_tick, p );
       larcv::Image2D img(meta);
       img.paint(0.0);
 
