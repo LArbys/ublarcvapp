@@ -1,5 +1,7 @@
 #include "MRCNNMatch.h"
 
+#include <algorithm>
+
 namespace ublarcvapp {
 namespace dltagger {
 
@@ -21,9 +23,18 @@ namespace dltagger {
       int idx=0;
       for ( auto const& mask : clustermask_v ) {
         MaskMatchData data( mask.meta.plane(), idx, mask );
+        data_v.emplace_back( std::move(data) );
         idx++;
       }
+      std::sort( data_v.begin(), data_v.end() );
+      std::cout << "PLANE " << clustermask_v.front().meta.plane() << " MASKS" << std::endl;
+      for ( auto& data : data_v )
+        std::cout << "  " << data << std::endl;
+      matchdata_vv.emplace_back( std::move(data_v) );
     }
+
+    /// initial screen for overlapping times
+    
     
   }
 

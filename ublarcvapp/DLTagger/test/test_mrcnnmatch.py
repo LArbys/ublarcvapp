@@ -20,7 +20,7 @@ io.read_entry(0)
 ev_masks = io.get_data(larcv.kProductClusterMask, "mrcnn_masks" )
 
 mask_vv = ev_masks.as_vector()
-print("Number of masks: ",mask_vv.at(0).size())
+print("Number of masks: ",[mask_vv.at(x).size() for x in range(3)])
 
 #matchdata = ublarcvapp.dltagger.MaskMatchData( 0, 0, mask_vv.at(0).at(0) )
 indices = std.vector("vector<int>")()

@@ -17,14 +17,14 @@ namespace dltagger {
     tick_max = mask.meta.min_y();
     detz_min = larutil::Geometry::GetME()->DetLength();
     detz_max = 0;
+    wire_min = larutil::Geometry::GetME()->Nwires(plane);
+    wire_max = 0;
     
-    
-    std::cout << "meta: " << mask.meta.dump() << std::endl;
     int xoffset = mask.box.min_x();
     int yoffset = mask.box.min_y();
     for ( size_t ipt=0; ipt<mask.points_v.size(); ipt++ ) {
       int row = yoffset + mask.points_v[ipt].y;
-      int col = yoffset + mask.points_v[ipt].x;
+      int col = xoffset + mask.points_v[ipt].x;
       float tick = mask.meta.pos_y(row);
       int wire = mask.meta.pos_x(col);
 
@@ -37,16 +37,21 @@ namespace dltagger {
       
       if ( tick_min>tick ) tick_min = tick;
       if ( tick_max<tick ) tick_max = tick;
+      if ( wire_min>wire ) wire_min = wire;
+      if ( wire_max<wire ) wire_max = wire;
       if ( detz_min>zmin ) detz_min = zmin;
       if ( detz_max<zmax ) detz_max = zmax;
     }
 
-    std::cout << "Mask bounds: "
-              << " DTICK=[" << tick_min << "," << tick_max << "] "
-              << " DZ=[" << detz_min << "," << detz_max << "]"
-              << std::endl;
-
   }
+
+  std::ostream& operator<<(std::ostream& os,const MaskMatchData& m) {
+    return os << "MaskMatchData[plane " << m.plane << ", index " << m.index << "] "
+              << " tick=(" << m.tick_min << "," << m.tick_max << ")"
+              << " wire=(" << m.wire_min << "," << m.wire_max << ")"
+              << " detz=(" << m.detz_min << "," << m.detz_max << ")";
+  };
+  
   
 }
 }
