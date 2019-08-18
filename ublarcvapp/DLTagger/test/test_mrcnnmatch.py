@@ -3,6 +3,7 @@ from __future__ import print_function
 import os,sys
 
 import ROOT as rt
+from ROOT import std
 from larcv import larcv
 from ublarcvapp import ublarcvapp
 
@@ -21,4 +22,6 @@ ev_masks = io.get_data(larcv.kProductClusterMask, "mrcnn_masks" )
 mask_vv = ev_masks.as_vector()
 print("Number of masks: ",mask_vv.at(0).size())
 
-matchdata = ublarcvapp.dltagger.MaskMatchData( 0, 0, mask_vv.at(0).at(0) )
+#matchdata = ublarcvapp.dltagger.MaskMatchData( 0, 0, mask_vv.at(0).at(0) )
+indices = std.vector("vector<int>")()
+matchalgo.matchMasksAcrossPlanes( mask_vv, indices )

@@ -15,9 +15,15 @@ namespace dltagger {
 
     // first we compile key match criteria for each mask
 
-    
-    
-    
+    std::vector< std::vector<MaskMatchData> > matchdata_vv;
+    for ( auto const& clustermask_v : clustermask_vv ) {
+      std::vector<MaskMatchData> data_v;
+      int idx=0;
+      for ( auto const& mask : clustermask_v ) {
+        MaskMatchData data( mask.meta.plane(), idx, mask );
+        idx++;
+      }
+    }
     
   }
 

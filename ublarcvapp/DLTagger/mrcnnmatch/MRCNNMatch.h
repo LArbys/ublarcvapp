@@ -5,7 +5,7 @@
 
 #include "larcv/core/DataFormat/ClusterMask.h"
 
-#include "MRCNNMatch.h"
+#include "MRCNNMatchTypes.h"
 
 namespace ublarcvapp {
 namespace dltagger {
