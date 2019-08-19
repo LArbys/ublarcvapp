@@ -7,6 +7,9 @@
 namespace ublarcvapp {
 namespace dltagger {
 
+  /**
+   * Class used to calculate and store tick and detector-z bounds from larcv::ClusterMask
+   */
   class MaskMatchData {
   public:
 

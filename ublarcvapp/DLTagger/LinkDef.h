@@ -15,6 +15,7 @@
 // mrcnnmatch
 #pragma link C++ class ublarcvapp::dltagger::MaskMatchData+;
 #pragma link C++ class ublarcvapp::dltagger::MaskCombo+;
+#pragma link C++ class ublarcvapp::dltagger::CropMaskCombo+;
 #pragma link C++ class ublarcvapp::dltagger::MRCNNMatch+;
 
 // dltagger

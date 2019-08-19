@@ -2,6 +2,8 @@
 
 #include <algorithm>
 
+#include "CropMaskCombo.h"
+
 namespace ublarcvapp {
 namespace dltagger {
 
@@ -13,6 +15,7 @@ namespace dltagger {
    *
    */
   void MRCNNMatch::matchMasksAcrossPlanes( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
+                                           const std::vector<larcv::Image2D>& wholeview_v,
                                            std::vector< std::vector<int> >& match_indices ) {
 
     // first we compile key match criteria for each mask
@@ -104,11 +107,28 @@ namespace dltagger {
     std::cout << "combos after Y-U-V match: " << m_combo_3plane_v.size() << std::endl;
     for ( auto const& combo : m_combo_3plane_v )
       std::cout << "  " << combo << std::endl;
+
+    // make crops, mask charge, contours on charge, contours on mask
+    for ( size_t icombo=0; icombo<m_combo_3plane_v.size(); icombo++ ) {
+      CropMaskCombo cropmaker( m_combo_3plane_v.at(icombo), wholeview_v );
+
+      ublarcvapp::ContourClusterAlgo charge_contour_maker;
+      charge_contour_maker.analyzeImages( cropmaker.crops_v );
+      charge_contour_maker.clear_intermediate_images();
+
+      ublarcvapp::ContourClusterAlgo mask_contour_maker;
+      mask_contour_maker.analyzeImages( cropmaker.crops_v, 10.0, 1 );
+      mask_contour_maker.clear_intermediate_images();
+      
+      m_combo_crops_vv.emplace_back( std::move(cropmaker) );
+      m_combo_charge_contour_v.emplace_back( std::move(charge_contour_maker) );
+      m_combo_mask_contour_v.emplace_back(   std::move(mask_contour_maker) );
+    }
+
+    // make contours for each set
     
+        
   }
 
 }
 }
-                                          
-    
-
