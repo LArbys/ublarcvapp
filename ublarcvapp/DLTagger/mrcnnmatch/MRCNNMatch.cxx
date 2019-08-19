@@ -95,8 +95,8 @@ namespace dltagger {
           combo_yuv.addMask( mask_vplane, data_vplane );
 
           //std::cout << "combo after Y-U-V match: " << combo_yuv << std::endl;
-          
-          m_combo_3plane_v.emplace_back( std::move(combo_yuv) );
+          if ( combo_yuv.iou()>0.5 )
+            m_combo_3plane_v.emplace_back( std::move(combo_yuv) );
           
         }
       }// loop over v-plane cluster/mask

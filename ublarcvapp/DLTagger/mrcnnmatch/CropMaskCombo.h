@@ -12,7 +12,9 @@ namespace dltagger {
    * class that stores crops across the planes based on 
    *  mask matches represented in a MaskCombo class
    *
-   * the charge in the crops are masked by the MRCNN masks
+   * the charge in the crops are masked by the MRCNN masks.
+   * the masks are stored.
+   * the class also stores the features we collect on those crops.
    */
   class CropMaskCombo  {
 
