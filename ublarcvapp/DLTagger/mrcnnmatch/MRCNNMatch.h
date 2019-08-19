@@ -18,6 +18,8 @@ namespace dltagger {
     void matchMasksAcrossPlanes( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
                                  std::vector< std::vector<int> >& match_indices );
 
+    std::vector< MaskCombo > m_combo_3plane_v;
+
   };
 }
 }

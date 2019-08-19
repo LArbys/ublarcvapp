@@ -69,10 +69,42 @@ namespace dltagger {
       }//end of u-plane loop
 
     }
-    std::cout << "combos after Y-U match: " << combo_v.size() << std::endl;
     std::sort( combo_v.begin(), combo_v.end() );
-    for ( auto const& combo : combo_v )
+    std::cout << "combos after Y-U match: " << combo_v.size() << std::endl;    
+    //for ( auto const& combo : combo_v )
+    //  std::cout << "  " << combo << std::endl;
+
+    // pair with v-plane
+    m_combo_3plane_v.clear();
+    
+    for ( auto const& combo : combo_v ) {
+
+      for ( size_t iv=0; iv<matchdata_vv.at(1).size(); iv++ ) {
+        auto const& data_vplane = matchdata_vv.at(1).at(iv);
+        auto const& mask_vplane = clustermask_vv.at(1).at(data_vplane.index);
+
+        if ( combo.union_tick[1] < data_vplane.tick_min ) break;
+
+        if ( combo.iscompatible( data_vplane ) ) {
+
+          MaskCombo combo_yuv( combo );
+
+          combo_yuv.addMask( mask_vplane, data_vplane );
+
+          //std::cout << "combo after Y-U-V match: " << combo_yuv << std::endl;
+          
+          m_combo_3plane_v.emplace_back( std::move(combo_yuv) );
+          
+        }
+      }// loop over v-plane cluster/mask
+
+    }// end of combo y-u loop
+
+    std::sort( m_combo_3plane_v.begin(), m_combo_3plane_v.end() );
+    std::cout << "combos after Y-U-V match: " << m_combo_3plane_v.size() << std::endl;
+    for ( auto const& combo : m_combo_3plane_v )
       std::cout << "  " << combo << std::endl;
+    
   }
 
 }

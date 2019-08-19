@@ -51,7 +51,7 @@ namespace dltagger {
     virtual ~MaskCombo() {};
     
     void addMask( const larcv::ClusterMask& mask, const MaskMatchData& data );
-    bool iscompatible( const MaskMatchData& );
+    bool iscompatible( const MaskMatchData& ) const;
     float calc_iou( bool wdetz_correction=false ) const;
     float iou() const { return IOU; };
 

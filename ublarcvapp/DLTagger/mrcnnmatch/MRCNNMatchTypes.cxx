@@ -169,7 +169,7 @@ namespace dltagger {
     
   }
 
-  bool MaskCombo::iscompatible( const MaskMatchData& data ) {
+  bool MaskCombo::iscompatible( const MaskMatchData& data ) const {
     bool isoverlapping = false;
     for ( size_t p=0; p<3; p++ ) {
       if ( indices[p]==-1 ) continue;
