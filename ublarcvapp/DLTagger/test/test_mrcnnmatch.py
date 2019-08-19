@@ -1,6 +1,7 @@
 from __future__ import print_function
 
 import os,sys
+from math import fabs
 
 import ROOT as rt
 from ROOT import std
@@ -28,7 +29,6 @@ print("Number of masks: ",[mask_vv.at(x).size() for x in range(3)])
 hwire_v = [ larcv.as_th2d( ev_wire.as_vector().at(p), "hwire_p%d"%(p) ) for p in xrange(3) ]
 meta_v  = [ ev_wire.as_vector().at(p).meta() for p in xrange(3) ]
 
-#matchdata = ublarcvapp.dltagger.MaskMatchData( 0, 0, mask_vv.at(0).at(0) )
 indices = std.vector("vector<int>")()
 matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), indices )
 
@@ -39,14 +39,19 @@ ccombos.Divide(3,2)
 for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     ccombos.Clear()
     ccombos.Divide(3,2)
+
+    # get algo outputs
+    combo     = matchalgo.m_combo_3plane_v.at(icombo)
+    combocrop = matchalgo.m_combo_crops_v.at(icombo)
+    features  = matchalgo.m_combo_features_v.at(icombo)
     
-    combo = matchalgo.m_combo_3plane_v.at(icombo)
-    mask_contours = matchalgo.m_combo_mask_contour_v.at(icombo)
+    mask_contours = features.combo_mask_contour
 
     # get masks
     combo_indices = [ combo.indices.at(p) for p in xrange(3) ]
     print("indicies: {}".format(combo_indices))
-    
+
+    # get clustermask objects
     combo_masks = []
     for p,idx in enumerate(combo_indices):
         if idx<0:
@@ -55,14 +60,13 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             combo_masks.append( mask_vv.at(p).at( idx ) )
     print( "combo: {}".format(combo_masks) )
 
-    # crops
-    combocrop = ublarcvapp.dltagger.CropMaskCombo( combo, ev_wire.Image2DArray() )
 
     # draw canvas and boxes
     tbox_v = []
     hcrop  = [ larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(idx,p) ) for p in xrange(3) ]
     tmarkers = []
     tcontours = []
+    gpca_v = []
     for p in xrange(3):
         ccombos.cd(1+p)
         if combo_masks[p] is None:
@@ -70,6 +74,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         hwire_v[p].Draw("colz")
         if p in [0,1]:
             hwire_v[p].GetXaxis().SetRangeUser(0,2400)
+        hwire_v[p].SetTitle("Plane %d: IOU %.3f;wire;tick"%(p,combo.iou()))
         print("bbox: ",combo_masks[p].box.min_x(), combo_masks[p].box.min_y(),combo_masks[p].box.max_x(), combo_masks[p].box.max_y() )
         bbox = rt.TBox( combo_masks[p].box.min_x(), meta_v[p].pos_y( int(combo_masks[p].box.min_y()) ),
                         combo_masks[p].box.max_x(), meta_v[p].pos_y( int(combo_masks[p].box.max_y()) ) )
@@ -84,6 +89,8 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         hcrop[p].Draw("colz")
 
         # draw contours, pca, end points and stuff
+
+        # markers and contours
         mask_meta = combocrop.mask_v.at(p).meta()
         ncontours = int(mask_contours.m_plane_atomicmeta_v.at(p).size())
         gmarker = rt.TGraph( ncontours*2 )
@@ -108,15 +115,38 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         gmarker.SetMarkerColor(rt.kRed)
         gmarker.Draw("P")
         tmarkers.append(gmarker)
+
+        # pca lines
+        pca_mean = [ mask_meta.pos_x( int(features.pca_mean_vv.at(p).at(0)) ),
+                     mask_meta.pos_y( int(features.pca_mean_vv.at(p).at(1)) ) ]
+        pca1_dir = [ features.pca1_dir_vv.at(p).at(x) for x in xrange(2) ]
+        pca1_dir[1] *= 6.0 # change y-axis scale from row pixels to ticks
+        dt_max = fabs(mask_meta.max_y() - pca_mean[1])/pca1_dir[1]
+        dw_max = fabs(mask_meta.max_x() - pca_mean[0])/pca1_dir[0]
+        dd = min(dt_max,dw_max)
+        ptmax = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
+        dt_min = fabs(mask_meta.min_y() - pca_mean[1])/pca1_dir[1]
+        dw_min = fabs(mask_meta.min_x() - pca_mean[0])/pca1_dir[0]
+        dd = min(dt_min,dw_min)
+        ptmin = [ pca_mean[x] - dd*pca1_dir[x] for x in xrange(2) ]
+        gpca = rt.TGraph(3)
+        gpca.SetPoint(0,ptmin[0],ptmin[1])
+        gpca.SetPoint(1,pca_mean[0],pca_mean[1])
+        gpca.SetPoint(2,ptmax[0],ptmax[1])
+        gpca.SetMarkerStyle(21)
+        gpca.SetMarkerColor(rt.kMagenta)
+        gpca.SetMarkerSize(2)
+        gpca.SetLineColor(rt.kMagenta)
+        gpca.SetLineWidth(2)
+        gpca.Draw("LP")
+        gpca_v.append(gpca)
+        
         
     ccombos.Draw()
     ccombos.Update()
     ccombos.SaveAs("example_combos/combo_%02d.png"%(icombo))
-    if True:
-        break
     
-    
-    if combo.iou()<0.5:
+    if combo.iou()<0.8:
         break
 
 raw_input()

@@ -191,6 +191,7 @@ namespace dltagger {
               << " union{ "
               << " tick=[" << m.union_tick[0] << "," << m.union_tick[1] << "]"
               << " detz=[" << m.union_detz[0] << "," << m.union_detz[1] << "]"
+              << " detz[2]=[" << m.pdata[2]->detz_min << "," << m.pdata[2]->detz_max << "]"
               << " }"
               << " iou: " << m.iou();
   }

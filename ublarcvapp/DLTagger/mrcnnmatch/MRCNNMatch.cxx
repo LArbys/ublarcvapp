@@ -94,7 +94,7 @@ namespace dltagger {
 
           combo_yuv.addMask( mask_vplane, data_vplane );
 
-          //std::cout << "combo after Y-U-V match: " << combo_yuv << std::endl;
+          std::cout << "combo Y-U-V: " << combo_yuv << std::endl;
           if ( combo_yuv.iou()>0.5 )
             m_combo_3plane_v.emplace_back( std::move(combo_yuv) );
           
@@ -104,25 +104,29 @@ namespace dltagger {
     }// end of combo y-u loop
 
     std::sort( m_combo_3plane_v.begin(), m_combo_3plane_v.end() );
-    std::cout << "combos after Y-U-V match: " << m_combo_3plane_v.size() << std::endl;
-    for ( auto const& combo : m_combo_3plane_v )
-      std::cout << "  " << combo << std::endl;
+    //std::cout << "combos after Y-U-V match: " << m_combo_3plane_v.size() << std::endl;
+    //for ( auto const& combo : m_combo_3plane_v )
+    //std::cout << "  " << combo << std::endl;
 
     // make crops, mask charge, contours on charge, contours on mask
     for ( size_t icombo=0; icombo<m_combo_3plane_v.size(); icombo++ ) {
-      CropMaskCombo cropmaker( m_combo_3plane_v.at(icombo), wholeview_v );
+      CropMaskCombo     cropmaker( m_combo_3plane_v.at(icombo), wholeview_v );
+      FeaturesMaskCombo features( cropmaker );
+      // ublarcvapp::ContourClusterAlgo charge_contour_maker;
+      // charge_contour_maker.analyzeImages( cropmaker.crops_v );
+      // charge_contour_maker.clear_intermediate_images();
 
-      ublarcvapp::ContourClusterAlgo charge_contour_maker;
-      charge_contour_maker.analyzeImages( cropmaker.crops_v );
-      charge_contour_maker.clear_intermediate_images();
-
-      ublarcvapp::ContourClusterAlgo mask_contour_maker;
-      mask_contour_maker.analyzeImages( cropmaker.crops_v, 10.0, 1 );
-      mask_contour_maker.clear_intermediate_images();
+      // ublarcvapp::ContourClusterAlgo mask_contour_maker;
+      // mask_contour_maker.analyzeImages( cropmaker.crops_v, 10.0, 1 );
+      // mask_contour_maker.clear_intermediate_images();
       
-      m_combo_crops_vv.emplace_back( std::move(cropmaker) );
-      m_combo_charge_contour_v.emplace_back( std::move(charge_contour_maker) );
-      m_combo_mask_contour_v.emplace_back(   std::move(mask_contour_maker) );
+
+      // m_combo_charge_contour_v.emplace_back( std::move(charge_contour_maker) );
+      // m_combo_mask_contour_v.emplace_back(   std::move(mask_contour_maker) );
+
+      m_combo_crops_v.emplace_back( std::move(cropmaker) );
+      m_combo_features_v.emplace_back( std::move(features) );
+      
     }
 
     // make contours for each set

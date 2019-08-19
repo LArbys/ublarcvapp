@@ -6,7 +6,8 @@ set(SUBMODULE_NAME MRCNNMatch)
 set(SOURCES
   mrcnnmatch/MRCNNMatch.cxx
   mrcnnmatch/MRCNNMatchTypes.cxx
-  mrcnnmatch/CropMaskCombo.cxx  
+  mrcnnmatch/CropMaskCombo.cxx
+  mrcnnmatch/FeaturesMaskCombo.cxx    
   )
 
 # ADD THE SOURCES
@@ -17,6 +18,7 @@ set_property( TARGET ${LIBNAME}
   APPEND PROPERTY PUBLIC_HEADER
   mrcnnmatch/MRCNNMatch.h
   mrcnnmatch/MRCNNMatchTypes.h
-  mrcnnmatch/CropMaskCombo.h  
+  mrcnnmatch/CropMaskCombo.h
+  mrcnnmatch/FeaturesMaskCombo.h
   )
   
