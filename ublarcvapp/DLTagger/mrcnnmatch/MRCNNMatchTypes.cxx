@@ -52,6 +52,148 @@ namespace dltagger {
               << " detz=(" << m.detz_min << "," << m.detz_max << ")";
   };
   
+
+  // =======================================================================================
+  // MaskCombo
+
+  void MaskCombo::addMask( const larcv::ClusterMask& mask, const MaskMatchData& data ) {
+    int plane = mask.meta.plane();
+    if ( indices.at(plane)!=-1 ) {
+      throw std::runtime_error("MaskCombo::addMask: combo already has index for this plane");
+    }
+
+    // set index
+    indices[plane] = data.index;
+    pmasks[plane]  = &mask;
+    pdata[plane]   = &data;
+
+    // update union
+    if ( union_tick[0]==-1 || union_tick[0]>data.tick_min ) union_tick[0] = data.tick_min;
+    if ( union_tick[1]==-1 || union_tick[1]<data.tick_max ) union_tick[1] = data.tick_max;
+    if ( union_detz[0]==-1 || union_detz[0]>data.detz_min ) union_detz[0] = data.detz_min;
+    if ( union_detz[1]==-1 || union_detz[1]<data.detz_max ) union_detz[1] = data.detz_max;
+    
+    // update intersection
+    // only if overlapping
+    bool isoverlapping = iscompatible(data);
+    for ( size_t p=0; p<3; p++ ) {
+      if ( indices[p]==-1 ) continue;
+      if ( (intersection_tick[0]<data.tick_max || intersection_tick[1]>data.tick_min )
+           && (intersection_detz[0]<data.detz_max || intersection_detz[1]>data.detz_min ) ) {
+        isoverlapping = true;
+      }
+    }
+    
+    if ( intersection_tick[0]==-1 || (isoverlapping && intersection_tick[0]<data.tick_min ) ) intersection_tick[0] = data.tick_min;
+    if ( intersection_tick[1]==-1 || (isoverlapping && intersection_tick[1]>data.tick_max ) ) intersection_tick[1] = data.tick_max;
+    if ( intersection_detz[0]==-1 || (isoverlapping && intersection_detz[0]<data.detz_min ) ) intersection_detz[0] = data.detz_min;
+    if ( intersection_detz[1]==-1 || (isoverlapping && intersection_detz[1]>data.detz_max ) ) intersection_detz[1] = data.detz_max;
+
+    IOU = calc_iou(false);
+  }
+
+
+  float MaskCombo::calc_iou( bool wdetz_correction ) const {
+
+    float intersection = (intersection_detz[1]-intersection_detz[0])*(intersection_tick[1]-intersection_tick[0]);
+    float unionarea    = (union_tick[1]-union_tick[0])*( pdata[2]->detz_max - pdata[2]->detz_min );
+    // will have to deal with no detz from plane2 later, but for now, Y-plane is our anchor (as usual)
+
+    // float union_correction = 0.;
+    
+    // if ( wdetz_correction ) {
+    //   // we account for the wire projection angles
+    //   // image dz overlap for one point in the detector. wires look like this: \|/ 
+    //   // intersection of Z is 1, but union includes the Z-projection of the U,V wires
+    //   // we subtract this off. we use geo info to get the z-projection of the wire
+
+    //   // we find the projections
+    //   float zproj[3][4] = { 0 };
+    //   for ( size_t p=0; p<indices.size(); p++ ) {
+    //     if ( p==0 ) std::cout << std::endl;
+    //     if ( indices[p]==-1 ) continue;
+    //     if ( p==2 ) continue;
+
+    //     // we find the nearest wire to the min and max z-det range
+
+    //     double testpts[4][3] = { { 0,  117.0, intersection_detz[0]  }, // minz top
+    //                              { 0, -117.0, intersection_detz[0]  }, // minz bottom
+    //                              { 0,  117.0, intersection_detz[1]  }, // maxz top
+    //                              { 0, -117.0, intersection_detz[1]  }  // maxz bot
+    //     };    
+
+    //     float near_wireco[4];
+    //     int   near_wire[4];
+    //     for ( int i=0; i<4; i++ ) {
+
+    //       if ( testpts[i][2]>=1036 )
+    //         testpts[i][2] = 1036.0;
+    //       if ( testpts[i][2]<0.5 )
+    //         testpts[i][2] = 0.5;
+          
+    //       near_wireco[i] = larutil::Geometry::GetME()->WireCoordinate( testpts[i], p );
+    //       near_wire[i] = (int)(near_wireco[i]+0.5);
+    //       if ( near_wire[i]<0 ) near_wire[i] = 0;
+    //       if ( near_wire[i]>=(int)larutil::Geometry::GetME()->Nwires(p) )
+    //         near_wire[i] = (int)larutil::Geometry::GetME()->Nwires(p) - 1;
+          
+    //       double start[3];
+    //       double end[3];        
+    //       larutil::Geometry::GetME()->WireEndPoints( p, near_wire[i], start, end );
+    //       zproj[p][i] = fabs(end[2]-start[2]);
+    //       std::cout << "zproj[plane=" << p << "][pt=" << i << "] = " << zproj[p][i]
+    //                 << "  near_wire=" << near_wireco[i]
+    //                 << "  start=(" << start[1] << "," << start[2] << ")"
+    //                 << "  end=(" << end[1] << "," << end[2] << ")"
+    //                 << std::endl;
+    //     }
+    //   }//end of loop over planes
+    //   // min-side correction
+    //   float zmin_correction = 0.;
+    //   float zmax_correction = 0.;
+    //   if ( indices[0]!=-1 ) {
+    //     zmin_correction = ( zproj[0][0] > zproj[1][1] ) ? zproj[0][0] : zproj[1][1]; // u-plane uses min-top, v-plane uses min-bottom
+    //     zmin_correction *= (union_tick[1]-union_tick[0]);
+    //   }
+    //   if ( indices[1]!=-1 ) {
+    //     zmax_correction = ( zproj[0][1] > zproj[1][0] ) ? zproj[0][1] : zproj[1][0]; // u-plane uses max-bot, v-plane uses max-top
+    //     zmax_correction *= (union_tick[1]-union_tick[0]);
+    //   }
+    //   union_correction = (zmin_correction + zmax_correction);
+    //   std::cout << " correction=" << union_correction << " = zmin(" << zmin_correction << ") + zmax(" << zmax_correction << ")" << std::endl;
+      
+    //   unionarea -= union_correction;
+    // }
+    
+    return intersection/unionarea;
+    
+  }
+
+  bool MaskCombo::iscompatible( const MaskMatchData& data ) {
+    bool isoverlapping = false;
+    for ( size_t p=0; p<3; p++ ) {
+      if ( indices[p]==-1 ) continue;
+      if ( (intersection_tick[0]<data.tick_max && intersection_tick[1]>data.tick_min )
+           && (intersection_detz[0]<data.detz_max && intersection_detz[1]>data.detz_min ) ) {
+        isoverlapping = true;
+      }
+    }
+    return isoverlapping;
+  }
+
+  std::ostream& operator<<(std::ostream& os,const MaskCombo& m) {
+    return os << "MaskCombo("
+              << " indicies=[" << m.indices[0] << "," << m.indices[1] << "," << m.indices[2] << "]"
+              << " intersection{ "
+              << " tick=[" << m.intersection_tick[0] << "," << m.intersection_tick[1] << "]"
+              << " detz=[" << m.intersection_detz[0] << "," << m.intersection_detz[1] << "]"
+              << " }"
+              << " union{ "
+              << " tick=[" << m.union_tick[0] << "," << m.union_tick[1] << "]"
+              << " detz=[" << m.union_detz[0] << "," << m.union_detz[1] << "]"
+              << " }"
+              << " iou: " << m.iou();
+  }
   
 }
 }

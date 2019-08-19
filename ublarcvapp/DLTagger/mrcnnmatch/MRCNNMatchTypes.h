@@ -36,6 +36,44 @@ namespace dltagger {
     
   };
 
+  class MaskCombo {
+  public:
+    MaskCombo()
+      : pmasks(3,nullptr),
+      pdata(3,nullptr),
+      indices(3,-1),
+      intersection_tick(2,-1),
+      union_tick(2,-1),
+      intersection_detz(2,-1),
+      union_detz(2,-1),
+      IOU(0)
+        {};
+    virtual ~MaskCombo() {};
+    
+    void addMask( const larcv::ClusterMask& mask, const MaskMatchData& data );
+    bool iscompatible( const MaskMatchData& );
+    float calc_iou( bool wdetz_correction=false ) const;
+    float iou() const { return IOU; };
+
+    std::vector<const larcv::ClusterMask*> pmasks;
+    std::vector<const MaskMatchData*> pdata;    
+    std::vector<int> indices;
+    std::vector<float> intersection_tick;
+    std::vector<float> union_tick;
+    std::vector<float> intersection_detz;
+    std::vector<float> union_detz;
+    float IOU;
+
+    // stdout streamer
+    friend std::ostream& operator<<(std::ostream &os,const MaskCombo& m);
+    
+    // comparison operator for sorting: we sort high to low
+    bool operator < (const MaskCombo& rhs ) const {
+      if ( iou() > rhs.iou() ) return true;
+      return false;
+    };
+  };
+
 
   
 }
