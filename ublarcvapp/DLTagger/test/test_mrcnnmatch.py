@@ -44,6 +44,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     combo     = matchalgo.m_combo_3plane_v.at(icombo)
     combocrop = matchalgo.m_combo_crops_v.at(icombo)
     features  = matchalgo.m_combo_features_v.at(icombo)
+    endpt3d   = matchalgo.m_combo_endpt3d_v.at(icombo)
     
     mask_contours = features.combo_mask_contour
 
@@ -67,6 +68,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     tmarkers = []
     tcontours = []
     gpca_v = []
+    tendpt_v = []
     for p in xrange(3):
         ccombos.cd(1+p)
         if combo_masks[p] is None:
@@ -121,32 +123,73 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
                      mask_meta.pos_y( int(features.pca_mean_vv.at(p).at(1)) ) ]
         pca1_dir = [ features.pca1_dir_vv.at(p).at(x) for x in xrange(2) ]
         pca1_dir[1] *= 6.0 # change y-axis scale from row pixels to ticks
-        dt_max = fabs(mask_meta.max_y() - pca_mean[1])/pca1_dir[1]
-        dw_max = fabs(mask_meta.max_x() - pca_mean[0])/pca1_dir[0]
-        dd = min(dt_max,dw_max)
+
+        # forward dir
+        if pca1_dir[0]>0:
+            dw = (mask_meta.max_x()-pca_mean[0])/pca1_dir[0]
+        else:
+            dw = (mask_meta.min_x()-pca_mean[0])/pca1_dir[0]
+        if pca1_dir[1]>0:
+            dt = (mask_meta.max_y()-pca_mean[1])/pca1_dir[1]
+        else:
+            dt = (mask_meta.min_y()-pca_mean[1])/pca1_dir[1]
+        
+        if fabs(dt)<fabs(dw):
+            dd = dt
+        else:
+            dd = dw
         ptmax = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
-        dt_min = fabs(mask_meta.min_y() - pca_mean[1])/pca1_dir[1]
-        dw_min = fabs(mask_meta.min_x() - pca_mean[0])/pca1_dir[0]
-        dd = min(dt_min,dw_min)
-        ptmin = [ pca_mean[x] - dd*pca1_dir[x] for x in xrange(2) ]
+
+        # backwards
+        if pca1_dir[0]<0:
+            dw = (mask_meta.max_x()-pca_mean[0])/pca1_dir[0]
+        else:
+            dw = (mask_meta.min_x()-pca_mean[0])/pca1_dir[0]
+        if pca1_dir[1]<0:
+            dt = (mask_meta.max_y()-pca_mean[1])/pca1_dir[1]
+        else:
+            dt = (mask_meta.min_y()-pca_mean[1])/pca1_dir[1]
+        if fabs(dt)<fabs(dw):
+            dd = dt
+        else:
+            dd = dw
+        ptmin = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
+        
         gpca = rt.TGraph(3)
+        print("plane[%d] pca mean: ",pca_mean)
+        print("plane[%d] pca ends: min="%(p),ptmin," max=",ptmax)
+        print("plane[%d] pca1-dir: "%(p),pca1_dir)        
         gpca.SetPoint(0,ptmin[0],ptmin[1])
         gpca.SetPoint(1,pca_mean[0],pca_mean[1])
         gpca.SetPoint(2,ptmax[0],ptmax[1])
-        gpca.SetMarkerStyle(21)
+        gpca.SetMarkerStyle(24)
         gpca.SetMarkerColor(rt.kMagenta)
-        gpca.SetMarkerSize(2)
+        #gpca.SetMarkerSize(2)
         gpca.SetLineColor(rt.kMagenta)
         gpca.SetLineWidth(2)
         gpca.Draw("LP")
         gpca_v.append(gpca)
+
+
+        # 3d points (projected of course)
+        tendpt = rt.TGraph(2)
+        print("plane[%d] endpoint: "%(p), endpt3d.endpt_wid_v[0][p], ",", endpt3d.endpt_tyz_v[0][0] )
+        print("plane[%d] endpoint: "%(p), endpt3d.endpt_wid_v[1][p], ",", endpt3d.endpt_tyz_v[1][0] )
+        tendpt.SetPoint(0, endpt3d.endpt_wid_v[0][p], endpt3d.endpt_tyz_v[0][0] )
+        tendpt.SetPoint(1, endpt3d.endpt_wid_v[1][p], endpt3d.endpt_tyz_v[1][0] )
+        tendpt.SetMarkerStyle(23)
+        tendpt.SetMarkerSize(2)
+        tendpt.SetMarkerColor( rt.kGreen )
+        tendpt.Draw("P")
+        tendpt_v.append(tendpt)
+        hcrop[p].SetTitle("Plane %d: tri=(%.3f,%.3f) x=(%d,%d);wire;tick"%(p,endpt3d.endpt_tri_v[0],endpt3d.endpt_tri_v[1],endpt3d.endpt_tpc_v[0],endpt3d.endpt_tpc_v[1]))
         
         
     ccombos.Draw()
     ccombos.Update()
     ccombos.SaveAs("example_combos/combo_%02d.png"%(icombo))
     
-    if combo.iou()<0.8:
+    if combo.iou()<0.5:
         break
 
 raw_input()

@@ -7,7 +7,8 @@ set(SOURCES
   mrcnnmatch/MRCNNMatch.cxx
   mrcnnmatch/MRCNNMatchTypes.cxx
   mrcnnmatch/CropMaskCombo.cxx
-  mrcnnmatch/FeaturesMaskCombo.cxx    
+  mrcnnmatch/FeaturesMaskCombo.cxx
+  mrcnnmatch/Gen3DEndpoints.cxx      
   )
 
 # ADD THE SOURCES
@@ -20,5 +21,6 @@ set_property( TARGET ${LIBNAME}
   mrcnnmatch/MRCNNMatchTypes.h
   mrcnnmatch/CropMaskCombo.h
   mrcnnmatch/FeaturesMaskCombo.h
+  mrcnnmatch/Gen3DEndpoints.h
   )
   

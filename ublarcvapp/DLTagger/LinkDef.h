@@ -17,6 +17,7 @@
 #pragma link C++ class ublarcvapp::dltagger::MaskCombo+;
 #pragma link C++ class ublarcvapp::dltagger::CropMaskCombo+;
 #pragma link C++ class ublarcvapp::dltagger::FeaturesMaskCombo+;
+#pragma link C++ class ublarcvapp::dltagger::Gen3DEndpoints+;
 #pragma link C++ class ublarcvapp::dltagger::MRCNNMatch+;
 
 // dltagger

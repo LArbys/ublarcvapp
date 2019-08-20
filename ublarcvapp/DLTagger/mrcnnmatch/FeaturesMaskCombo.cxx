@@ -55,12 +55,23 @@ namespace dltagger {
       std::vector<float> pca2(2);
       std::vector<float> eigenvals(2);
 
+      float pca1len = 0.;
+      float pca2len = 0.;
       for (int i=0; i<2; i++) {
         mean[i] = pca.getDataMean()(i);
         eigenvals[i] = pca.getEigenValues()(i);
         pca1[i] = pca.getEigenVectors()(i,0); // first axis
         pca2[i] = pca.getEigenVectors()(i,1); // second axis
+        pca1len += pca1[i]*pca1[i];
+        pca2len += pca2[i]*pca2[i];
       }
+      pca1len = sqrt(pca1len);
+      pca2len = sqrt(pca2len);
+      for (int i=0; i<2; i++ ) {
+        pca1[i] /= pca1len;
+        pca2[i] /= pca2len;
+      }
+      
       pca_mean_vv.push_back( mean );
       pca1_dir_vv.push_back( pca1 );
       pca2_dir_vv.push_back( pca2 );

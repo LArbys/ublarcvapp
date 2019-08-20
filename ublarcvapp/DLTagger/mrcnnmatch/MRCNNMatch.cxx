@@ -112,6 +112,7 @@ namespace dltagger {
     for ( size_t icombo=0; icombo<m_combo_3plane_v.size(); icombo++ ) {
       CropMaskCombo     cropmaker( m_combo_3plane_v.at(icombo), wholeview_v );
       FeaturesMaskCombo features( cropmaker );
+      Gen3DEndpoints    endpoints( features );
       // ublarcvapp::ContourClusterAlgo charge_contour_maker;
       // charge_contour_maker.analyzeImages( cropmaker.crops_v );
       // charge_contour_maker.clear_intermediate_images();
@@ -126,7 +127,8 @@ namespace dltagger {
 
       m_combo_crops_v.emplace_back( std::move(cropmaker) );
       m_combo_features_v.emplace_back( std::move(features) );
-      
+      m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+
     }
 
     // make contours for each set
