@@ -8,7 +8,8 @@ namespace dltagger {
 
   MaskMatchData::MaskMatchData( int _plane, int _index, const larcv::ClusterMask& mask )
     : plane(_plane),
-      index(_index)
+      index(_index),
+      used(false)
   {
 
     // we loop over the points in the mask
@@ -49,7 +50,8 @@ namespace dltagger {
     return os << "MaskMatchData[plane " << m.plane << ", index " << m.index << "] "
               << " tick=(" << m.tick_min << "," << m.tick_max << ")"
               << " wire=(" << m.wire_min << "," << m.wire_max << ")"
-              << " detz=(" << m.detz_min << "," << m.detz_max << ")";
+              << " detz=(" << m.detz_min << "," << m.detz_max << ")"
+              << " used="  << m.used;
   };
   
 

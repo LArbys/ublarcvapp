@@ -81,12 +81,13 @@ namespace dltagger {
 
     }
     std::sort( combo_v.begin(), combo_v.end() );
+    
     std::cout << "combos after Y-U match: " << combo_v.size() << std::endl;    
     //for ( auto const& combo : combo_v )
     //  std::cout << "  " << combo << std::endl;
 
     // pair with v-plane
-    m_combo_3plane_v.clear();
+    std::vector< MaskCombo > combo_3plane_v;
     
     for ( auto const& combo : combo_v ) {
 
@@ -103,23 +104,40 @@ namespace dltagger {
           combo_yuv.addMask( mask_vplane, data_vplane );
 
           std::cout << "combo Y-U-V: " << combo_yuv << std::endl;
-          if ( combo_yuv.iou()>0.5 )
-            m_combo_3plane_v.emplace_back( std::move(combo_yuv) );
+          if ( combo_yuv.iou()>0.25 )
+            combo_3plane_v.emplace_back( std::move(combo_yuv) );
           
         }
       }// loop over v-plane cluster/mask
 
     }// end of combo y-u loop
 
-    std::sort( m_combo_3plane_v.begin(), m_combo_3plane_v.end() );
+    std::sort( combo_3plane_v.begin(), combo_3plane_v.end() );
     //std::cout << "combos after Y-U-V match: " << m_combo_3plane_v.size() << std::endl;
     //for ( auto const& combo : m_combo_3plane_v )
     //std::cout << "  " << combo << std::endl;
 
     // make crops, mask charge, contours on charge, contours on mask
-    for ( size_t icombo=0; icombo<m_combo_3plane_v.size(); icombo++ ) {
-      CropMaskCombo     cropmaker( m_combo_3plane_v.at(icombo), wholeview_v );
+    std::vector<int> pass;
+    for ( size_t icombo=0; icombo<combo_3plane_v.size(); icombo++ ) {
+
+      auto& combo = combo_3plane_v[icombo];
+
+      // greedy: if already used successfully, we do not reuse
+      bool isused = false;
+      for ( size_t p=0; p<combo.indices.size(); p++ ) {
+        if ( matchdata_vv[p][ combo.indices[p] ].used ) isused = true;
+      }
+      if ( isused )
+        continue;
+      
+      // we step through a number of data products
+
+      // make crop around mask. make image of both charge and mask pixels
+      CropMaskCombo     cropmaker( combo, wholeview_v );
+      // extract contours, PCA of mask pixels
       FeaturesMaskCombo features( cropmaker );
+      // attempt to define 3D endpoints
       Gen3DEndpoints    endpoints( features );
 
       // run astar only if the 3d points are fairly consistent
@@ -128,11 +146,27 @@ namespace dltagger {
         if ( triarea_score>200 ) runastar = false;
       
       AStarMaskCombo    astar( endpoints, badch_v, runastar );
-      
-      m_combo_crops_v.emplace_back( std::move(cropmaker) );
-      m_combo_features_v.emplace_back( std::move(features) );
-      m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
-      m_combo_astar_v.emplace_back( std::move(astar) );
+
+      if ( runastar ) {
+        if (astar.astar_completed==1 ) {
+          pass.push_back(1);
+
+          // we mark the mask data in the combo as used
+          for ( size_t p=0; p<combo.indices.size(); p++ )
+            matchdata_vv[p][ combo.indices[p] ].used = true;
+          
+        }
+        else {
+          pass.push_back(0);
+        }
+        
+        m_combo_3plane_v.emplace_back( std::move(combo) );
+        m_combo_crops_v.emplace_back( std::move(cropmaker) );
+        m_combo_features_v.emplace_back( std::move(features) );
+        m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+        m_combo_astar_v.emplace_back( std::move(astar) );
+        
+      }
 
       // for debug
       //if ( icombo==0 )

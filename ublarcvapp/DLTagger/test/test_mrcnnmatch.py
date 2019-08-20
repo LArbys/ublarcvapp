@@ -37,6 +37,14 @@ matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus, 
 ccombos = rt.TCanvas("ccombos","Combos", 1500, 1200)
 ccombos.Divide(3,2)
 
+# collect graphical items
+tbox_v = {0:[],1:[],2:[]}
+tmarkers = {0:[],1:[],2:[]}
+tcontours = {0:[],1:[],2:[]}
+gpca_v = {0:[],1:[],2:[]}
+tendpt_v = {0:[],1:[],2:[]}
+tastar_v = {0:[],1:[],2:[]}
+
 for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     ccombos.Clear()
     ccombos.Divide(3,2)
@@ -69,13 +77,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
 
 
     # draw canvas and boxes
-    tbox_v = []
-    hcrop  = [ larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(idx,p) ) for p in xrange(3) ]
-    tmarkers = []
-    tcontours = []
-    gpca_v = []
-    tendpt_v = []
-    tastar_v = []
+    hcrop  = [ larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(idx,p) ) for p in xrange(3) ]    
     for p in xrange(3):
         ccombos.cd(1+p)
         if combo_masks[p] is None:
@@ -91,7 +93,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         bbox.SetLineWidth(3)
         bbox.SetFillStyle(0)
         bbox.Draw("same")
-        tbox_v.append(bbox)
+        tbox_v[p].append(bbox)
 
         # crop
         ccombos.cd(4+p)
@@ -119,11 +121,11 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             gcontour.SetLineColor(rt.kBlack)
             gcontour.SetLineWidth(1)
             gcontour.Draw("L")
-            tcontours.append(gcontour)
+            tcontours[p].append(gcontour)
         gmarker.SetMarkerStyle(20)
         gmarker.SetMarkerColor(rt.kRed)
         gmarker.Draw("P")
-        tmarkers.append(gmarker)
+        tmarkers[p].append(gmarker)
 
         # pca lines
         pca_mean = [ mask_meta.pos_x( int(features.pca_mean_vv.at(p).at(0)) ),
@@ -163,7 +165,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         ptmin = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
         
         gpca = rt.TGraph(3)
-        print("plane[%d] pca mean: ",pca_mean)
+        print("plane[%d] pca mean: "%(p),pca_mean)
         print("plane[%d] pca ends: min="%(p),ptmin," max=",ptmax)
         print("plane[%d] pca1-dir: "%(p),pca1_dir)        
         gpca.SetPoint(0,ptmin[0],ptmin[1])
@@ -175,7 +177,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         gpca.SetLineColor(rt.kMagenta)
         gpca.SetLineWidth(2)
         gpca.Draw("LP")
-        gpca_v.append(gpca)
+        gpca_v[p].append(gpca)
 
 
         # 3d points (projected of course)
@@ -188,7 +190,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         tendpt.SetMarkerSize(2)
         tendpt.SetMarkerColor( rt.kGreen )
         tendpt.Draw("P")
-        tendpt_v.append(tendpt)
+        tendpt_v[p].append(tendpt)
         hcrop[p].SetTitle("Plane %d: tri=(%.3f,%.3f) x=(%d,%d);wire;tick"%(p,endpt3d.endpt_tri_v[0],endpt3d.endpt_tri_v[1],endpt3d.endpt_tpc_v[0],endpt3d.endpt_tpc_v[1]))
 
         
@@ -208,13 +210,23 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             tastar.SetMarkerColor( rt.kBlack )
             tastar.SetLineColor( rt.kBlack )
         tastar.Draw("LP")
-        tastar_v.append( tastar )
+        tastar_v[p].append( tastar )
         
     ccombos.Draw()
     ccombos.Update()
     ccombos.SaveAs("example_combos/combo_%02d.png"%(icombo))
+
+call = rt.TCanvas("call", "All", 1200,1500 )
+call.Divide(1,3)
+for p in xrange(3):
+    call.cd(1+p)
+    hwire_v[p].Draw("colz")
+    for g in tastar_v[p]:
+        g.Draw("LP")
+    for g in gpca_v[p]:
+        g.Draw("LP")
+    for g in tbox_v[p]:
+        g.Draw()
     
-    if combo.iou()<0.5:
-        break
 
 raw_input()

@@ -24,6 +24,7 @@ namespace dltagger {
     float wire_max;
     float detz_min;
     float detz_max;
+    bool  used;
 
     // comparison operator needed for sorting
     bool operator < (const MaskMatchData& b) const {
