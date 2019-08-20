@@ -51,7 +51,7 @@ namespace reco3d {
     for (int i=0; i<3; i++) {
       nodeid[i] = (int) (( pos[i]-m_origin[i])/m_cm_per_pixel[i]);
       if ( nodeid[i]<0 || nodeid[i]>=m_widths[i])
-        return A3DPixPos_t(); // outside lattice, so send and empty one
+        return A3DPixPos_t(); // outside lattice, so send an empty one
     }
     return nodeid;
   }
@@ -95,6 +95,7 @@ namespace reco3d {
       wid[p] = larutil::Geometry::GetME()->WireCoordinate( xyz, p );
       if ( wid[p]<=m_meta_v.at(p)->min_x() || wid[p]>=m_meta_v.at(p)->max_x() ) {
         within_image = false;
+        //std::cout << "WARNING: sampled wire=" << wid[p] << " on plane=" << p << " outside of image" << std::endl;
         return;
       }
       cols[p] = m_meta_v.at(p)->col(wid[p]);

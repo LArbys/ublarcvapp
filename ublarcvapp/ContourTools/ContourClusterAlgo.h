@@ -37,6 +37,8 @@ namespace ublarcvapp {
                         const int hull_edge_pts_split=50,
                         const int n_allowed_breaks=10,
                         const int verbosity=2 );
+    
+    void clear_intermediate_images();
 
   protected:
     

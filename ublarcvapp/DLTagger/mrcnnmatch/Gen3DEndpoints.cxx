@@ -188,8 +188,9 @@ namespace dltagger {
         ext_pt_min[1] = min_row;        
       }
 
-      std::cout << "ext max pt: (" << ext_pt_max[0] << "," << ext_pt_max[1] << ")" << std::endl;
-      std::cout << "ext min pt: (" << ext_pt_min[0] << "," << ext_pt_min[1] << ")" << std::endl;      
+      std::cout << "within image " << meta.dump() << ":" << std::endl;
+      std::cout << " ext max pt: (" << ext_pt_max[0] << "," << ext_pt_max[1] << ")" << std::endl;
+      std::cout << " ext min pt: (" << ext_pt_min[0] << "," << ext_pt_min[1] << ")" << std::endl;      
       
       // convert from (col,row) to (wire,tick)
       ext_pt_min[0] = meta.pos_x( (int)ext_pt_min[0] );

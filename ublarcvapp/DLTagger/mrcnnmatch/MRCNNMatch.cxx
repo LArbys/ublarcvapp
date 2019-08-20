@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "ublarcvapp/UBImageMod/EmptyChannelAlgo.h"
 #include "CropMaskCombo.h"
 
 namespace ublarcvapp {
@@ -16,8 +17,15 @@ namespace dltagger {
    */
   void MRCNNMatch::matchMasksAcrossPlanes( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
                                            const std::vector<larcv::Image2D>& wholeview_v,
+                                           const larcv::EventChStatus& ev_chstatus,
                                            std::vector< std::vector<int> >& match_indices ) {
 
+    // make badch image
+    ublarcvapp::EmptyChannelAlgo badchalgo;
+    std::vector<larcv::Image2D> badch_v =
+      badchalgo.makeBadChImage( 4, 3, 2400, 1008*6, 3456, 6, 1, ev_chstatus );
+    
+    
     // first we compile key match criteria for each mask
 
     std::vector< std::vector<MaskMatchData> > matchdata_vv;
@@ -113,26 +121,27 @@ namespace dltagger {
       CropMaskCombo     cropmaker( m_combo_3plane_v.at(icombo), wholeview_v );
       FeaturesMaskCombo features( cropmaker );
       Gen3DEndpoints    endpoints( features );
-      // ublarcvapp::ContourClusterAlgo charge_contour_maker;
-      // charge_contour_maker.analyzeImages( cropmaker.crops_v );
-      // charge_contour_maker.clear_intermediate_images();
 
-      // ublarcvapp::ContourClusterAlgo mask_contour_maker;
-      // mask_contour_maker.analyzeImages( cropmaker.crops_v, 10.0, 1 );
-      // mask_contour_maker.clear_intermediate_images();
+      // run astar only if the 3d points are fairly consistent
+      bool runastar = true;
+      for ( auto const& triarea_score : endpoints.endpt_tri_v )
+        if ( triarea_score>200 ) runastar = false;
       
-
-      // m_combo_charge_contour_v.emplace_back( std::move(charge_contour_maker) );
-      // m_combo_mask_contour_v.emplace_back(   std::move(mask_contour_maker) );
-
+      AStarMaskCombo    astar( endpoints, badch_v, runastar );
+      
       m_combo_crops_v.emplace_back( std::move(cropmaker) );
       m_combo_features_v.emplace_back( std::move(features) );
       m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+      m_combo_astar_v.emplace_back( std::move(astar) );
 
+      // for debug
+      //if ( icombo==3 )
+      //break;
     }
 
-    // make contours for each set
-    
+    // initial round of selection
+
+    // PASS 2 using only 2 plane matches and remaining masks
         
   }
 

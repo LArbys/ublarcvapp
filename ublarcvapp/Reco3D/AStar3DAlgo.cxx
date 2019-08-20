@@ -34,8 +34,22 @@ namespace reco3d {
     std::vector<int> start_wids(start_cols.size());
     std::vector<int> goal_wids(goal_cols.size());
     for (size_t p=0; p<goal_cols.size(); p++) {
-      start_wids[p] = img_v.at(p).meta().pos_x( start_cols[p] );
-      goal_wids[p]  = img_v.at(p).meta().pos_x( goal_cols[p] );
+      try {
+        start_wids[p] = img_v.at(p).meta().pos_x( start_cols[p] );
+      }
+      catch ( std::exception& e ) {
+        std::stringstream errmsg;
+        errmsg << "couldn't get wire-id for start col=" << start_cols[p] << " on plane=" << p << ": " << e.what() << std::endl;
+        throw std::runtime_error( errmsg.str() );
+      }
+      try {
+        goal_wids[p]  = img_v.at(p).meta().pos_x( goal_cols[p] );
+      }
+      catch (std::exception& e ) {
+        std::stringstream errmsg;
+        errmsg << "couldn't get wire-id for end col=" << goal_cols[p] << " on plane=" << p << ": " << e.what() << std::endl;
+        throw std::runtime_error( errmsg.str() );
+      }
     }
     double start_tri = 0.;
     int start_crosses = 0;
@@ -154,6 +168,8 @@ namespace reco3d {
       if ( verbose>0 )
         std::cout << "Start Node: " << start->str() << std::endl;
     }
+    if ( start->cols[0]==0 && start->cols[1]==0 && start->cols[2]==0 )
+      start->cols = start_cols; // not sure why this is happening
 
     // start fscore gets set to the heuristic
     for (int i=1; i<3; i++ ) {

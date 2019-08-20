@@ -184,6 +184,16 @@ namespace ublarcvapp {
   }//splitContour
 
   /**
+   * clear out intermediate products to save memory
+   */
+  void ContourClusterAlgo::clear_intermediate_images() {
+    cvimg_stage0_v.clear();
+    cvimg_stage1_v.clear();
+    cvimg_stage2_v.clear();
+    cvimg_stage3_v.clear();
+  }
+
+  /**
    * make images with index stored in cluster
    *
    * @param[in] img_v original larcv images

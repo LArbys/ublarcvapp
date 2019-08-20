@@ -30,7 +30,12 @@ namespace dltagger {
     int nrows    = tickdiff/int(wholeview_v.front().meta().pixel_height());
     if ( tickdiff%int(wholeview_v.front().meta().pixel_height())!=0 )
       nrows++;
+    if ( nrows%8!=0 )
+      nrows += 8-nrows%8;
+    if ( nrows%8!=0 )
+      throw std::runtime_error( "nrows not divisible by 8" );
     tick_union_max = tick_union_min + nrows*wholeview_v.front().meta().pixel_height();
+    // adjust tick bounds to stay within min/max of full image
     if ( tick_union_max>=wholeview_v.front().meta().max_y() ) {
       tick_union_max = wholeview_v.front().meta().max_y();
       tick_union_min = tick_union_max - nrows*wholeview_v.front().meta().pixel_height();
@@ -58,15 +63,21 @@ namespace dltagger {
       }
       
       int wire_min = near_wire[0];
-      int wire_max = near_wire[1];
+      int wire_max = near_wire[0];
       for ( int i=1; i<4; i++ ) {
         if ( wire_min>near_wire[i] ) wire_min = near_wire[i];
         if ( wire_max<near_wire[i] ) wire_max = near_wire[i];
       }
       int ncols = wire_max-wire_min+1;
-      if ( wire_min+ncols>larutil::Geometry::GetME()->Nwires(p) ) {
+      if (ncols%8!=0)
+        ncols += 8-ncols%8;
+      if ( ncols%8!=0 )
+        throw std::runtime_error( "nrows not divisible by 8" );
+      
+      wire_max = wire_min + ncols*wholeview_v[p].meta().pixel_width();
+      if ( wire_max>larutil::Geometry::GetME()->Nwires(p) ) {
         wire_max = larutil::Geometry::GetME()->Nwires(p);
-        wire_min = wire_max-ncols;
+        wire_min = wire_max-ncols*wholeview_v[p].meta().pixel_width();
       }
       
       const larcv::ClusterMask& mask = *getCombo().pmasks.at(p);

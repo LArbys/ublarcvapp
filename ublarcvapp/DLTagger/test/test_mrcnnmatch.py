@@ -23,6 +23,7 @@ io.read_entry(0)
 
 ev_wire  = io.get_data(larcv.kProductImage2D, "wire" )
 ev_masks = io.get_data(larcv.kProductClusterMask, "mrcnn_masks" )
+ev_chstatus = io.get_data(larcv.kProductChStatus, "wire" )
 
 mask_vv = ev_masks.as_vector()
 print("Number of masks: ",[mask_vv.at(x).size() for x in range(3)])
@@ -30,7 +31,7 @@ hwire_v = [ larcv.as_th2d( ev_wire.as_vector().at(p), "hwire_p%d"%(p) ) for p in
 meta_v  = [ ev_wire.as_vector().at(p).meta() for p in xrange(3) ]
 
 indices = std.vector("vector<int>")()
-matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), indices )
+matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus, indices )
 
 # visualize individual matches
 ccombos = rt.TCanvas("ccombos","Combos", 1500, 1200)
@@ -42,9 +43,14 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
 
     # get algo outputs
     combo     = matchalgo.m_combo_3plane_v.at(icombo)
+
+    if icombo>=matchalgo.m_combo_crops_v.size():
+        break
+    
     combocrop = matchalgo.m_combo_crops_v.at(icombo)
     features  = matchalgo.m_combo_features_v.at(icombo)
     endpt3d   = matchalgo.m_combo_endpt3d_v.at(icombo)
+    astarout  = matchalgo.m_combo_astar_v.at(icombo)
     
     mask_contours = features.combo_mask_contour
 
@@ -69,6 +75,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     tcontours = []
     gpca_v = []
     tendpt_v = []
+    tastar_v = []
     for p in xrange(3):
         ccombos.cd(1+p)
         if combo_masks[p] is None:
@@ -183,7 +190,25 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         tendpt.Draw("P")
         tendpt_v.append(tendpt)
         hcrop[p].SetTitle("Plane %d: tri=(%.3f,%.3f) x=(%d,%d);wire;tick"%(p,endpt3d.endpt_tri_v[0],endpt3d.endpt_tri_v[1],endpt3d.endpt_tpc_v[0],endpt3d.endpt_tpc_v[1]))
+
         
+        # astar path
+        astar_path = astarout.astar_path
+        tastar = rt.TGraph( astar_path.size() )
+        for ipt in xrange( astar_path.size() ):
+            astar_node = astar_path[ipt]
+            node_wire = mask_meta.pos_x( int(astar_node.cols[p]) )
+            print("Astar node[%d] tick=%d wire=%d"%(p,astar_node.tyz[0],node_wire))
+            tastar.SetPoint( ipt, node_wire, astar_node.tyz[0] )
+        tastar.SetMarkerStyle(24)
+        if astarout.astar_completed==1:
+            tastar.SetMarkerColor( rt.kBlue )
+            tastar.SetLineColor( rt.kBlue )
+        else:
+            tastar.SetMarkerColor( rt.kBlack )
+            tastar.SetLineColor( rt.kBlack )
+        tastar.Draw("LP")
+        tastar_v.append( tastar )
         
     ccombos.Draw()
     ccombos.Update()

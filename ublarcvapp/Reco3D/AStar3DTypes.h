@@ -38,6 +38,7 @@ namespace reco3d {
       row = 0;
       within_image=false;
       pixval.resize(3,0.0);
+      cols.resize(3,0);      
       badchnode = false;
     };
     AStar3DNode( int u_, int v_, int w_, std::vector<float> tyz_ ) { 
@@ -58,6 +59,7 @@ namespace reco3d {
       prev = NULL;
       row = 0;
       pixval.resize(3,0.0);
+      cols.resize(3,0);
       badchnode = false;
     };
     AStar3DNode( const AStar3DNode& src ) {
@@ -120,6 +122,7 @@ namespace reco3d {
       std::stringstream ss;
       ss << "[node=(" << u << "," << v << "," << w << ") "
       	 << "tyz=(" << tyz[0] << "," << tyz[1] << "," << tyz[2] << ") "
+         << "cols=(" << cols[0] << "," << cols[1] << "," << cols[2] << ") "
       	 << "f=" << fscore << " "
       	 << "g=" << gscore << " "
       	 << "k=" << kscore << " "

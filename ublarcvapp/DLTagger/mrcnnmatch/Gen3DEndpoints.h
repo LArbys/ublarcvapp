@@ -27,10 +27,10 @@ namespace dltagger {
     std::vector< std::vector<int> >   endpt_wid_v; // for each end point, the wires used on each plane
     std::vector< float >              endpt_tri_v; // for each end point, a measure of how consistent the end point was
     std::vector< int >                endpt_tpc_v; // for each end point, flag indicating if wires intersect inside TPC
-    
-  protected:
 
     const FeaturesMaskCombo* pfeatures; ///< holds data we use to make this output
+    
+  protected:
 
     void _gather_plane_endpoints( const FeaturesMaskCombo& features );
     void _gen_3dendpoints();
