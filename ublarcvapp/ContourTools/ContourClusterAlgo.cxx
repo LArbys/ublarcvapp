@@ -56,6 +56,17 @@ namespace ublarcvapp {
     
     // first convert the images into cv and binarize
     for ( auto const& img : img_v ) {
+
+      // check if image is empty
+      if ( img.meta().cols()==0 || img.meta().rows()==0 ) {
+        // fill blank
+        cv::Mat cvimg;
+        cv::Mat thresh;
+        cvimg_stage0_v.emplace_back( std::move(cvimg) );
+        cvimg_stage1_v.emplace_back( std::move(thresh) );
+        continue;
+      }
+      
       cv::Mat cvimg = larcv::as_gray_mat( img, threshold, 256.0, 1.0 );
       cv::Mat cvrgb = larcv::as_mat_greyscale2bgr( img, threshold, 100.0 );
       cv::Mat thresh( cvimg );
@@ -66,6 +77,21 @@ namespace ublarcvapp {
 
 
     for (int p=0; p<3; p++) {
+
+      if ( img_v[p].meta().cols()==0 || img_v[p].meta().rows()==0 ) {
+        // fill blank
+        cv::Mat stage2;
+        cv::Mat stage3;
+        cvimg_stage2_v.emplace_back( std::move(stage2) );
+        cvimg_stage3_v.emplace_back( std::move(stage3) );
+
+        m_plane_contours_v.push_back( ContourList_t() );
+        m_plane_hulls_v.push_back( std::vector<ContourIndices_t>() );
+        m_plane_defects_v.push_back( std::vector<Defects_t>() );
+        m_plane_atomics_v.push_back( ContourList_t() );
+        m_plane_atomicmeta_v.push_back( std::vector< ContourShapeMeta >() );
+        continue;
+      }
       
       // dilate image first
       cv::Mat& cvimg = cvimg_stage1_v[p];

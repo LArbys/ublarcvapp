@@ -47,6 +47,14 @@ namespace dltagger {
     
     for ( size_t p=0; p<wholeview_v.size(); p++ ) {
 
+      if ( getCombo().indices[p]==-1 ) {
+        // create empty containers
+        larcv::Image2D blank;
+        crops_v.push_back(blank);
+        mask_v.push_back(blank);
+        continue;
+      }
+      
       // need to get the min and max wire ID for detz position
       float near_wireco[4];
       int   near_wire[4];

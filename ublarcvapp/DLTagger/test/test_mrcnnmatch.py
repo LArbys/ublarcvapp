@@ -57,14 +57,20 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     
     combocrop = matchalgo.m_combo_crops_v.at(icombo)
     features  = matchalgo.m_combo_features_v.at(icombo)
-    endpt3d   = matchalgo.m_combo_endpt3d_v.at(icombo)
-    astarout  = matchalgo.m_combo_astar_v.at(icombo)
+    if icombo<matchalgo.m_combo_endpt3d_v.size():
+        endpt3d   = matchalgo.m_combo_endpt3d_v.at(icombo)
+    else:
+        endpt3d   = None
+    if icombo<matchalgo.m_combo_astar_v.size():
+        astarout  = matchalgo.m_combo_astar_v.at(icombo)
+    else:
+        astarout  = None
     
     mask_contours = features.combo_mask_contour
 
     # get masks
     combo_indices = [ combo.indices.at(p) for p in xrange(3) ]
-    print("indicies: {}".format(combo_indices))
+    print("COMBO[{}] indicies={}".format(icombo,combo_indices))
 
     # get clustermask objects
     combo_masks = []
@@ -77,7 +83,12 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
 
 
     # draw canvas and boxes
-    hcrop  = [ larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(idx,p) ) for p in xrange(3) ]    
+    hcrop  = [ None if combo_indices[p]<0 else larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(icombo,p) ) for p in xrange(3) ]
+    is3plane = True    
+    for h in hcrop:
+        if h is None:
+            is3plane = False
+
     for p in xrange(3):
         ccombos.cd(1+p)
         if combo_masks[p] is None:
@@ -89,7 +100,10 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         print("bbox: ",combo_masks[p].box.min_x(), combo_masks[p].box.min_y(),combo_masks[p].box.max_x(), combo_masks[p].box.max_y() )
         bbox = rt.TBox( combo_masks[p].box.min_x(), meta_v[p].pos_y( int(combo_masks[p].box.min_y()) ),
                         combo_masks[p].box.max_x(), meta_v[p].pos_y( int(combo_masks[p].box.max_y()) ) )
-        bbox.SetLineColor(rt.kRed)
+        if is3plane:
+            bbox.SetLineColor(rt.kRed)
+        else:
+            bbox.SetLineColor(rt.kBlue)
         bbox.SetLineWidth(3)
         bbox.SetFillStyle(0)
         bbox.Draw("same")
@@ -165,9 +179,9 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         ptmin = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
         
         gpca = rt.TGraph(3)
-        print("plane[%d] pca mean: "%(p),pca_mean)
-        print("plane[%d] pca ends: min="%(p),ptmin," max=",ptmax)
-        print("plane[%d] pca1-dir: "%(p),pca1_dir)        
+        #print("plane[%d] pca mean: "%(p),pca_mean)
+        #print("plane[%d] pca ends: min="%(p),ptmin," max=",ptmax)
+        #print("plane[%d] pca1-dir: "%(p),pca1_dir)        
         gpca.SetPoint(0,ptmin[0],ptmin[1])
         gpca.SetPoint(1,pca_mean[0],pca_mean[1])
         gpca.SetPoint(2,ptmax[0],ptmax[1])
@@ -181,36 +195,39 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
 
 
         # 3d points (projected of course)
-        tendpt = rt.TGraph(2)
-        print("plane[%d] endpoint: "%(p), endpt3d.endpt_wid_v[0][p], ",", endpt3d.endpt_tyz_v[0][0] )
-        print("plane[%d] endpoint: "%(p), endpt3d.endpt_wid_v[1][p], ",", endpt3d.endpt_tyz_v[1][0] )
-        tendpt.SetPoint(0, endpt3d.endpt_wid_v[0][p], endpt3d.endpt_tyz_v[0][0] )
-        tendpt.SetPoint(1, endpt3d.endpt_wid_v[1][p], endpt3d.endpt_tyz_v[1][0] )
-        tendpt.SetMarkerStyle(23)
-        tendpt.SetMarkerSize(2)
-        tendpt.SetMarkerColor( rt.kGreen )
-        tendpt.Draw("P")
-        tendpt_v[p].append(tendpt)
-        hcrop[p].SetTitle("Plane %d: tri=(%.3f,%.3f) x=(%d,%d);wire;tick"%(p,endpt3d.endpt_tri_v[0],endpt3d.endpt_tri_v[1],endpt3d.endpt_tpc_v[0],endpt3d.endpt_tpc_v[1]))
+        if endpt3d is not None:
+            tendpt = rt.TGraph(2)
+            #print("plane[%d] endpoint: "%(p), endpt3d.endpt_wid_v[0][p], ",", endpt3d.endpt_tyz_v[0][0] )
+            #print("plane[%d] endpoint: "%(p), endpt3d.endpt_wid_v[1][p], ",", endpt3d.endpt_tyz_v[1][0] )
+            tendpt.SetPoint(0, endpt3d.endpt_wid_v[0][p], endpt3d.endpt_tyz_v[0][0] )
+            tendpt.SetPoint(1, endpt3d.endpt_wid_v[1][p], endpt3d.endpt_tyz_v[1][0] )
+            tendpt.SetMarkerStyle(23)
+            tendpt.SetMarkerSize(2)
+            tendpt.SetMarkerColor( rt.kGreen )
+            tendpt.Draw("P")
+            tendpt_v[p].append(tendpt)
+            hcrop[p].SetTitle("Plane %d: tri=(%.3f,%.3f) x=(%d,%d);wire;tick"%(p,endpt3d.endpt_tri_v[0],endpt3d.endpt_tri_v[1],endpt3d.endpt_tpc_v[0],endpt3d.endpt_tpc_v[1]))
 
         
         # astar path
-        astar_path = astarout.astar_path
-        tastar = rt.TGraph( astar_path.size() )
-        for ipt in xrange( astar_path.size() ):
-            astar_node = astar_path[ipt]
-            node_wire = mask_meta.pos_x( int(astar_node.cols[p]) )
-            print("Astar node[%d] tick=%d wire=%d"%(p,astar_node.tyz[0],node_wire))
-            tastar.SetPoint( ipt, node_wire, astar_node.tyz[0] )
-        tastar.SetMarkerStyle(24)
-        if astarout.astar_completed==1:
-            tastar.SetMarkerColor( rt.kBlue )
-            tastar.SetLineColor( rt.kBlue )
-        else:
-            tastar.SetMarkerColor( rt.kBlack )
-            tastar.SetLineColor( rt.kBlack )
-        tastar.Draw("LP")
-        tastar_v[p].append( tastar )
+        if astarout is not None:
+            astar_path = astarout.astar_path
+            tastar = rt.TGraph( astar_path.size() )
+            tastar.SetMarkerStyle(24)            
+            for ipt in xrange( astar_path.size() ):
+                astar_node = astar_path[ipt]
+                node_wire = mask_meta.pos_x( int(astar_node.cols[p]) )
+                #print("Astar node[%d] tick=%d wire=%d"%(p,astar_node.tyz[0],node_wire))
+                tastar.SetPoint( ipt, node_wire, astar_node.tyz[0] )
+
+            if astarout.astar_completed==1:
+                tastar.SetMarkerColor( rt.kBlue )
+                tastar.SetLineColor( rt.kBlue )
+            else:
+                tastar.SetMarkerColor( rt.kBlack )
+                tastar.SetLineColor( rt.kBlack )
+            tastar.Draw("LP")
+            tastar_v[p].append( tastar )
         
     ccombos.Draw()
     ccombos.Update()
@@ -227,6 +244,8 @@ for p in xrange(3):
         g.Draw("LP")
     for g in tbox_v[p]:
         g.Draw()
-    
+call.Update()
+call.Draw()
+call.SaveAs("example_combos/all_combos_pass1.png")
 
 raw_input()

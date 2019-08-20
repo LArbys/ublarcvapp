@@ -29,6 +29,22 @@ namespace dltagger {
     std::vector< FeaturesMaskCombo > m_combo_features_v; // features extracted from the images
     std::vector< Gen3DEndpoints >    m_combo_endpt3d_v;  // 3D endpoints created for mask-combo
     std::vector< AStarMaskCombo >    m_combo_astar_v;    // AStar path
+
+
+  protected:
+    
+    void run3PlanePass( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
+                        const std::vector<larcv::Image2D>& wholeview_v,
+                        const std::vector<larcv::Image2D>& badch_v,
+                        std::vector< std::vector<MaskMatchData> >& matchdata_vv,
+                        std::vector< std::vector<int> >& match_indices );
+
+    void run2PlanePass( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
+                        const std::vector<larcv::Image2D>& wholeview_v,
+                        const std::vector<larcv::Image2D>& badch_v,
+                        std::vector< std::vector<MaskMatchData> >& matchdata_vv,
+                        std::vector< std::vector<int> >& match_indices );
+  
   };
 }
 }

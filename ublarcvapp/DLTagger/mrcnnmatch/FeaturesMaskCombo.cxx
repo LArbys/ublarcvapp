@@ -38,6 +38,19 @@ namespace dltagger {
     
     for ( size_t p=0; p< cropdata.mask_v.size(); p++ ) {
       auto const& mask = cropdata.mask_v[p];
+      if ( mask.meta().cols()==0 || mask.meta().rows()==0 ) {
+        // empty. fill blank
+        std::vector<float> mean(2,0);
+        std::vector<float> pca1(2,0);
+        std::vector<float> pca2(2,0);
+        std::vector<float> eigenvals(2,0);
+        
+        pca_mean_vv.push_back( mean );
+        pca1_dir_vv.push_back( pca1 );
+        pca2_dir_vv.push_back( pca2 );
+        pca_eigenvalues_vv.push_back(eigenvals);
+        continue;
+      }
 
       std::vector< Eigen::Vector3f > pt_v;
       pt_v.reserve( int(mask.meta().cols()*mask.meta().rows()*0.05) );

@@ -17,7 +17,7 @@ namespace dltagger {
     virtual ~MaskMatchData() {};
 
     int plane;
-    int index;
+    int index; // in clustermask vector
     float tick_min;
     float tick_max;
     float wire_min;
@@ -46,6 +46,7 @@ namespace dltagger {
       : pmasks(3,nullptr),
       pdata(3,nullptr),
       indices(3,-1),
+      maskdata_indices(3,-1),
       intersection_tick(2,-1),
       union_tick(2,-1),
       intersection_detz(2,-1),
@@ -61,7 +62,8 @@ namespace dltagger {
 
     std::vector<const larcv::ClusterMask*> pmasks;
     std::vector<const MaskMatchData*> pdata;    
-    std::vector<int> indices;
+    std::vector<int>   indices; //< clustermask input vector index for each plane
+    std::vector<int>   maskdata_indices; //< source maskdata input vector index for each plane
     std::vector<float> intersection_tick;
     std::vector<float> union_tick;
     std::vector<float> intersection_detz;

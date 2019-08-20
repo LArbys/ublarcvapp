@@ -47,7 +47,7 @@ namespace dltagger {
   }
 
   std::ostream& operator<<(std::ostream& os,const MaskMatchData& m) {
-    return os << "MaskMatchData[plane " << m.plane << ", index " << m.index << "] "
+    return os << "MaskMatchData[plane " << m.plane << ", clustermask-index " << m.index << "] "
               << " tick=(" << m.tick_min << "," << m.tick_max << ")"
               << " wire=(" << m.wire_min << "," << m.wire_max << ")"
               << " detz=(" << m.detz_min << "," << m.detz_max << ")"
@@ -185,7 +185,8 @@ namespace dltagger {
 
   std::ostream& operator<<(std::ostream& os,const MaskCombo& m) {
     return os << "MaskCombo("
-              << " indicies=[" << m.indices[0] << "," << m.indices[1] << "," << m.indices[2] << "]"
+              << " clustmask-idx=[" << m.indices[0] << "," << m.indices[1] << "," << m.indices[2] << "]"
+              << " maskdata-idx=[" << m.maskdata_indices[0] << "," << m.maskdata_indices[1] << "," << m.maskdata_indices[2] << "]"      
               << " intersection{ "
               << " tick=[" << m.intersection_tick[0] << "," << m.intersection_tick[1] << "]"
               << " detz=[" << m.intersection_detz[0] << "," << m.intersection_detz[1] << "]"
