@@ -112,20 +112,24 @@ namespace dltagger {
           int xrow = cropmeta.row( pttick );
           int xcol = cropmeta.col( ptwire );
         
-          imgmask.set_pixel( xrow, xcol, 1.0 );
+          imgmask.set_pixel( xrow, xcol, 50.0 );
         }
         catch (std::exception& e) {
           std::cout << "warning mask out of bounds: " << e.what() << std::endl;
         };
       }
 
-      const std::vector<float>& vec_mask = imgmask.as_vector();
-      std::vector<float>& vec_pix = crop.as_mod_vector();
+      std::vector<float>& vec_mask = imgmask.as_mod_vector();
+      std::vector<float>& vec_pix  = crop.as_mod_vector();
+      // apply mask to charge image
+      // for ( size_t idx=0; idx<vec_pix.size(); idx++ ) {
+      //   vec_pix[idx] *= vec_mask[idx];
+      // }
+      // apply threshold to both charge and mask image
       for ( size_t idx=0; idx<vec_pix.size(); idx++ ) {
-        vec_pix[idx] *= vec_mask[idx];
+        if ( vec_pix[idx]<10.0 ) vec_pix[idx]  = 0.0;
+        if ( vec_pix[idx]<10.0 ) vec_mask[idx] = 0.0;
       }
-      for ( size_t idx=0; idx<vec_pix.size(); idx++ )
-        if ( vec_pix[idx]<10.0 ) vec_pix[idx] = 0.0;
       
       crops_v.emplace_back( std::move(crop) );
       mask_v.emplace_back( std::move(imgmask) );

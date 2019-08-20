@@ -32,7 +32,8 @@ namespace dltagger {
     
     std::vector<ublarcvapp::reco3d::AStar3DNode> astar_path;
     int astar_completed;
-    std::vector< larcv::Image2D > badch_crop_v;
+    std::vector< larcv::Image2D > badch_crop_v; //< badch image
+    std::vector< larcv::Image2D > astar_crop_v; //< adc image with some mods using pcaline and masks
 
     const Gen3DEndpoints *pEndpoint;
     

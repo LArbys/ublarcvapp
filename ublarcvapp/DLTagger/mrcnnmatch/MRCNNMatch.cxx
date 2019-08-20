@@ -135,8 +135,8 @@ namespace dltagger {
       m_combo_astar_v.emplace_back( std::move(astar) );
 
       // for debug
-      //if ( icombo==3 )
-      //break;
+      //if ( icombo==0 )
+      //  break;
     }
 
     // initial round of selection

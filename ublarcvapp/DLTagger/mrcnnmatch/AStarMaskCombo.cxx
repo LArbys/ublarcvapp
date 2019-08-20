@@ -71,6 +71,10 @@ namespace dltagger {
     
   }
 
+  // void AStarMaskCombo::_prep_astar_crop( const std::vector<larcv::Image2D>& whole_adc_v ) {
+  //   // recover charge
+  // }
+
   void AStarMaskCombo::_run_astar() {
 
     ublarcvapp::reco3d::AStar3DAlgoConfig config;

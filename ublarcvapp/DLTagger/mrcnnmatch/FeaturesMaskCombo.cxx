@@ -22,7 +22,8 @@ namespace dltagger {
     combo_charge_contour.analyzeImages( cropdata.crops_v );
     combo_charge_contour.clear_intermediate_images();
     
-    combo_mask_contour.analyzeImages( cropdata.crops_v, 10.0, 1 );
+    combo_mask_contour.analyzeImages( cropdata.mask_v, 0.5, 1 );
+    //combo_mask_contour.analyzeImages( cropdata.crops_v, 10, 1 );    
     combo_mask_contour.clear_intermediate_images();
     
   }
