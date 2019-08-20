@@ -291,16 +291,18 @@ namespace dltagger {
         
         // get intersection and infer missing plane wire
         triarea = 0.;
-        int otherwire = 0;
+        int otherplane = missingplane;
+        int otherwire  = 0;
         //ublarcvapp::UBWireTool::wireIntersection( goodplane[0], goodwid[0], goodplane[1], goodwid[1], intersection_zy, crosses );
         ublarcvapp::UBWireTool::getMissingWireAndPlane( goodplane[0], goodwid[0], goodplane[1], goodwid[1],
-                                                        missingplane, otherwire, intersection_zy, crosses );
+                                                        otherplane, otherwire, intersection_zy, crosses );
         std::vector<float> point_tyz(3);
         point_tyz[0] = extension_pts[goodplane[0]][i][1]; // tick coordinate
         point_tyz[1] = intersection_zy[1];     // y-position
         point_tyz[2] = intersection_zy[0];     // z-position
-        
-        wireids[missingplane] = otherwire;
+
+        if ( otherwire!=-1 )
+          wireids[missingplane] = otherwire;
 
         endpt_tyz_v.push_back( point_tyz );
         endpt_wid_v.push_back( wireids );
