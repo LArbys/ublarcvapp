@@ -85,29 +85,31 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     # draw canvas and boxes
     hcrop  = [ None if combo_indices[p]<0 else larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(icombo,p) ) for p in xrange(3) ]
     is3plane = True    
-    for h in hcrop:
+    for ip,h in enumerate(hcrop):
         if h is None:
             is3plane = False
+            hcrop[ip] = larcv.as_th2d( combocrop.missing_v[ip], "hmissingcrop_combo%d_p%d"%(icombo,p))
 
     for p in xrange(3):
         ccombos.cd(1+p)
-        if combo_masks[p] is None:
-            continue
+
         hwire_v[p].Draw("colz")
         if p in [0,1]:
             hwire_v[p].GetXaxis().SetRangeUser(0,2400)
         hwire_v[p].SetTitle("Plane %d: IOU %.3f;wire;tick"%(p,combo.iou()))
-        print("bbox: ",combo_masks[p].box.min_x(), combo_masks[p].box.min_y(),combo_masks[p].box.max_x(), combo_masks[p].box.max_y() )
-        bbox = rt.TBox( combo_masks[p].box.min_x(), meta_v[p].pos_y( int(combo_masks[p].box.min_y()) ),
-                        combo_masks[p].box.max_x(), meta_v[p].pos_y( int(combo_masks[p].box.max_y()) ) )
-        if is3plane:
-            bbox.SetLineColor(rt.kRed)
-        else:
-            bbox.SetLineColor(rt.kBlue)
-        bbox.SetLineWidth(3)
-        bbox.SetFillStyle(0)
-        bbox.Draw("same")
-        tbox_v[p].append(bbox)
+        if combo_masks[p] is not None:
+            print("bbox: ",combo_masks[p].box.min_x(), combo_masks[p].box.min_y(),combo_masks[p].box.max_x(), combo_masks[p].box.max_y() )
+            bbox = rt.TBox( combo_masks[p].box.min_x(), meta_v[p].pos_y( int(combo_masks[p].box.min_y()) ),
+                            combo_masks[p].box.max_x(), meta_v[p].pos_y( int(combo_masks[p].box.max_y()) ) )
+            if is3plane:
+                bbox.SetLineColor(rt.kRed)
+            else:
+                bbox.SetLineColor(rt.kBlue)
+                
+            bbox.SetLineWidth(3)
+            bbox.SetFillStyle(0)
+            bbox.Draw("same")
+            tbox_v[p].append(bbox)
 
         # crop
         ccombos.cd(4+p)
@@ -116,82 +118,85 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         # draw contours, pca, end points and stuff
 
         # markers and contours
-        mask_meta = combocrop.mask_v.at(p).meta()
-        ncontours = int(mask_contours.m_plane_atomicmeta_v.at(p).size())
-        gmarker = rt.TGraph( ncontours*2 )
-        for ictr in xrange( ncontours ):
-            contour = mask_contours.m_plane_atomicmeta_v.at(p).at(ictr)
-            # contour end points
-            startpt = contour.getFitSegmentStart()
-            endpt   = contour.getFitSegmentEnd()
-            gmarker.SetPoint( 2*ictr,   mask_meta.pos_x(startpt.x), mask_meta.pos_y(startpt.y) )
-            gmarker.SetPoint( 2*ictr+1, mask_meta.pos_x(endpt.x),   mask_meta.pos_y(endpt.y) )
-            # contour graph
-            gcontour = rt.TGraph( contour.size()+1 )
-            for ipt in xrange(contour.size()):
-                gcontour.SetPoint( ipt, mask_meta.pos_x(contour.at(ipt).x), mask_meta.pos_y(contour.at(ipt).y) )
-                if ipt==0:
-                    gcontour.SetPoint( contour.size(), mask_meta.pos_x(contour.at(ipt).x), mask_meta.pos_y(contour.at(ipt).y) )
-            gcontour.SetLineColor(rt.kBlack)
-            gcontour.SetLineWidth(1)
-            gcontour.Draw("L")
-            tcontours[p].append(gcontour)
-        gmarker.SetMarkerStyle(20)
-        gmarker.SetMarkerColor(rt.kRed)
-        gmarker.Draw("P")
-        tmarkers[p].append(gmarker)
+        if combo_masks[p] is not None:
+            mask_meta = combocrop.mask_v.at(p).meta()
+            ncontours = int(mask_contours.m_plane_atomicmeta_v.at(p).size())
+            gmarker = rt.TGraph( ncontours*2 )
+            for ictr in xrange( ncontours ):
+                contour = mask_contours.m_plane_atomicmeta_v.at(p).at(ictr)
+                # contour end points
+                startpt = contour.getFitSegmentStart()
+                endpt   = contour.getFitSegmentEnd()
+                gmarker.SetPoint( 2*ictr,   mask_meta.pos_x(startpt.x), mask_meta.pos_y(startpt.y) )
+                gmarker.SetPoint( 2*ictr+1, mask_meta.pos_x(endpt.x),   mask_meta.pos_y(endpt.y) )
+                # contour graph
+                gcontour = rt.TGraph( contour.size()+1 )
+                for ipt in xrange(contour.size()):
+                    gcontour.SetPoint( ipt, mask_meta.pos_x(contour.at(ipt).x), mask_meta.pos_y(contour.at(ipt).y) )
+                    if ipt==0:
+                        gcontour.SetPoint( contour.size(), mask_meta.pos_x(contour.at(ipt).x), mask_meta.pos_y(contour.at(ipt).y) )
+                gcontour.SetLineColor(rt.kBlack)
+                gcontour.SetLineWidth(1)
+                gcontour.Draw("L")
+                tcontours[p].append(gcontour)
+                
+            gmarker.SetMarkerStyle(20)
+            gmarker.SetMarkerColor(rt.kRed)
+            gmarker.Draw("P")
+            tmarkers[p].append(gmarker)
 
-        # pca lines
-        pca_mean = [ mask_meta.pos_x( int(features.pca_mean_vv.at(p).at(0)) ),
-                     mask_meta.pos_y( int(features.pca_mean_vv.at(p).at(1)) ) ]
-        pca1_dir = [ features.pca1_dir_vv.at(p).at(x) for x in xrange(2) ]
-        pca1_dir[1] *= 6.0 # change y-axis scale from row pixels to ticks
+            # pca lines
+            pca_mean = [ mask_meta.pos_x( int(features.pca_mean_vv.at(p).at(0)) ),
+                         mask_meta.pos_y( int(features.pca_mean_vv.at(p).at(1)) ) ]
+            pca1_dir = [ features.pca1_dir_vv.at(p).at(x) for x in xrange(2) ]
+            pca1_dir[1] *= 6.0 # change y-axis scale from row pixels to ticks
 
-        # forward dir
-        if pca1_dir[0]>0:
-            dw = (mask_meta.max_x()-pca_mean[0])/pca1_dir[0]
-        else:
-            dw = (mask_meta.min_x()-pca_mean[0])/pca1_dir[0]
-        if pca1_dir[1]>0:
-            dt = (mask_meta.max_y()-pca_mean[1])/pca1_dir[1]
-        else:
-            dt = (mask_meta.min_y()-pca_mean[1])/pca1_dir[1]
+            # forward dir
+            if pca1_dir[0]>0:
+                dw = (mask_meta.max_x()-pca_mean[0])/pca1_dir[0]
+            else:
+                dw = (mask_meta.min_x()-pca_mean[0])/pca1_dir[0]
+            # backward dir
+            if pca1_dir[1]>0:
+                dt = (mask_meta.max_y()-pca_mean[1])/pca1_dir[1]
+            else:
+                dt = (mask_meta.min_y()-pca_mean[1])/pca1_dir[1]
         
-        if fabs(dt)<fabs(dw):
-            dd = dt
-        else:
-            dd = dw
-        ptmax = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
+            if fabs(dt)<fabs(dw):
+                dd = dt
+            else:
+                dd = dw
+            ptmax = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
 
-        # backwards
-        if pca1_dir[0]<0:
-            dw = (mask_meta.max_x()-pca_mean[0])/pca1_dir[0]
-        else:
-            dw = (mask_meta.min_x()-pca_mean[0])/pca1_dir[0]
-        if pca1_dir[1]<0:
-            dt = (mask_meta.max_y()-pca_mean[1])/pca1_dir[1]
-        else:
-            dt = (mask_meta.min_y()-pca_mean[1])/pca1_dir[1]
-        if fabs(dt)<fabs(dw):
-            dd = dt
-        else:
-            dd = dw
-        ptmin = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
+            # backwards
+            if pca1_dir[0]<0:
+                dw = (mask_meta.max_x()-pca_mean[0])/pca1_dir[0]
+            else:
+                dw = (mask_meta.min_x()-pca_mean[0])/pca1_dir[0]
+            if pca1_dir[1]<0:
+                dt = (mask_meta.max_y()-pca_mean[1])/pca1_dir[1]
+            else:
+                dt = (mask_meta.min_y()-pca_mean[1])/pca1_dir[1]
+            if fabs(dt)<fabs(dw):
+                dd = dt
+            else:
+                dd = dw
+            ptmin = [ pca_mean[x] + dd*pca1_dir[x] for x in xrange(2) ]
         
-        gpca = rt.TGraph(3)
-        #print("plane[%d] pca mean: "%(p),pca_mean)
-        #print("plane[%d] pca ends: min="%(p),ptmin," max=",ptmax)
-        #print("plane[%d] pca1-dir: "%(p),pca1_dir)        
-        gpca.SetPoint(0,ptmin[0],ptmin[1])
-        gpca.SetPoint(1,pca_mean[0],pca_mean[1])
-        gpca.SetPoint(2,ptmax[0],ptmax[1])
-        gpca.SetMarkerStyle(24)
-        gpca.SetMarkerColor(rt.kMagenta)
-        #gpca.SetMarkerSize(2)
-        gpca.SetLineColor(rt.kMagenta)
-        gpca.SetLineWidth(2)
-        gpca.Draw("LP")
-        gpca_v[p].append(gpca)
+            gpca = rt.TGraph(3)
+            #print("plane[%d] pca mean: "%(p),pca_mean)
+            #print("plane[%d] pca ends: min="%(p),ptmin," max=",ptmax)
+            #print("plane[%d] pca1-dir: "%(p),pca1_dir)        
+            gpca.SetPoint(0,ptmin[0],ptmin[1])
+            gpca.SetPoint(1,pca_mean[0],pca_mean[1])
+            gpca.SetPoint(2,ptmax[0],ptmax[1])
+            gpca.SetMarkerStyle(24)
+            gpca.SetMarkerColor(rt.kMagenta)
+            #gpca.SetMarkerSize(2)
+            gpca.SetLineColor(rt.kMagenta)
+            gpca.SetLineWidth(2)
+            gpca.Draw("LP")
+            gpca_v[p].append(gpca)
 
 
         # 3d points (projected of course)

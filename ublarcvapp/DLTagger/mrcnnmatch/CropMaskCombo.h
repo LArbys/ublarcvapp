@@ -29,12 +29,20 @@ namespace dltagger {
     
     std::vector<larcv::Image2D> crops_v;
     std::vector<larcv::Image2D> mask_v;
+    std::vector<larcv::Image2D> missing_v; ///< adds non-empty image for plane that is missing in crops_v and mask_v
+    int ngoodplanes;
+    int badplane;
     const MaskCombo& getCombo() const { return *_pcombo; };
+
     
   protected:
     
     const MaskCombo* _pcombo;
     void _crop_and_mask_image( const std::vector<larcv::Image2D>& wholeview_v );
+    void _make_missing_crop( const std::vector<larcv::Image2D>& wholeview_v,
+                             std::vector<larcv::Image2D>& out_v );
+    
+
     
   };
   

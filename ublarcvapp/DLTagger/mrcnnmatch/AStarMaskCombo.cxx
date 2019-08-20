@@ -17,7 +17,7 @@ namespace dltagger {
     ublarcvapp::EmptyChannelAlgo badchalgo;
     std::vector<larcv::Image2D> badch_v =
       badchalgo.makeBadChImage( 4, 3, 2400, 1008*6, 3456, 6, 1, evchstatus );
-
+    
     _prep_badch_crop( badch_v );
     if ( run )
       _run_astar();

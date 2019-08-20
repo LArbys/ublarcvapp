@@ -38,7 +38,7 @@ namespace dltagger {
     const Gen3DEndpoints *pEndpoint;
     
   protected:
-    
+
     void _prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v );
     void _run_astar();
     
