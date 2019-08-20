@@ -26,8 +26,20 @@ namespace dltagger {
     
     // operate on planes independently first
     mask_endpoints_vv.clear();
+    mask_projdist_vv.clear();
     
     for ( size_t p=0; p<nplanes; p++ ) {
+
+      if ( features.pcropdata->crops_v[p].meta().cols()==0 ||
+           features.pcropdata->crops_v[p].meta().rows()==0 ) {
+        // empty image
+        // fill empty
+
+        mask_endpoints_vv.push_back( std::vector<EndPoint_t>() );
+        mask_projdist_vv.push_back(  std::vector<float>() );
+        continue;
+      }
+      
       // find the extreme points along the 1st pca-axis. they are buried deep into the ContourShapeMeta classes
       const std::vector< ublarcvapp::ContourShapeMeta >& contour_v =
        features.combo_mask_contour.m_plane_atomicmeta_v.at(p);
@@ -105,7 +117,7 @@ namespace dltagger {
       
       mask_endpoints_vv.emplace_back( std::move(endpoints_v) );
       mask_projdist_vv.emplace_back(  std::move(projdist_v) );
-    }
+    }// end of plane loop
     
   }
 
@@ -131,6 +143,10 @@ namespace dltagger {
 
       // get crop mask
       const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
+      if ( meta.cols()==0 || meta.rows()==0 ) {
+        // empty image. skip
+        continue;
+      }
       
       for ( size_t i=0; i<2; i++ ) {
         auto const& endpt = mask_endpoints_vv[p][i];
@@ -157,17 +173,21 @@ namespace dltagger {
     std::vector< float > extension_pts[3][2]; // [plane][min or max]
     for ( size_t p=0; p<3; p++ ) {
 
-      const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
-
-      // do extension in (col,row) pixel coordinates
-      std::vector<float> pca1_dir = pfeatures->pca1_dir_vv.at(p);
-      auto const& pca_mean = pfeatures->pca_mean_vv.at(p);
-
       // in pixel coordinates
       auto& ext_pt_min = extension_pts[p][0];
       auto& ext_pt_max = extension_pts[p][1];
       ext_pt_min.resize(2,0.0);
       ext_pt_max.resize(2,0.0);
+      
+      const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
+      if ( meta.cols()==0 || meta.rows()==0 ) {
+        // empty image. skip.
+        continue;
+      }
+
+      // do extension in (col,row) pixel coordinates
+      std::vector<float> pca1_dir = pfeatures->pca1_dir_vv.at(p);
+      auto const& pca_mean = pfeatures->pca_mean_vv.at(p);
 
       // max extension: towards max tick
       if ( max_pt_plane==p ) {
@@ -212,30 +232,93 @@ namespace dltagger {
     // now we get 3d points
     for (int i=0; i<2; i++ ) { // loop over min/max
       
-      std::vector< int > wireids(3);
-      std::vector<float> intersection_zy;
+      std::vector< int > wireids(3,-1);
+      std::vector<float> intersection_zy(2,0);
       double triarea = 0;
       int crosses = 0;
-      
-      for ( size_t p=0; p<3; p++ )
-        wireids[p] = (int)extension_pts[p][i][0];
 
-      ublarcvapp::UBWireTool::wireIntersection( wireids, intersection_zy, triarea, crosses );
-      std::vector<float> point_tyz(3);
-      point_tyz[0] = extension_pts[0][i][1]; // tick coordinate
-      point_tyz[1] = intersection_zy[1];     // y-position
-      point_tyz[2] = intersection_zy[0];     // z-position
+      int num_good_planes = 0;
       
-      endpt_tyz_v.push_back( point_tyz );
-      endpt_wid_v.push_back( wireids );
-      endpt_tri_v.push_back( triarea );
-      endpt_tpc_v.push_back( crosses );
-      
-      std::cout << "3D Point: "
-                << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
-                << " triarea=" << triarea
-                << " crosses=" << crosses
-                << std::endl;
+      for ( size_t p=0; p<3; p++ ) {
+
+        const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
+        if ( meta.cols()==0 || meta.rows()==0 ) {
+          // empty image. skip
+          continue;
+        }
+
+        //if ( extension_pts[p][i].size()==2 ) {
+        wireids[p] = (int)extension_pts[p][i][0];
+        num_good_planes++;
+        //}
+      }
+
+      if ( num_good_planes==3 ) {
+        // 3 Plane End point creation
+        ublarcvapp::UBWireTool::wireIntersection( wireids, intersection_zy, triarea, crosses );
+        std::vector<float> point_tyz(3);
+        point_tyz[0] = extension_pts[0][i][1]; // tick coordinate
+        point_tyz[1] = intersection_zy[1];     // y-position
+        point_tyz[2] = intersection_zy[0];     // z-position
+        
+        endpt_tyz_v.push_back( point_tyz );
+        endpt_wid_v.push_back( wireids );
+        endpt_tri_v.push_back( triarea );
+        endpt_tpc_v.push_back( crosses );
+        
+        std::cout << "3D Point (3 plane): "
+                  << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
+                  << " triarea=" << triarea
+                  << " crosses=" << crosses
+                  << std::endl;
+      }
+      else if ( num_good_planes==2 ) {
+        std::vector<int> goodwid;
+        std::vector<int> goodplane;
+        int missingplane = -1;
+        for ( size_t p=0; p<3; p++ ) {
+          if ( wireids[p]!=-1 ) {
+            goodwid.push_back( wireids[p] );
+            goodplane.push_back(p);
+          }
+          else
+            missingplane = (int)p;
+        }
+        std::cout << "we have a missing plane: " << missingplane << std::endl;
+        std::cout << " wids={" << wireids[0] << "," << wireids[1] << "," << wireids[2] << "}" << std::endl;
+        std::cout << " goodplanes={" << goodplane[0] << "," << goodplane[1] << "}" << std::endl;
+        std::cout << " wires on good planes={" << goodwid[0] << "," << goodwid[1] << "}" << std::endl;
+        
+        // get intersection and infer missing plane wire
+        triarea = 0.;
+        int otherwire = 0;
+        //ublarcvapp::UBWireTool::wireIntersection( goodplane[0], goodwid[0], goodplane[1], goodwid[1], intersection_zy, crosses );
+        ublarcvapp::UBWireTool::getMissingWireAndPlane( goodplane[0], goodwid[0], goodplane[1], goodwid[1],
+                                                        missingplane, otherwire, intersection_zy, crosses );
+        std::vector<float> point_tyz(3);
+        point_tyz[0] = extension_pts[goodplane[0]][i][1]; // tick coordinate
+        point_tyz[1] = intersection_zy[1];     // y-position
+        point_tyz[2] = intersection_zy[0];     // z-position
+        
+        wireids[missingplane] = otherwire;
+
+        endpt_tyz_v.push_back( point_tyz );
+        endpt_wid_v.push_back( wireids );
+        endpt_tri_v.push_back( triarea );
+        endpt_tpc_v.push_back( crosses );
+                
+        std::cout << "3D Point (2 plane): "
+                  << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
+                  << " triarea=" << triarea
+                  << " crosses=" << crosses
+                  << " otherwire=" << otherwire
+                  << std::endl;        
+      }
+      else {
+        std::stringstream errmsg;
+        errmsg << __FILE__ << ":" << __LINE__ << ": not enough good planes (<2) to form 3D point" << std::endl;
+        throw std::runtime_error(errmsg.str());
+      }
     }
     
   }

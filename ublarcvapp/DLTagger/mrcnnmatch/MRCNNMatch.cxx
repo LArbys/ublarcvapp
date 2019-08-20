@@ -290,10 +290,13 @@ namespace dltagger {
       CropMaskCombo     cropmaker( combo, wholeview_v );
       // extract contours, PCA of mask pixels
       FeaturesMaskCombo features( cropmaker );
+      // attempt to define 3D endpoints
+      Gen3DEndpoints    endpoints( features );      
 
       m_combo_3plane_v.emplace_back( std::move(combo) );
       m_combo_crops_v.emplace_back( std::move(cropmaker) );
       m_combo_features_v.emplace_back( std::move(features) );
+      m_combo_endpt3d_v.emplace_back( std::move(endpoints) );      
       std::cout << "STORE 2-PLANE COMBO" << std::endl;
     }//end of combo loop
 
