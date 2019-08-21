@@ -19,10 +19,10 @@ set(LARLITE_INCLUDES $ENV{LARLITE_BASEDIR} $ENV{LARLITE_USERDEVDIR} $ENV{LARLITE
 #set(LARLITE_LIBS_USED SelectionTool_LEEPreCuts)
 
 # larcv libs used
-#set(LARCV_LIBS_USED LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil)
+set(LARCV_LIBS_USED LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil)
 
 # ublarcvapp libraries
-#set(UBLARCVAPP_LIBS_USED LArCVApp_ContourTools LArCVApp_UBImageMod)
+set(UBLARCVAPP_LIBS_USED LArCVApp_ContourTools LArCVApp_UBImageMod LArCVApp_Reco3D)
 
 # sub-directories
 add_subdirectory( mrcnnmatch )
@@ -39,12 +39,13 @@ target_include_directories(${LIBNAME}
   ${LARCV_INCLUDE_DIR}
   ${LARLITE_INCLUDES}
   $ENV{CILANTRO_INC_DIR}
-  $ENV{EIGEN_INC_DIR}
+  ${OpenCV_INCLUDE_DIRS}
+  ${EIGEN3_INCLUDE_DIRS}
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/mrcnnmatch
   ${PROJECT_SOURCE_DIR}
   )
-#target_link_libraries(${LIBNAME} ${LARLITE_LIBS_USED} ${LARCV_LIBS_USED} ${UBLARCVAPP_LIBS_USED} ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
+target_link_libraries(${LIBNAME} ${LARLITE_LIBS_USED} ${LARCV_LIBS_USED} ${UBLARCVAPP_LIBS_USED} ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
 
 include_directories( ${PROJECT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/mrcnnmatch ${LARCV_INCLUDE_DIR} ${LARLITE_INCLUDES} $ENV{CILANTRO_INC_DIR})
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${ALL_HEADERS} LINKDEF LinkDef.h)

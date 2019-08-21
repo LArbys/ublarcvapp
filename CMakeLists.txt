@@ -46,6 +46,8 @@ else()
   message("DISABLING modules needing Geo2D")  
 endif()
 
+#---Eigen3
+find_package(Eigen3 REQUIRED)
 
 #---LArLite
 set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" )
