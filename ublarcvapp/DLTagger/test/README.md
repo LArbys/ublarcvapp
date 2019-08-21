@@ -7,6 +7,8 @@ Use to test the MRCNNMatch class which is responsible for matching Mask R-CNN cl
 It uses mutual overlap in time and detector-z along with
 `AStar3DAlgo` to check if a 3D-consistent path through charge can be defined.
 
-Example out:
+Examples:
 
 ![](all_combos_pass1.png?raw=true)
+
+![](example_event_2.png?raw=true)
