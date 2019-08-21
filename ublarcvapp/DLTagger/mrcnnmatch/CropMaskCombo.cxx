@@ -231,6 +231,11 @@ namespace dltagger {
                                wholeview_v.at(badplane).meta().plane() );
     larcv::Image2D crop = wholeview_v.at(badplane).crop(cropmeta);
 
+    // threshold
+    for ( auto& pixval : crop.as_mod_vector() ) {
+      if ( pixval<10.0 ) pixval = 0.;
+    }
+
     for ( size_t p=0; p<crops_v.size(); p++ ) {
       if ( p==badplane )
         out_v.emplace_back(std::move(crop));

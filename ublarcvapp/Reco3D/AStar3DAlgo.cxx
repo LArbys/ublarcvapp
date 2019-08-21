@@ -151,7 +151,8 @@ namespace reco3d {
       throw std::runtime_error("Was not able to produce a valid goal node.");
     }
     else {
-      if ( verbose>0 )
+      goal->within_image = true; // hack
+      if ( verbose>=0 )
         std::cout << "Goal Node: " << goal->str() << " within-image=" << goal->within_image << std::endl;
     }
 
@@ -165,8 +166,8 @@ namespace reco3d {
       throw std::runtime_error("Was not able to produce a valid start node.");
     }
     else {
-      if ( verbose>0 )
-        std::cout << "Start Node: " << start->str() << std::endl;
+      if ( verbose>=0 )
+        std::cout << "Start Node: " << start->str() << " within-image=" << start->within_image << std::endl;
     }
     if ( start->cols[0]==0 && start->cols[1]==0 && start->cols[2]==0 )
       start->cols = start_cols; // not sure why this is happening

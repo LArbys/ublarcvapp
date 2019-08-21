@@ -90,6 +90,9 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             is3plane = False
             hcrop[ip] = larcv.as_th2d( combocrop.missing_v[ip], "hmissingcrop_combo%d_p%d"%(icombo,p))
 
+    castar = rt.TCanvas("caster","ASTAR", 1500, 500 )
+    castar.Divide(3,1)
+    hastar_v = []
     for p in xrange(3):
         ccombos.cd(1+p)
 
@@ -115,11 +118,16 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         ccombos.cd(4+p)
         hcrop[p].Draw("colz")
 
+        # get the meta for the crop
+        if combo_masks[p] is not None:
+            mask_meta = combocrop.mask_v.at(p).meta()
+        else:
+            mask_meta = combocrop.missing_v.at(p).meta()
+
         # draw contours, pca, end points and stuff
 
         # markers and contours
         if combo_masks[p] is not None:
-            mask_meta = combocrop.mask_v.at(p).meta()
             ncontours = int(mask_contours.m_plane_atomicmeta_v.at(p).size())
             gmarker = rt.TGraph( ncontours*2 )
             for ictr in xrange( ncontours ):
@@ -233,10 +241,23 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
                 tastar.SetLineColor( rt.kBlack )
             tastar.Draw("LP")
             tastar_v[p].append( tastar )
-        
+
+            # astar canvas
+            castar.cd(1+p)
+            if astarout.score_crop_v.size()>0:
+                hastar = larcv.as_th2d( astarout.score_crop_v.at( p ), "hastar_combo%d_p%d"%(icombo,p) )
+                hastar.Draw("colz")
+                tastar.Draw("LP")
+                hastar_v.append(hastar)
+            castar.Update()
+    
     ccombos.Draw()
     ccombos.Update()
     ccombos.SaveAs("example_combos/combo_%02d.png"%(icombo))
+
+    castar.Draw()
+    castar.Update()
+    castar.SaveAs("example_combos/astar_%02d.png"%(icombo))
 
 call = rt.TCanvas("call", "All", 1200,1500 )
 call.Divide(1,3)

@@ -34,13 +34,15 @@ namespace dltagger {
     int astar_completed;
     std::vector< larcv::Image2D > badch_crop_v; //< badch image
     std::vector< larcv::Image2D > astar_crop_v; //< adc image with some mods using pcaline and masks
+    std::vector< larcv::Image2D > score_crop_v; //< adc image showing score
 
     const Gen3DEndpoints *pEndpoint;
     
   protected:
 
-    void _prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v );
-    void _run_astar();
+    void _prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v,
+                           const std::vector<larcv::Image2D>& input_crop_v );
+    void _run_astar( const std::vector<larcv::Image2D>& input_v );
     
   };
   

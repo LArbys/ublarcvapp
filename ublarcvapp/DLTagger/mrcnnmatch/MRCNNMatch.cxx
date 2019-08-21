@@ -273,6 +273,7 @@ namespace dltagger {
     }
     
     // Analyze 2-plane combos
+    std::vector<int> pass;    
     for ( auto const& combo : combo_v ) {
 
       // greedy: if already used successfully, we do not reuse
@@ -291,13 +292,37 @@ namespace dltagger {
       // extract contours, PCA of mask pixels
       FeaturesMaskCombo features( cropmaker );
       // attempt to define 3D endpoints
-      Gen3DEndpoints    endpoints( features );      
+      Gen3DEndpoints    endpoints( features );
 
-      m_combo_3plane_v.emplace_back( std::move(combo) );
-      m_combo_crops_v.emplace_back( std::move(cropmaker) );
-      m_combo_features_v.emplace_back( std::move(features) );
-      m_combo_endpt3d_v.emplace_back( std::move(endpoints) );      
-      std::cout << "STORE 2-PLANE COMBO" << std::endl;
+      bool run = true;
+      if (endpoints.endpt_tpc_v[0]==0 || endpoints.endpt_tpc_v[1]==0 )
+        run = false;
+      
+      // astar
+      AStarMaskCombo    astar( endpoints, badch_v, run );
+
+      if ( run ) {
+        if (astar.astar_completed==1 ) {
+          pass.push_back(1);
+
+          // we mark the mask data in the combo as used
+          for ( size_t p=0; p<combo.maskdata_indices.size(); p++ ) {
+            if ( combo.maskdata_indices[p]!=-1 )
+              matchdata_vv[p][ combo.maskdata_indices[p] ].used = true;
+          }
+        }
+        else {
+          pass.push_back(0);
+        }
+        
+        m_combo_3plane_v.emplace_back( std::move(combo) );
+        m_combo_crops_v.emplace_back( std::move(cropmaker) );
+        m_combo_features_v.emplace_back( std::move(features) );
+        m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+        m_combo_astar_v.emplace_back( std::move(astar) );
+        std::cout << "STORE 2-PLANE COMBO" << std::endl;        
+      }
+
     }//end of combo loop
 
   }
