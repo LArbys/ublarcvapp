@@ -9,21 +9,31 @@ namespace ublarcvapp {
 namespace dltagger {
 
   /**
-   * match mask R-CNN masks across planes
+   * match mask R-CNN masks across planes.
+   *
+   * the output of the algorithm is stored in the m_combo_XXXX_v
    * 
-   * @param[in] clustermask_vv vector of masks for each plane
-   * @param[inout] match_indices each match stores as a vector of mask indices for each plane. -1 if no match for that plane
+   * @param[in] clustermask_vv vector of masks for each plane. output of Mask-RCNN.
+   * @param[in] wholeview_v whole images for each plane.
+   * @param[in] ev_chstatus channel status info for event.
    *
    */
   void MRCNNMatch::matchMasksAcrossPlanes( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
                                            const std::vector<larcv::Image2D>& wholeview_v,
-                                           const larcv::EventChStatus& ev_chstatus,
-                                           std::vector< std::vector<int> >& match_indices ) {
+                                           const larcv::EventChStatus& ev_chstatus ) {
 
     // make badch image
     ublarcvapp::EmptyChannelAlgo badchalgo;
+    auto const& wholeimage_meta = wholeview_v.front().meta();
+    
     std::vector<larcv::Image2D> badch_v =
-      badchalgo.makeBadChImage( 4, 3, 2400, 1008*6, 3456, 6, 1, ev_chstatus );
+      badchalgo.makeBadChImage( 4, wholeview_v.size(),
+                                wholeimage_meta.min_y(),
+                                wholeimage_meta.rows()*wholeimage_meta.pixel_height(),
+                                wholeimage_meta.cols()*wholeimage_meta.pixel_width(),
+                                wholeimage_meta.pixel_height(),
+                                wholeimage_meta.pixel_width(),                                
+                                ev_chstatus );
     
 
     // compile key match criteria for each mask
@@ -37,23 +47,35 @@ namespace dltagger {
         idx++;
       }
       std::sort( data_v.begin(), data_v.end() );
-      std::cout << "PLANE " << clustermask_v.front().meta.plane() << " MASKS" << std::endl;
-      for ( auto& data : data_v )
-        std::cout << "  " << data << std::endl;
+      LARCV_INFO() << "plane[" << clustermask_v.front().meta.plane() << "] number of masks: " << data_v.size() << std::endl;
+      if ( logger().debug() ) {
+        // print list of masks and the data
+        for ( auto& data : data_v )
+          LARCV_DEBUG() << "  " << data << std::endl;
+      }
       matchdata_vv.emplace_back( std::move(data_v) );
     }
-    
-    run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv, match_indices );
-    run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv, match_indices );
+
+    // make 3-plane matches
+    run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    // make 2-plane matches
+    run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
   }
 
+  /**
+   * match masks across all three planes.
+   *
+   * serves as first pass
+   *
+   * @param[in] clustermask_vv  input cluster masks for each plane.
+   * @param[in] wholeview_v     whole image for each plane.
+   * @param[in] badch_v         whole image indicating location of bad channels. Made by ublarcvapp/UBImageMod/EmptyChannelAlgo
+   * @param[inout] matchdata_vv info on mask bounds. also contains flag if mask is claimed, which this method can change.
+   */
   void MRCNNMatch::run3PlanePass( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
                                   const std::vector<larcv::Image2D>& wholeview_v,
                                   const std::vector<larcv::Image2D>& badch_v,
-                                  std::vector< std::vector<MaskMatchData> >& matchdata_vv,
-                                  std::vector< std::vector<int> >& match_indices ) {
-    
-    
+                                  std::vector< std::vector<MaskMatchData> >& matchdata_vv ) {
 
     /// initial screen for overlapping times
     // start from Y plane, match U, then V
@@ -92,7 +114,7 @@ namespace dltagger {
     }
     std::sort( combo_v.begin(), combo_v.end() );
     
-    std::cout << "combos after Y-U match: " << combo_v.size() << std::endl;    
+    LARCV_DEBUG() << "combos after Y-U match: " << combo_v.size() << std::endl;    
     //for ( auto const& combo : combo_v )
     //  std::cout << "  " << combo << std::endl;
 
@@ -114,7 +136,7 @@ namespace dltagger {
           combo_yuv.addMask( mask_vplane, data_vplane );
           combo_yuv.maskdata_indices[1] = iv;          
 
-          std::cout << "combo Y-U-V: " << combo_yuv << std::endl;
+          LARCV_DEBUG() << "combo Y-U-V: " << combo_yuv << std::endl;
           if ( combo_yuv.iou()>0.20 )
             combo_3plane_v.emplace_back( std::move(combo_yuv) );
           
@@ -154,9 +176,12 @@ namespace dltagger {
       // run astar only if the 3d points are fairly consistent
       bool runastar = true;
       for ( auto const& triarea_score : endpoints.endpt_tri_v )
-        if ( triarea_score>200 ) runastar = false;
+        if ( triarea_score>_config.triarea_maximum ) runastar = false;
       
-      AStarMaskCombo    astar( endpoints, badch_v, runastar );
+      AStarMaskCombo    astar( endpoints, badch_v, runastar,
+                               _config.astar_max_downsample_factor,
+                               _config.astar_store_score_image,
+                               _config.astar_verbosity );
 
       if ( runastar ) {
         if (astar.astar_completed==1 ) {
@@ -170,13 +195,14 @@ namespace dltagger {
         else {
           pass.push_back(0);
         }
-        
-        m_combo_3plane_v.emplace_back( std::move(combo) );
-        m_combo_crops_v.emplace_back( std::move(cropmaker) );
-        m_combo_features_v.emplace_back( std::move(features) );
-        m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
-        m_combo_astar_v.emplace_back( std::move(astar) );
-        
+
+        if ( pass.back()==1 || !_config.filter_astar_failures ) {
+          m_combo_3plane_v.emplace_back( std::move(combo) );
+          m_combo_crops_v.emplace_back( std::move(cropmaker) );
+          m_combo_features_v.emplace_back( std::move(features) );
+          m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+          m_combo_astar_v.emplace_back( std::move(astar) );
+        }
       }
 
       // for debug
@@ -184,17 +210,25 @@ namespace dltagger {
       //  break;
     }
 
-    // initial round of selection
-
-    // PASS 2 using only 2 plane matches and remaining masks
-    std::cout << "FINISHED 3-Plane PASS" << std::endl;
+    LARCV_INFO() << "Number of 3-plane matches: " << m_combo_3plane_v.size() << std::endl;
+    
   }
 
+  /**
+   * match across 2 planes only.
+   *
+   * intended for a second-pass
+   *
+   * @param[in] clustermask_vv vector of cluster masks for each plane.
+   * @param[in] wholeview_v    whole ADC image for each plane.
+   * @param[in] badch_v        whole view image where bad channels are marked.
+   * @param[inout] matchdata_v data for each cluster masks used for matching. an element is flagged after being used.
+   *
+   */
   void MRCNNMatch::run2PlanePass( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
                                   const std::vector<larcv::Image2D>& wholeview_v,
                                   const std::vector<larcv::Image2D>& badch_v,
-                                  std::vector< std::vector<MaskMatchData> >& matchdata_vv,                                 
-                                  std::vector< std::vector<int> >& match_indices ) {
+                                  std::vector< std::vector<MaskMatchData> >& matchdata_vv ) {
 
     // assemble 2-plane combos
     std::vector<MaskCombo> combo_v;
@@ -266,14 +300,16 @@ namespace dltagger {
       
     }
     std::sort( combo_v.begin(), combo_v.end() );
-
-    std::cout << "NUM OF 2-PLANE COMBOS (2nd pass): " << combo_v.size() << std::endl;
-    for ( auto const& combo : combo_v ) {
-      std::cout << combo << std::endl;
+    LARCV_DEBUG() << "NUM OF 2-PLANE COMBOS (2nd pass): " << combo_v.size() << std::endl;
+    if ( logger().debug() ) {
+      for ( auto const& combo : combo_v ) {
+        std::cout << combo << std::endl;
+      }
     }
     
     // Analyze 2-plane combos
-    std::vector<int> pass;    
+    std::vector<int> pass;
+    int npassed = 0;
     for ( auto const& combo : combo_v ) {
 
       // greedy: if already used successfully, we do not reuse
@@ -283,7 +319,7 @@ namespace dltagger {
         if ( matchdata_vv[p][ combo.maskdata_indices[p] ].used ) isused = true;
       }
       if ( isused ) {
-        std::cout << "combo is used." << std::endl;        
+        //std::cout << "combo is used." << std::endl;        
         continue;
       }
 
@@ -299,12 +335,16 @@ namespace dltagger {
         run = false;
       
       // astar
-      AStarMaskCombo    astar( endpoints, badch_v, run );
-
+      AStarMaskCombo    astar( endpoints, badch_v, run,
+                               _config.astar_max_downsample_factor,
+                               _config.astar_store_score_image,
+                               _config.astar_verbosity );
+                               
       if ( run ) {
         if (astar.astar_completed==1 ) {
           pass.push_back(1);
-
+          npassed++;
+          
           // we mark the mask data in the combo as used
           for ( size_t p=0; p<combo.maskdata_indices.size(); p++ ) {
             if ( combo.maskdata_indices[p]!=-1 )
@@ -314,16 +354,20 @@ namespace dltagger {
         else {
           pass.push_back(0);
         }
-        
-        m_combo_3plane_v.emplace_back( std::move(combo) );
-        m_combo_crops_v.emplace_back( std::move(cropmaker) );
-        m_combo_features_v.emplace_back( std::move(features) );
-        m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
-        m_combo_astar_v.emplace_back( std::move(astar) );
-        std::cout << "STORE 2-PLANE COMBO" << std::endl;        
+
+        if ( pass.back()==1 || !_config.filter_astar_failures ) {
+          m_combo_3plane_v.emplace_back( std::move(combo) );
+          m_combo_crops_v.emplace_back( std::move(cropmaker) );
+          m_combo_features_v.emplace_back( std::move(features) );
+          m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+          m_combo_astar_v.emplace_back( std::move(astar) );
+          //std::cout << "STORE 2-PLANE COMBO" << std::endl;
+        }
       }
 
     }//end of combo loop
+
+    LARCV_INFO() << "Number of 2-plane matches: " << npassed << std::endl;
 
   }
 

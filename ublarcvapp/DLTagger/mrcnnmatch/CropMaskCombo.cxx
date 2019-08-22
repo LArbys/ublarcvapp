@@ -6,10 +6,14 @@
 namespace ublarcvapp {
 namespace dltagger {
   
-  CropMaskCombo::CropMaskCombo( const MaskCombo& xcombo, const std::vector<larcv::Image2D>& adc )
+  CropMaskCombo::CropMaskCombo( const MaskCombo& xcombo, const std::vector<larcv::Image2D>& adc,
+                                float pixel_threshold,  int tick_padding, int downsample_factor )
     : _pcombo(&xcombo),
       ngoodplanes(0),
-      badplane(-1)
+      badplane(-1),
+      _threshold(pixel_threshold),
+      _tick_padding(tick_padding),
+      _downsample_factor(downsample_factor)
   {
     _crop_and_mask_image( adc );
     _make_missing_crop( adc, missing_v );
@@ -18,8 +22,8 @@ namespace dltagger {
   void CropMaskCombo::_crop_and_mask_image( const std::vector<larcv::Image2D>& wholeview_v ) {
 
     // we make crops based on the union of the mask-combos
-    float tick_union_min = getCombo().union_tick[0]-6;
-    float tick_union_max = getCombo().union_tick[1]+6;
+    float tick_union_min = getCombo().union_tick[0]-_tick_padding;
+    float tick_union_max = getCombo().union_tick[1]+_tick_padding;
     float detz_union_min = getCombo().union_detz[0];
     float detz_union_max = getCombo().union_detz[1];
 
@@ -33,10 +37,11 @@ namespace dltagger {
     int nrows    = tickdiff/int(wholeview_v.front().meta().pixel_height());
     if ( tickdiff%int(wholeview_v.front().meta().pixel_height())!=0 )
       nrows++;
-    if ( nrows%8!=0 )
-      nrows += 8-nrows%8;
-    if ( nrows%8!=0 )
-      throw std::runtime_error( "nrows not divisible by 8" );
+    // ensure we are a multiple of some factor we can use to downsample later (for AStar)
+    if ( nrows%_downsample_factor!=0 )
+      nrows += _downsample_factor-nrows%_downsample_factor;
+    if ( nrows%_downsample_factor!=0 )
+      throw std::runtime_error( "nrows not divisible by downsampling factor" );
     tick_union_max = tick_union_min + nrows*wholeview_v.front().meta().pixel_height();
     // adjust tick bounds to stay within min/max of full image
     if ( tick_union_max>=wholeview_v.front().meta().max_y() ) {
@@ -80,10 +85,10 @@ namespace dltagger {
         if ( wire_max<near_wire[i] ) wire_max = near_wire[i];
       }
       int ncols = wire_max-wire_min+1;
-      if (ncols%8!=0)
-        ncols += 8-ncols%8;
-      if ( ncols%8!=0 )
-        throw std::runtime_error( "nrows not divisible by 8" );
+      if (ncols%_downsample_factor!=0)
+        ncols += _downsample_factor-ncols%_downsample_factor;
+      if ( ncols%_downsample_factor!=0 )
+        throw std::runtime_error( "nrows not divisible by _downsample_factor" );
       
       wire_max = wire_min + ncols*wholeview_v[p].meta().pixel_width();
       if ( wire_max>larutil::Geometry::GetME()->Nwires(p) ) {
@@ -122,8 +127,10 @@ namespace dltagger {
           
           int xrow = cropmeta.row( pttick );
           int xcol = cropmeta.col( ptwire );
-        
-          imgmask.set_pixel( xrow, xcol, 50.0 );
+
+          // set to arbitrary value, but must be big enough
+          // to not be scaled down to zero when converting to cv::Mat later
+          imgmask.set_pixel( xrow, xcol, 50.0 ); 
         }
         catch (std::exception& e) {
           std::cout << "warning mask out of bounds: " << e.what() << std::endl;
@@ -138,8 +145,8 @@ namespace dltagger {
       // }
       // apply threshold to both charge and mask image
       for ( size_t idx=0; idx<vec_pix.size(); idx++ ) {
-        if ( vec_pix[idx]<10.0 ) vec_pix[idx]  = 0.0;
-        if ( vec_pix[idx]<10.0 ) vec_mask[idx] = 0.0;
+        if ( vec_pix[idx]<_threshold ) vec_pix[idx]  = 0.0;
+        if ( vec_pix[idx]<_threshold ) vec_mask[idx] = 0.0;
       }
       
       crops_v.emplace_back( std::move(crop) );
@@ -211,8 +218,8 @@ namespace dltagger {
               << " wire range: [" << start_wire << "," << end_wire << "]" << std::endl;
     
     int ncols = (end_wire-start_wire)*wholeview_v.at(badplane).meta().pixel_width();
-    if ( ncols%8!=0 )
-      ncols += (8-ncols%8);
+    if ( ncols%_downsample_factor!=0 )
+      ncols += (_downsample_factor-ncols%_downsample_factor);
     end_wire = start_wire + wholeview_v.at(badplane).meta().pixel_width()*ncols;
     if ( end_wire>wholeview_v.at(badplane).meta().max_x() ) {
       end_wire = wholeview_v.at(badplane).meta().max_x();
@@ -233,7 +240,7 @@ namespace dltagger {
 
     // threshold
     for ( auto& pixval : crop.as_mod_vector() ) {
-      if ( pixval<10.0 ) pixval = 0.;
+      if ( pixval<_threshold ) pixval = 0.;
     }
 
     for ( size_t p=0; p<crops_v.size(); p++ ) {

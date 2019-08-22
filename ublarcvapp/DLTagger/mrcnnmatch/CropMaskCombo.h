@@ -24,7 +24,10 @@ namespace dltagger {
       : _pcombo(nullptr)
     {};
     
-    CropMaskCombo( const MaskCombo& combo, const std::vector<larcv::Image2D>& adc );
+    CropMaskCombo( const MaskCombo& combo, const std::vector<larcv::Image2D>& adc,
+                   float pixel_threshold=10.0,
+                   int tick_padding=6, int downsample_factor=8 );
+    
     virtual ~CropMaskCombo() {};
     
     std::vector<larcv::Image2D> crops_v;
@@ -41,7 +44,11 @@ namespace dltagger {
     void _crop_and_mask_image( const std::vector<larcv::Image2D>& wholeview_v );
     void _make_missing_crop( const std::vector<larcv::Image2D>& wholeview_v,
                              std::vector<larcv::Image2D>& out_v );
-    
+
+    // parameters
+    float _threshold;         //< pixel value threshold
+    int   _tick_padding;      //< padding added to tick dimensions
+    int   _downsample_factor; //< crops will be a multple of this factor in order to allow for downsampling
 
     
   };

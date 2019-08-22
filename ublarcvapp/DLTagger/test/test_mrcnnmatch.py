@@ -15,6 +15,7 @@ rt.gStyle.SetOptStat(0)
 os.system("mkdir -p example_combos/")
 
 inputfile = "out_larcv_test.root"
+#inputfile = "../../../../out_larcv_test.root"
 
 matchalgo = ublarcvapp.dltagger.MRCNNMatch()
 
@@ -33,8 +34,7 @@ print("Number of masks: ",[mask_vv.at(x).size() for x in range(3)])
 hwire_v = [ larcv.as_th2d( ev_wire.as_vector().at(p), "hwire_p%d"%(p) ) for p in xrange(3) ]
 meta_v  = [ ev_wire.as_vector().at(p).meta() for p in xrange(3) ]
 
-indices = std.vector("vector<int>")()
-matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus, indices )
+matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus )
 
 # visualize individual matches
 ccombos = rt.TCanvas("ccombos","Combos", 1500, 1200)

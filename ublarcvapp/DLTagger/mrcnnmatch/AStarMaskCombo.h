@@ -7,6 +7,7 @@
 #include "DataFormat/track.h"
 
 // larcv
+#include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/EventChStatus.h"
 #include "larcv/core/DataFormat/Image2D.h"
 
@@ -19,16 +20,28 @@
 namespace ublarcvapp {
 namespace dltagger {
 
-  class AStarMaskCombo {
+  class AStarMaskCombo : public larcv::larcv_base {
   public:
     AStarMaskCombo()
-      : pEndpoint(nullptr),
+      : larcv::larcv_base("AStarMaskCombo"),
+      pEndpoint(nullptr),
       astar_completed(0)
     {};
     virtual ~AStarMaskCombo() {};
 
-    AStarMaskCombo( const Gen3DEndpoints& endpt, const larcv::EventChStatus& evchstatus, bool run=true );
-    AStarMaskCombo( const Gen3DEndpoints& endpt, const std::vector<larcv::Image2D>& whole_badch_v, bool run=true );
+    AStarMaskCombo( const Gen3DEndpoints& endpt,
+                    const larcv::EventChStatus& evchstatus,
+                    bool run=true,
+                    int max_downsample_factor=16,
+                    int store_score_image=0,
+                    int astar_verbosity=0);
+
+    AStarMaskCombo( const Gen3DEndpoints& endpt,
+                    const std::vector<larcv::Image2D>& whole_badch_v,
+                    bool run=true,
+                    int max_downsample_factor=16,
+                    int store_score_image=0,
+                    int astar_verbosity=0);
     
     std::vector<ublarcvapp::reco3d::AStar3DNode> astar_path;
     int astar_completed;
@@ -40,9 +53,16 @@ namespace dltagger {
     
   protected:
 
+    void _prep_crop_image( std::vector<larcv::Image2D>& input_v );
     void _prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v,
                            const std::vector<larcv::Image2D>& input_crop_v );
     void _run_astar( const std::vector<larcv::Image2D>& input_v );
+
+    // parameters
+    int _max_downsample_factor; ///< maximum downsample factor to use when running AStar
+    int _store_score_image;     ///< if 1, have AStar3DAlgo make and store score image for debug
+    int _astar_verbosity;       ///< verbosity of the AStar3DAlgo
+    
     
   };
   
