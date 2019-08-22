@@ -14,7 +14,7 @@ namespace dltagger {
     _mask_match_algo.matchMasksAcrossPlanes( clustermask_vv, wholeview_v, ev_chstatus );
 
     // make thrumu image
-    _tagPixels( wholeview_v, m_tagged_v );
+    _tagPixels( wholeview_v, m_tagged_v, m_pixel_cluster_vv, m_pixel_cluster_meta_v );
     hasRun = true;
   }
 
@@ -23,8 +23,40 @@ namespace dltagger {
    *
    */
   void DLTagger::transferImages( std::vector<larcv::Image2D>& out ) {
+    
+    if (!hasRun) {
+      LARCV_CRITICAL() << "Asking for tagged images, but have not run tagger yet!" << std::endl;
+      return;
+    }
+    
     for ( auto& img : m_tagged_v ) {
       out.emplace_back( std::move(img) );
+    }
+    hasRun = false;
+  }
+
+  /**
+   * transfer pixels to event container
+   */
+  void DLTagger::transferPixelClusters( larcv::EventPixel2D& evcluster ) {
+
+    if (!hasRun) {
+      LARCV_CRITICAL() << "Asking for pixel clusters, but have not run tagger yet!" << std::endl;
+      return;
+    }
+
+    std::vector<int> nclusters( m_pixel_cluster_vv.size(), 0 );
+    for ( size_t p=0; p<m_pixel_cluster_vv.size(); p++ ) {
+      for ( auto& cluster : m_pixel_cluster_vv[p] ) {
+        evcluster.Emplace( (larcv::PlaneID_t)p, std::move(cluster), m_pixel_cluster_meta_v[p] );
+        nclusters[p]++;
+      }
+    }
+
+    for ( auto& ncluster : nclusters ) {
+      if ( ncluster!=nclusters.front() ) {
+        LARCV_CRITICAL() << "The number of clusters in each plane is not the same!" << std::endl;
+      }
     }
     hasRun = false;
   }
@@ -34,7 +66,9 @@ namespace dltagger {
    *
    */
   void DLTagger::_tagPixels( const std::vector<larcv::Image2D>& wholeview_v,
-                             std::vector<larcv::Image2D>& whole_filled_v ) {
+                             std::vector<larcv::Image2D>& whole_filled_v,
+                             std::vector< std::vector<larcv::Pixel2DCluster> >& pixel_cluster_vv,
+                             std::vector< larcv::ImageMeta >& pixel_cluster_meta_v ) {
 
     int nplanes = wholeview_v.size();
     
@@ -53,6 +87,16 @@ namespace dltagger {
       fillme.paint(0);
       whole_filled_v.emplace_back( std::move(fillme) );
     }
+
+    // container for pixel clusters
+    pixel_cluster_vv.clear();
+    pixel_cluster_meta_v.clear();
+    pixel_cluster_vv.resize(wholeview_v.size());
+    // save whole image meta for them
+    for ( auto const& whole : wholeview_v ) {
+      pixel_cluster_meta_v.push_back( whole.meta() );
+    }
+    
     
     // we use the matches with a good AStar track
     for (int icombo=0; icombo<nastar; icombo++ ) {
@@ -210,6 +254,8 @@ namespace dltagger {
         // contour metas have the charge pixels conveniently collected
         auto& fillme = whole_filled_v[p];
         auto& fullmeta = fillme.meta();
+
+        larcv::Pixel2DCluster pixcluster;
         
         for ( int ictr=0; ictr<ncontours; ictr++ ) {
           if ( contourkept[ictr]==0 ) continue;
@@ -234,11 +280,17 @@ namespace dltagger {
 
             fillme.set_pixel( xrow, xcol, 1.0 );
             fillimg.set_pixel( row, col,  1.0 );
+
+            larcv::Pixel2D pix(xcol,xrow);
+            pix.Intensity( wholeview_v[p].pixel( xrow, xcol ) );
+              
+            pixcluster += pix;
           }
           
         }
 
         plane_fill_images_v[p].emplace_back( std::move(fillimg) );
+        pixel_cluster_vv[p].emplace_back( std::move(pixcluster) );
         
       }//end of loop over planes
       
