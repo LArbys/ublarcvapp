@@ -23,6 +23,8 @@
 
 // dltagger
 #pragma link C++ class ublarcvapp::dltagger::DLTagger+;
+#pragma link C++ class ublarcvapp::dltagger::DLTaggerProcess+;
+#pragma link C++ class ublarcvapp::dltagger::DLTaggerProcessFactory+;
 
 //ADD_NEW_CLASS ... do not change this line
 #endif

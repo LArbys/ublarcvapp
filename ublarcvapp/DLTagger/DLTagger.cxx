@@ -24,7 +24,7 @@ namespace dltagger {
    */
   void DLTagger::transferImages( std::vector<larcv::Image2D>& out ) {
     
-    if (!hasRun) {
+    if (m_tagged_v.size()==0) {
       LARCV_CRITICAL() << "Asking for tagged images, but have not run tagger yet!" << std::endl;
       return;
     }
@@ -33,6 +33,7 @@ namespace dltagger {
       out.emplace_back( std::move(img) );
     }
     hasRun = false;
+    m_tagged_v.clear();
   }
 
   /**
@@ -40,7 +41,7 @@ namespace dltagger {
    */
   void DLTagger::transferPixelClusters( larcv::EventPixel2D& evcluster ) {
 
-    if (!hasRun) {
+    if (m_pixel_cluster_vv.size()==0) {
       LARCV_CRITICAL() << "Asking for pixel clusters, but have not run tagger yet!" << std::endl;
       return;
     }
@@ -59,6 +60,7 @@ namespace dltagger {
       }
     }
     hasRun = false;
+    m_pixel_cluster_vv.clear();
   }
 
   /**
