@@ -18,7 +18,7 @@ namespace ublarcvapp {
    
  public:
    ContourShapeMeta();   
-   ContourShapeMeta( const std::vector<cv::Point>& contour, const larcv::Image2D& img );   
+   ContourShapeMeta( const std::vector<cv::Point>& contour, const larcv::Image2D& img, float threshold=10.0 );   
    virtual ~ContourShapeMeta() {};
 
    const larcv::ImageMeta& meta() const { return m_meta; };    
@@ -45,6 +45,7 @@ namespace ublarcvapp {
    std::vector<float> getPCAStartPos() const { return m_pca_startpt; };
    std::vector<float> getPCAEndPos() const   { return m_pca_endpt; };
 
+   const std::vector<cv::Point>& getChargePixels() const { return qpixels; };
    
  protected:
    
@@ -67,7 +68,7 @@ namespace ublarcvapp {
    void _get_tick_range();
 
    // Charge core PCA
-   void _charge_core_pca( const larcv::Image2D& img );
+   void _charge_core_pca( const larcv::Image2D& img, float );
    bool m_valid_pca;
    cv::Point center;
    std::vector<cv::Point2d> eigen_vecs;
@@ -75,8 +76,9 @@ namespace ublarcvapp {
    // start and end points determined by radius from center and either neg or pos on major axis
    std::vector<float> m_pca_startpt; 
    std::vector<float> m_pca_endpt;
-   
-   
+   // points within the contour with charge
+   float m_threshold;
+   std::vector< cv::Point > qpixels;   
    
  };
  

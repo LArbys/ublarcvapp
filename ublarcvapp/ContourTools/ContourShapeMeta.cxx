@@ -11,12 +11,15 @@ namespace ublarcvapp {
     throw std::runtime_error(msg.str());
   }
   
-  ContourShapeMeta::ContourShapeMeta( const std::vector<cv::Point>& contour, const larcv::Image2D& img )
+  ContourShapeMeta::ContourShapeMeta( const std::vector<cv::Point>& contour,
+                                      const larcv::Image2D& img,
+                                      float threshold )
     : std::vector<cv::Point>(contour),
       m_meta(img.meta()),
       m_start( cv::Point(0,0) ),
       m_end( cv::Point(0,0) ),
-      m_valid_pca(false)
+    m_valid_pca(false),
+    m_threshold(threshold)
   {
 
     eigen_vecs.clear();
@@ -25,7 +28,7 @@ namespace ublarcvapp {
     _fill_linefit_members();
     _build_bbox();
     _get_tick_range();
-    _charge_core_pca(img);
+    _charge_core_pca(img, threshold);
   }
 
   void ContourShapeMeta::_fill_linefit_members() {
@@ -109,15 +112,15 @@ namespace ublarcvapp {
     xbounds[1] = maxx;
   }
 
-  void ContourShapeMeta::_charge_core_pca( const larcv::Image2D& img ) {
+  void ContourShapeMeta::_charge_core_pca( const larcv::Image2D& img, float threshold ) {
 
     // collect charge pixels
-    std::vector< cv::Point > qpixels;
+    qpixels.clear();
     qpixels.reserve( int( (xbounds[1]-xbounds[0])*(ybounds[1]-ybounds[0]) ) );
     for ( int c=xbounds[0]; c<=xbounds[1]; c++ ) {
       for (int r=ybounds[0]; r<=ybounds[1]; r++ ) {
 
-	if ( img.pixel(r,c)>10.0 ) {
+	if ( img.pixel(r,c)>threshold ) {
 	  cv::Point testpt( c,r );
 	  double dist = cv::pointPolygonTest( *this, testpt, false );
 	  if ( dist>0 )

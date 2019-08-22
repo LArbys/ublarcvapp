@@ -59,7 +59,7 @@ namespace dltagger {
     // make 3-plane matches
     run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
     // make 2-plane matches
-    run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    //run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
   }
 
   /**
@@ -206,8 +206,8 @@ namespace dltagger {
       }
 
       // for debug
-      //if ( icombo==0 )
-      //  break;
+      if ( icombo==0 )
+        break;
     }
 
     LARCV_INFO() << "Number of 3-plane matches: " << m_combo_3plane_v.size() << std::endl;
@@ -371,5 +371,17 @@ namespace dltagger {
 
   }
 
+  /**
+   * clear output containers
+   *
+   */
+  void MRCNNMatch::clear() {
+    m_combo_3plane_v.clear();
+    m_combo_crops_v.clear();
+    m_combo_features_v.clear();
+    m_combo_endpt3d_v.clear();
+    m_combo_astar_v.clear();
+  }
+  
 }
 }
