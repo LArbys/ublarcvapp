@@ -13,31 +13,30 @@ namespace dltagger {
   void DLTaggerProcess::configure( const larcv::PSet& pset ) {
 
     // larcv inputs
-    _input_adc_producer      = "wire";
-    _input_chstatus_producer = "wire";
-    _input_mask_producer     = "mrcnn_masks";
+    _input_adc_producer      = pset.get<std::string>("InputADCproducer");
+    _input_chstatus_producer = pset.get<std::string>("InputChStatusProducer");
+    _input_mask_producer     = pset.get<std::string>("InputMRCNNproducer");
 
     // larlite inputs
-    _input_opflash_producer  = "simpleFlashBeam";
-    _input_ophit_producer    = "opHitBeam";
-    _larlite_files           = std::vector<std::string>();
-    _larlite_files.push_back("testset1/larlite_opreco.root");
+    _input_opflash_producer  = pset.get<std::string>("InputOpFlashProducer");
+    _input_ophit_producer    = pset.get<std::string>("InputOpHitProducer");
+    _larlite_files           = pset.get<std::vector<std::string> >("LArLiteInputFiles");
 
     // larcv output
-    _output_tagged_image       = "thrumu";
-    _output_notcosmic_image    = "notcosmic";    
-    _output_cosmic_clusters    = "thrumupixels";
-    _output_notcosmic_clusters = "notcosmic";    
-    _output_croi               = "croi";
-    _output_croi_merged        = "croimerged";
+    _output_tagged_image       = pset.get<std::string>("OutputTaggerImage","thrumu");
+    _output_notcosmic_image    = pset.get<std::string>("OutputNotCosmicImage","notcosmic");
+    _output_cosmic_clusters    = pset.get<std::string>("OutputCosmicPixelCluster","thrumupixels");
+    _output_notcosmic_clusters = pset.get<std::string>("OutputNotCosmicPixelCluster", "notcosmic");    
+    _output_croi               = pset.get<std::string>("OutputCROI","croi");
+    _output_croi_merged        = pset.get<std::string>("OutputMergedCROI","croimerged");
 
     // larlite output
-    _output_larlite_file     = "dltaggerout_larlite.root";
-    _output_tracks           = "thrumu";
+    _output_larlite_file     = pset.get<std::string>("OutputLArLiteFile","dltaggerout_larlite.root");
+    _output_tracks           = pset.get<std::string>("OutputTracks","thrumu");
 
     // BNB window
-    _inbeam_win_start_tick = 215;
-    _inbeam_win_end_tick   = 345;
+    _inbeam_win_start_tick = pset.get<int>("InBeamWindowStartTick");//215;
+    _inbeam_win_end_tick   = pset.get<int>("InBeamWindowEndTick");//345;
   }
 
   void DLTaggerProcess::initialize() {

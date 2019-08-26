@@ -25,6 +25,8 @@ namespace dltagger {
     bool process( larcv::IOManager& mgr );
     void finalize();
 
+    void add_larlite_infile( std::string inputfile ) { _larlite_files.push_back(inputfile); };
+
   protected:
 
     DLTagger m_tagger;
