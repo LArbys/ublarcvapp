@@ -464,16 +464,20 @@ namespace dltagger {
     // apply selection
     for ( size_t imatch=0; imatch<nmatches; imatch++ ) {
 
-      // for now, skip on tracks that did not complete
-      auto& astarcombo = matchdata.m_combo_astar_v[imatch];      
-      if ( astarcombo.astar_completed==0 )
-        continue;
-      
-      auto const& endptdata = matchdata.m_combo_endpt3d_v.at(imatch);
-
       // store varialbles for analysis
       // ------------------------------
       CosmicSelectVars_t vars;
+        
+      // for now, skip on tracks that did not complete
+      auto& astarcombo = matchdata.m_combo_astar_v[imatch];      
+      if ( astarcombo.astar_completed==0 ) {
+        m_select_vars_v.push_back( vars );        
+        continue;
+      }
+
+      vars.astar_complete = 1;      
+      
+      auto const& endptdata = matchdata.m_combo_endpt3d_v.at(imatch);
       
       // measure of containment
       _calcDwall( endptdata, vars.dwall_outermost, vars.dwall_innermost );
@@ -488,7 +492,7 @@ namespace dltagger {
         LARCV_DEBUG() << "match[" << imatch << "] plane[" << p << "] number of pixels in cluster: " << pixel_v[p]->size() << std::endl;
       }
       if ( croimerged.BB().size()>0 ) {
-        _calcOutOfROIfrac( wholeview_v, croimerged, pixel_v, vars.frac_per_plane, vars.total_frac );
+        _calcOutOfROIfrac( wholeview_v, croimerged, pixel_v, vars.frac_per_plane, vars.numpixels, vars.total_frac );
       }
       else {
         vars.frac_per_plane.resize( wholeview_v.size(), 0.0 );
@@ -616,13 +620,14 @@ namespace dltagger {
                                     const larcv::ROI& croi,
                                     const std::vector<const larcv::Pixel2DCluster*>& ppixel_cluster_v,
                                     std::vector<float>& frac_per_plane,
+                                    std::vector<int>& npix,
                                     float& total_frac ) {
     size_t nplanes = ppixel_cluster_v.size();
     frac_per_plane.resize(nplanes,0.0);
     total_frac = 0;
     float total_pix = 0;
 
-    std::vector<int> npix(nplanes,0);
+    npix.resize(nplanes,0);
 
     for ( size_t p=0; p<nplanes; p++ ) {
       auto const& meta = wholeview_v[p].meta();
@@ -651,6 +656,54 @@ namespace dltagger {
     }//end of plane loop
     if ( total_pix>0 )
       total_frac /= total_pix;
+  }
+
+  /**
+   * add truth-info to reco products for analysis
+   *
+   *
+   */
+  void DLTagger::recoTruthMatching( const std::vector<larcv::Image2D>& mcinstance_v ) {
+    
+    if (!hasRun) {
+      LARCV_CRITICAL() << "Need to run tagger first before running reco-truth matching" << std::endl;
+      throw larcv::larbys( "Need to run Tagger first" );
+    }
+
+    int numclusters = m_pixel_cluster_vv.front().size();
+    for ( int icluster=0; icluster<numclusters; icluster++ ) {
+      // loop over the pixels and total up pixels with an instance ID. means its a neutrino.
+      auto& vars = m_select_vars_v[icluster];
+      vars.total_nufrac = 0.;
+      vars.nufrac_per_plane.resize( m_pixel_cluster_vv.size(), 0 );
+      for ( size_t p=0; p<m_pixel_cluster_vv.size(); p++ ) {
+        auto const& instance_img = mcinstance_v[p];
+        auto const& pixel_v = m_pixel_cluster_vv.at(p).at(icluster);
+        for ( auto const& pix : pixel_v ) {
+          if ( (int)pix.Y()>=0 && (int)pix.Y()<(int)instance_img.meta().rows()
+               && (int)pix.X()>=0 && (int)pix.X()<(int)instance_img.meta().cols() ) {
+            if ( instance_img.pixel( (int)pix.Y(), (int)pix.X() )>0 ) {
+              vars.nufrac_per_plane[p]++;
+              vars.total_nufrac += 1.0;
+            }
+          }
+        }//loop over pixels
+        if ( vars.numpixels[p]>0 ) {
+          vars.nufrac_per_plane[p] /= (float)vars.numpixels[p];
+        }
+        else {
+          vars.nufrac_per_plane[p] = 0.;
+        }
+      }//loop over planes
+      float totpix = vars.numpixels[0] + vars.numpixels[1] + vars.numpixels[2];
+      if ( totpix>0 ) {
+        vars.total_nufrac /= totpix;
+      }
+      else {
+        vars.total_nufrac = 0.;
+      }
+    }// end of cluster loop
+    
   }
   
 }

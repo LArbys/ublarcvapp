@@ -15,7 +15,8 @@ namespace dltagger {
 
     DLTaggerProcess(std::string instance_name )
       : larcv::ProcessBase(instance_name),
-      _larlite_io(nullptr)
+      _larlite_io(nullptr),
+      _ana_tree(nullptr)
     {};
     virtual ~DLTaggerProcess() {};
 
@@ -50,9 +51,34 @@ namespace dltagger {
     std::string _output_croi;             //< name to give container storing collection of CROIs
     std::string _output_croi_merged;      //< name to give container storing merged CROI
 
+    // true-reco matching
+    bool _has_mcinstance_img;             //< if true, expect to have mc instance image for truth-reco matching
+    std::string _input_instance_image;    //< name to input producer containing MC Instance Image
+
     // opflash window
     float _inbeam_win_start_tick;
     float _inbeam_win_end_tick;
+
+    void setupAnaTree();
+    void clearAnaVars();
+    void fillAnaVars();
+    int _num_clusters;
+    std::vector< int   > _astar_complete;
+    std::vector< float > _dwall_outermost;
+    std::vector< float > _dwall_innermost;
+    std::vector< float > _dtick_outoftime;
+    std::vector< float > _frac_in_croi_plane0;
+    std::vector< float > _frac_in_croi_plane1;
+    std::vector< float > _frac_in_croi_plane2;
+    std::vector< float > _frac_in_croi_total;
+    std::vector< float > _nufrac_plane0;
+    std::vector< float > _nufrac_plane1;
+    std::vector< float > _nufrac_plane2;
+    std::vector< float > _nufrac_total;
+    std::vector< float > _numpixels_plane0;
+    std::vector< float > _numpixels_plane1;
+    std::vector< float > _numpixels_plane2;
+    TTree* _ana_tree;
     
   };
 

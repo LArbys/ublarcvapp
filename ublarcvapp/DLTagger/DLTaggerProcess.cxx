@@ -17,6 +17,9 @@ namespace dltagger {
     _input_chstatus_producer = pset.get<std::string>("InputChStatusProducer");
     _input_mask_producer     = pset.get<std::string>("InputMRCNNproducer");
 
+    _has_mcinstance_img      = pset.get<bool>("HasMCInstanceImage",false);
+    _input_instance_image    = pset.get<std::string>("InputInstanceProducer","instance");
+
     // larlite inputs
     _input_opflash_producer  = pset.get<std::string>("InputOpFlashProducer");
     _input_ophit_producer    = pset.get<std::string>("InputOpHitProducer");
@@ -37,6 +40,8 @@ namespace dltagger {
     // BNB window
     _inbeam_win_start_tick = pset.get<int>("InBeamWindowStartTick");//215;
     _inbeam_win_end_tick   = pset.get<int>("InBeamWindowEndTick");//345;
+
+    _ana_tree = nullptr;
   }
 
   void DLTaggerProcess::initialize() {
@@ -46,6 +51,8 @@ namespace dltagger {
     }
     _larlite_io->set_out_filename( _output_larlite_file );
     _larlite_io->open();
+    
+    setupAnaTree();
   }
 
   bool DLTaggerProcess::process( larcv::IOManager& mgr ) {
@@ -62,6 +69,11 @@ namespace dltagger {
 
     larcv::EventClusterMask* ev_clustermask
       = (larcv::EventClusterMask*)mgr.get_data(larcv::kProductClusterMask, _input_mask_producer );
+
+    larcv::EventImage2D* ev_mcinstance = nullptr;
+    if ( _has_mcinstance_img ) {
+      ev_mcinstance = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D, _input_instance_image);
+    }
 
     // GET LARLITE INPUT
     _larlite_io->syncEntry( mgr );
@@ -89,7 +101,10 @@ namespace dltagger {
                         intime_opflash_v,
                         ev_clustermask->as_vector() );
 
-
+    if ( _has_mcinstance_img ) {
+      m_tagger.recoTruthMatching( ev_mcinstance->Image2DArray() );
+    }
+    
     // OUTPUTS
 
     // precuts
@@ -122,11 +137,92 @@ namespace dltagger {
     m_tagger.transferPixelClusters( *evout_cosmic_clusters, *evout_notcosmic_clusters );
 
     m_tagger.transferCROI( *ev_croi, *ev_croi_merged );
+
+    fillAnaVars();
     
     return true;
   }
 
+  void DLTaggerProcess::setupAnaTree() {
+    if ( !has_ana_file() ) {
+      LARCV_WARNING() << "No analysis tree defined" << std::endl;
+      return;
+    }
+
+    LARCV_NORMAL() << "Setup analysis tree" << std::endl;
+    ana_file().cd();
+    _ana_tree = new TTree("dltaggervars", "DL Tagger Selection Variables");
+    _ana_tree->Branch( "numclusters", &_num_clusters, "numclusters/I" );
+    _ana_tree->Branch( "numpixels_plane0", &_numpixels_plane0 );
+    _ana_tree->Branch( "numpixels_plane1", &_numpixels_plane1 );
+    _ana_tree->Branch( "numpixels_plane2", &_numpixels_plane2 );
+    _ana_tree->Branch( "dwall_outermost",  &_dwall_outermost );
+    _ana_tree->Branch( "dwall_innermost",  &_dwall_innermost );
+    _ana_tree->Branch( "astar_complete",   &_astar_complete );
+    _ana_tree->Branch( "dtick_outoftime",  &_dtick_outoftime );
+    _ana_tree->Branch( "frac_out_croi_tot", &_frac_in_croi_total );
+    _ana_tree->Branch( "frac_out_croi_plane0", &_frac_in_croi_plane0);
+    _ana_tree->Branch( "frac_out_croi_plane1", &_frac_in_croi_plane1);
+    _ana_tree->Branch( "frac_out_croi_plane2", &_frac_in_croi_plane2);
+    _ana_tree->Branch( "nufrac_tot", &_nufrac_total );
+    _ana_tree->Branch( "nufrac_plane0", &_nufrac_plane0);
+    _ana_tree->Branch( "nufrac_plane1", &_nufrac_plane1);
+    _ana_tree->Branch( "nufrac_plane2", &_nufrac_plane2);
+  }
+
+  void DLTaggerProcess::clearAnaVars() {
+    _num_clusters = 0;
+    _astar_complete.clear();
+    _dwall_outermost.clear();
+    _dwall_innermost.clear();
+    _dtick_outoftime.clear();
+    _frac_in_croi_plane0.clear();
+    _frac_in_croi_plane1.clear();
+    _frac_in_croi_plane2.clear();
+    _frac_in_croi_total.clear();
+    _nufrac_plane0.clear();
+    _nufrac_plane1.clear();
+    _nufrac_plane2.clear();
+    _nufrac_total.clear();
+    _numpixels_plane0.clear();
+    _numpixels_plane1.clear();
+    _numpixels_plane2.clear();    
+  }
+
+  void DLTaggerProcess::fillAnaVars() {
+    if ( !has_ana_file() ) {
+      LARCV_DEBUG() << "No anatree to fill" << std::endl;
+      return;
+    }
+
+    LARCV_DEBUG() << "Filling ana tree" << std::endl;
+    clearAnaVars();
+    auto const& sel_vars_v = m_tagger.getSelectionVars();
+    _num_clusters = sel_vars_v.size();
+    for ( auto const& vars : sel_vars_v ) {
+      _astar_complete.push_back(  vars.astar_complete );
+      _dwall_outermost.push_back( vars.dwall_outermost );
+      _dwall_innermost.push_back( vars.dwall_innermost );
+      _dtick_outoftime.push_back( vars.dtick_outoftime );
+      _frac_in_croi_total.push_back( vars.total_frac );
+      _frac_in_croi_plane0.push_back( vars.frac_per_plane[0] );
+      _frac_in_croi_plane1.push_back( vars.frac_per_plane[1] );
+      _frac_in_croi_plane2.push_back( vars.frac_per_plane[2] );
+      _nufrac_total.push_back( vars.total_nufrac );
+      _nufrac_plane0.push_back( vars.nufrac_per_plane[0] );
+      _nufrac_plane1.push_back( vars.nufrac_per_plane[1] );
+      _nufrac_plane2.push_back( vars.nufrac_per_plane[2] );      
+      _numpixels_plane0.push_back( vars.numpixels[0] );
+      _numpixels_plane1.push_back( vars.numpixels[1] );
+      _numpixels_plane2.push_back( vars.numpixels[2] );      
+    }
+    _ana_tree->Fill();
+  }
+
   void DLTaggerProcess::finalize() {
+    if ( has_ana_file() && _ana_tree ) {
+      _ana_tree->Write();
+    }
     _larlite_io->close();
     delete _larlite_io;
   }

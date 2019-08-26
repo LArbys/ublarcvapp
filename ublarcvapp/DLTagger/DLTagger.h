@@ -34,6 +34,8 @@ namespace dltagger {
                     const std::vector<larlite::opflash>& intime_opflash_v,                    
                     const std::vector< std::vector<larcv::ClusterMask> >& clustermask_vv );
 
+    void recoTruthMatching( const std::vector<larcv::Image2D>& mcinstance_v );
+    
     void transferImages( std::vector<larcv::Image2D>& cosmic,
                          std::vector<larcv::Image2D>& notcosmic_v );
     
@@ -45,12 +47,31 @@ namespace dltagger {
     bool hasData() { return hasRun; };
 
     struct CosmicSelectVars_t {
+      int astar_complete;
+      std::vector<int>   numpixels;
       float dwall_outermost;
       float dwall_innermost;
       float dtick_outoftime;
-      std::vector<float> frac_per_plane;
       float total_frac;
+      std::vector<float> frac_per_plane;
+      float total_nufrac;
+      std::vector<float> nufrac_per_plane;
+      
+      CosmicSelectVars_t()
+      : astar_complete(0),
+        dwall_outermost(-100),
+        dwall_innermost(-100),
+        dtick_outoftime(0),
+        total_frac(0),
+        total_nufrac(0)
+      {
+        numpixels.resize(3,0);
+        frac_per_plane.resize(3,0);
+        nufrac_per_plane.resize(3,0);
+      };
+        
     };
+    const std::vector<CosmicSelectVars_t>& getSelectionVars() const { return m_select_vars_v; };
 
     void reset();
       
@@ -100,6 +121,7 @@ namespace dltagger {
                             const larcv::ROI& croi,
                             const std::vector<const larcv::Pixel2DCluster*>& ppixel_cluster_v,
                             std::vector<float>& frac_per_plane,
+                            std::vector<int>& npixs,
                             float& total_frac );
     
     
