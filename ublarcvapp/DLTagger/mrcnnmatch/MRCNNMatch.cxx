@@ -339,6 +339,7 @@ namespace dltagger {
                                _config.astar_max_downsample_factor,
                                _config.astar_store_score_image,
                                _config.astar_verbosity );
+      astar.set_verbosity((larcv::msg::Level_t)0);
                                
       if ( run ) {
         if (astar.astar_completed==1 ) {

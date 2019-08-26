@@ -20,12 +20,18 @@ namespace dltagger {
     detz_max = 0;
     wire_min = larutil::Geometry::GetME()->Nwires(plane);
     wire_max = 0;
-    
+
     int xoffset = mask.box.min_x();
     int yoffset = mask.box.min_y();
+    if ( yoffset<0 )
+      yoffset = 0;
     for ( size_t ipt=0; ipt<mask.points_v.size(); ipt++ ) {
       int row = yoffset + mask.points_v[ipt].y;
+      if ( row<0 )
+        continue;
       int col = xoffset + mask.points_v[ipt].x;
+      if ( col<0 )
+        continue;
       float tick = mask.meta.pos_y(row);
       int wire = mask.meta.pos_x(col);
 

@@ -8,7 +8,8 @@ namespace dltagger {
   
   CropMaskCombo::CropMaskCombo( const MaskCombo& xcombo, const std::vector<larcv::Image2D>& adc,
                                 float pixel_threshold,  int tick_padding, int downsample_factor )
-    : _pcombo(&xcombo),
+    : larcv::larcv_base("CropMaskCombo"),
+      _pcombo(&xcombo),
       ngoodplanes(0),
       badplane(-1),
       _threshold(pixel_threshold),
@@ -27,6 +28,8 @@ namespace dltagger {
     float detz_union_min = getCombo().union_detz[0];
     float detz_union_max = getCombo().union_detz[1];
 
+    std::cout << "tick_union_max = " << tick_union_max << std::endl;
+
     double testpts[4][3] = { { 0,  117.0, detz_union_min  },  // minz top
                              { 0, -117.0, detz_union_min  },  // minz bottom
                              { 0,  117.0, detz_union_max  },  // maxz top
@@ -39,10 +42,10 @@ namespace dltagger {
       nrows++;
     // ensure we are a multiple of some factor we can use to downsample later (for AStar)
     if ( nrows%_downsample_factor!=0 )
-      nrows += _downsample_factor-nrows%_downsample_factor;
+      nrows += _downsample_factor-int(nrows)%_downsample_factor;
     if ( nrows%_downsample_factor!=0 )
       throw std::runtime_error( "nrows not divisible by downsampling factor" );
-    tick_union_max = tick_union_min + nrows*wholeview_v.front().meta().pixel_height();
+    tick_union_max = tick_union_min + int(nrows)*wholeview_v.front().meta().pixel_height();
     // adjust tick bounds to stay within min/max of full image
     if ( tick_union_max>=wholeview_v.front().meta().max_y() ) {
       tick_union_max = wholeview_v.front().meta().max_y();
@@ -101,6 +104,10 @@ namespace dltagger {
       const larcv::ImageMeta& meta   = wholeview_v.at(p).meta();
       float width  = wire_max-wire_min;
       float height = tick_union_max-tick_union_min;
+
+      if ( height<0 ) { 
+        LARCV_CRITICAL() << "height=" << height << " from tick_union_max=" << tick_union_max << " tick_union_min=" << tick_union_min << std::endl;
+      }
       
       // make a meta to crop
       larcv::ImageMeta cropmeta( width, height,

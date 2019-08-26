@@ -40,6 +40,7 @@ namespace dltagger {
     
     // reset/clear algo
     _mask_match_algo.clear();
+    _mask_match_algo.set_verbosity( logger().level() );
 
     // make matches
     _mask_match_algo.matchMasksAcrossPlanes( clustermask_vv, wholeview_v, ev_chstatus );

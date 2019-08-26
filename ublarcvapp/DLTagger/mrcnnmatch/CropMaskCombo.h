@@ -2,6 +2,7 @@
 #define __CROP_MASK_COMBO_H__
 
 #include <vector>
+#include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/Image2D.h"
 #include "MRCNNMatchTypes.h"
 
@@ -16,12 +17,13 @@ namespace dltagger {
    * the masks are stored.
    * the class also stores the features we collect on those crops.
    */
-  class CropMaskCombo  {
+  class CropMaskCombo : larcv::larcv_base {
 
   public:
 
     CropMaskCombo()
-      : _pcombo(nullptr)
+      : larcv::larcv_base("CropMaskCombo"),
+      _pcombo(nullptr)
     {};
     
     CropMaskCombo( const MaskCombo& combo, const std::vector<larcv::Image2D>& adc,
