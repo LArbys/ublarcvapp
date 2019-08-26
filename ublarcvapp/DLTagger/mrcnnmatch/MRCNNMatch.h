@@ -34,6 +34,7 @@ namespace dltagger {
     std::vector< AStarMaskCombo >    m_combo_astar_v;    ///< AStar path
 
     void clear();
+    size_t numMatches() const { return m_combo_3plane_v.size(); };
 
   protected:
     

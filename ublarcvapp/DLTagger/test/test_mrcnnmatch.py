@@ -14,7 +14,8 @@ rt.gStyle.SetOptStat(0)
 # make folder to save images
 os.system("mkdir -p example_combos/")
 
-inputfile = "out_larcv_test.root"
+inputfile = "out_larcv_test_compare.root"
+#inputfile = "out_larcv_test.root"
 #inputfile = "../../../../out_larcv_test.root"
 
 matchalgo = ublarcvapp.dltagger.MRCNNMatch()
