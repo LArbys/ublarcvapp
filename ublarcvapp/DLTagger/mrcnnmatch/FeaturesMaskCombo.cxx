@@ -62,6 +62,20 @@ namespace dltagger {
         }
       }
 
+      if ( pt_v.size()==0 ) {
+        // empty. fill blank
+        std::vector<float> mean(2,0);
+        std::vector<float> pca1(2,0);
+        std::vector<float> pca2(2,0);
+        std::vector<float> eigenvals(2,0);
+        
+        pca_mean_vv.push_back( mean );
+        pca1_dir_vv.push_back( pca1 );
+        pca2_dir_vv.push_back( pca2 );
+        pca_eigenvalues_vv.push_back(eigenvals);
+        continue;
+      }
+      
       cilantro::PrincipalComponentAnalysis3f pca(pt_v);
 
       std::vector<float> mean(2);
