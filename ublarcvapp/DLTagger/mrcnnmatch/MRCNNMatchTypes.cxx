@@ -23,6 +23,7 @@ namespace dltagger {
 
     int xoffset = mask.box.min_x();
     int yoffset = mask.box.min_y();
+
     if ( yoffset<0 )
       yoffset = 0;
     for ( size_t ipt=0; ipt<mask.points_v.size(); ipt++ ) {
@@ -34,6 +35,16 @@ namespace dltagger {
         continue;
       float tick = mask.meta.pos_y(row);
       int wire = mask.meta.pos_x(col);
+
+      // skip edge cases
+      if ( wire>= (int)larutil::Geometry::GetME()->Nwires((unsigned int)_plane) )
+        continue;
+      if ( wire<0 )
+        continue;
+      if ( tick>= mask.meta.max_y() )
+        continue;
+      if ( tick<mask.meta.min_y() )
+        continue;
 
       double xyzstart[3];
       double xyzend[3];

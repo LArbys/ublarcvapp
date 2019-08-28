@@ -25,6 +25,7 @@ namespace dltagger {
     ublarcvapp::ubdllee::FixedCROIFromFlashConfig croi_config;// rely on defaults for now, need proper config
     ublarcvapp::ubdllee::FixedCROIFromFlashAlgo   croi_algo(croi_config);
 
+    LARCV_DEBUG() << "define CROI and make merged CROI" << std::endl;
     int nflashes = intime_opflash_v.size();
     if ( nflashes>0 ) {
       m_croi_v      = croi_algo.findCROIfromFlash( intime_opflash_v.front() ); ///< 3d-consistent regions
@@ -43,6 +44,7 @@ namespace dltagger {
     _mask_match_algo.set_verbosity( logger().level() );
 
     // make matches
+    LARCV_DEBUG() << "run MRCNNMatch::matchMasksAcrossPlanes" << std::endl;    
     _mask_match_algo.matchMasksAcrossPlanes( clustermask_vv, wholeview_v, ev_chstatus );
 
     // make pixel clusters
@@ -158,6 +160,8 @@ namespace dltagger {
                                      std::vector< std::vector<larcv::Pixel2DCluster> >& pixel_cluster_vv,
                                      std::vector< larcv::ImageMeta >& pixel_cluster_meta_v ) {
 
+    LARCV_DEBUG() << "make pixel clusters" << std::endl;
+    
     int nplanes = wholeview_v.size();
     
     int ncombos = matchdata.m_combo_3plane_v.size();
@@ -453,6 +457,8 @@ namespace dltagger {
                                     const std::vector< std::vector<larcv::Pixel2DCluster> >& pixel_cluster_vv,
                                     std::vector<int>& iscosmic_v ) {
 
+    LARCV_DEBUG() << "evaluate clusters" << std::endl;
+    
     size_t nmatches = matchdata.numMatches();
     iscosmic_v.resize(nmatches,0);
 

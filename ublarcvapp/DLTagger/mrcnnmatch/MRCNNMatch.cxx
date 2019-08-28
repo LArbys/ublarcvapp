@@ -37,6 +37,7 @@ namespace dltagger {
     
 
     // compile key match criteria for each mask
+    LARCV_DEBUG() << "compile MaskMatchData" << std::endl;    
     std::vector< std::vector<MaskMatchData> > matchdata_vv;
     for ( auto const& clustermask_v : clustermask_vv ) {
       std::vector<MaskMatchData> data_v;
@@ -79,6 +80,7 @@ namespace dltagger {
 
     /// initial screen for overlapping times
     // start from Y plane, match U, then V
+    LARCV_DEBUG() << "make 3 plane matches" << std::endl;
 
     std::vector<MaskCombo> combo_v;
     

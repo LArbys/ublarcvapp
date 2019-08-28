@@ -59,6 +59,7 @@ namespace dltagger {
 
     m_tagger.set_verbosity( logger().level() );
     _larlite_io->set_verbosity( logger().level() );
+
     
     // GET LARCV INPUT
     larcv::EventImage2D* ev_wire
@@ -74,6 +75,10 @@ namespace dltagger {
     if ( _has_mcinstance_img ) {
       ev_mcinstance = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D, _input_instance_image);
     }
+
+    LARCV_NORMAL() << "Processing entry[" << mgr.current_entry() << "] "
+                   << "rse=(" << mgr.event_id().run() << "," << mgr.event_id().subrun() << "," << mgr.event_id().event() << ")"
+                   << std::endl;
 
     // GET LARLITE INPUT
     _larlite_io->syncEntry( mgr );
