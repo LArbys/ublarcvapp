@@ -208,6 +208,10 @@ namespace reco3d {
         std::cout << "step=" << nsteps << ": get current node " << current->str() << ". "
                   << "number of remaining nodes in openset=" << openset.size() << std::endl;
       }
+      if ( nsteps==_config.max_steps ) {
+        std::cout << "Hit maximum steps. Stopping" << std::endl;
+        break;
+      }
 
       if ( *current==*goal ) {
         if ( verbose>0 ) {

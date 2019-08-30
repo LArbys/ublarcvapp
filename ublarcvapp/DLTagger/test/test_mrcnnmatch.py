@@ -14,28 +14,39 @@ rt.gStyle.SetOptStat(0)
 # make folder to save images
 os.system("mkdir -p example_combos/")
 
-inputfile = "out_larcv_test_compare.root"
+#inputfile = "out_larcv_test_compare.root"
 #inputfile = "out_larcv_test.root"
 #inputfile = "../../../../out_larcv_test.root"
+inputfiles = ["../bin/testset2/supera-Run007704-SubRun000023.root", "../bin/testset2/mrcnn-mcc9_v13_nueintrinsics_overlay_run1-Run007704-SubRun000023.root"]
 
 matchalgo = ublarcvapp.dltagger.MRCNNMatch()
 
-io = larcv.IOManager(larcv.IOManager.kREAD, "IO" )
-io.add_in_file( inputfile )
+io = larcv.IOManager(larcv.IOManager.kREAD, "IO", larcv.IOManager.kTickBackward )
+for inputfile in inputfiles:
+    io.add_in_file( inputfile )
 io.initialize()
 
-io.read_entry(0)
+io.read_entry(7)
 
 ev_wire  = io.get_data(larcv.kProductImage2D, "wire" )
 ev_masks = io.get_data(larcv.kProductClusterMask, "mrcnn_masks" )
 ev_chstatus = io.get_data(larcv.kProductChStatus, "wire" )
+badchalgo = ublarcvapp.EmptyChannelAlgo()
+badch_v = badchalgo.makeBadChImage( 4, 3, 2400, 1008*6, 3456, 6, 1, ev_chstatus )
+hbadch_v = [ larcv.as_th2d( badch_v.at(x), "hbadch_p%d"%(x) ) for x in range(3) ]
+
+gapch_v = badchalgo.findMissingBadChs( ev_wire.Image2DArray(), badch_v, 1.0, 200 )
+hgapch_v = [ larcv.as_th2d( gapch_v.at(x), "hgapch_p%d"%(x) ) for x in range(3) ]
+for gap,bad in zip( hgapch_v, hbadch_v ):
+    gap.Add( bad )
 
 mask_vv = ev_masks.as_vector()
 print("Number of masks: ",[mask_vv.at(x).size() for x in range(3)])
 hwire_v = [ larcv.as_th2d( ev_wire.as_vector().at(p), "hwire_p%d"%(p) ) for p in xrange(3) ]
 meta_v  = [ ev_wire.as_vector().at(p).meta() for p in xrange(3) ]
 
-matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus )
+matchalgo.set_verbosity(1)
+matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus, True )
 
 # visualize individual matches
 ccombos = rt.TCanvas("ccombos","Combos", 1500, 1200)
@@ -206,7 +217,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             gpca.SetMarkerColor(rt.kMagenta)
             #gpca.SetMarkerSize(2)
             gpca.SetLineColor(rt.kMagenta)
-            gpca.SetLineWidth(2)
+            gpca.SetLineWidth(1)
             gpca.Draw("LP")
             gpca_v[p].append(gpca)
 
@@ -238,11 +249,12 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
                 tastar.SetPoint( ipt, node_wire, astar_node.tyz[0] )
 
             if astarout.astar_completed==1:
+                tastar.SetMarkerColor( rt.kCyan )
+                tastar.SetLineColor( rt.kCyan )
+            else:
                 tastar.SetMarkerColor( rt.kBlue )
                 tastar.SetLineColor( rt.kBlue )
-            else:
-                tastar.SetMarkerColor( rt.kBlack )
-                tastar.SetLineColor( rt.kBlack )
+            tastar.SetLineWidth( 2 )                
             tastar.Draw("LP")
             tastar_v[p].append( tastar )
 
@@ -277,5 +289,23 @@ for p in xrange(3):
 call.Update()
 call.Draw()
 call.SaveAs("example_combos/all_combos_pass1.png")
+
+cbadch = rt.TCanvas("cbadch", "Bad channel image", 1200, 1500 )
+cbadch.Divide(1,3)
+for p in xrange(3):
+    cbadch.cd(1+p)
+    hbadch_v[p].Draw("colz")
+cbadch.Update()
+cbadch.Draw()
+cbadch.SaveAs("example_combos/badch_image.png")
+
+cgapch = rt.TCanvas("cgapch", "Gap channel image", 1200, 1500 )
+cgapch.Divide(1,3)
+for p in xrange(3):
+    cgapch.cd(1+p)
+    hgapch_v[p].Draw("colz")
+cgapch.Update()
+cgapch.Draw()
+cgapch.SaveAs("example_combos/gapch_image.png")
 
 raw_input()

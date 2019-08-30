@@ -25,7 +25,8 @@ namespace dltagger {
     AStarMaskCombo()
       : larcv::larcv_base("AStarMaskCombo"),
       pEndpoint(nullptr),
-      astar_completed(0)
+      astar_completed(0),
+      used_astar(false)
     {};
     virtual ~AStarMaskCombo() {};
 
@@ -45,6 +46,7 @@ namespace dltagger {
     
     std::vector<ublarcvapp::reco3d::AStar3DNode> astar_path;
     int astar_completed;
+    bool used_astar;
     std::vector< larcv::Image2D > badch_crop_v; //< badch image
     std::vector< larcv::Image2D > astar_crop_v; //< adc image with some mods using pcaline and masks
     std::vector< larcv::Image2D > score_crop_v; //< adc image showing score
@@ -57,6 +59,9 @@ namespace dltagger {
     void _prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v,
                            const std::vector<larcv::Image2D>& input_crop_v );
     void _run_astar( const std::vector<larcv::Image2D>& input_v );
+    void _run_linear_test( const std::vector<larcv::Image2D>& input_v,
+                           const std::vector<larcv::Image2D>& badch_v,
+                           float& max_discontinuity_cm );
 
     // parameters
     int _max_downsample_factor; ///< maximum downsample factor to use when running AStar

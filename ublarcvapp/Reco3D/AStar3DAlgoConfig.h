@@ -38,6 +38,7 @@ namespace reco3d {
     int compression_mode; // compression mode used (check Image2D for enum) if calling downsampleAndFindPath
     int verbosity; // verbosity of the algorithm: 0=most silent, >0 progressively more verbose
     bool store_score_image; // store image with scores for visualization. useful for debug.
+    int max_steps;
 
     void dump();
 

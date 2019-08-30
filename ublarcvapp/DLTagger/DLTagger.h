@@ -25,7 +25,12 @@ namespace dltagger {
   public:
     DLTagger()
       : larcv::larcv_base("DLTagger"),
-      hasRun(false)
+      hasRun(false),
+      _cut_dtick_outoftime(-100.0),
+      _cut_frac_out_of_croi(0.025),
+      _cut_frac_dwall_innermost(-10.0),
+      _cut_frac_dwall_outermost(-10.0),
+      _max_pixdist_from_path(8.0)
     {};
     virtual ~DLTagger() {};
 
@@ -56,6 +61,8 @@ namespace dltagger {
       std::vector<float> frac_per_plane;
       float total_nufrac;
       std::vector<float> nufrac_per_plane;
+      std::vector<float> outermost_endpt_tyz;
+      std::vector<float> innermost_endpt_tyz;      
       
       CosmicSelectVars_t()
       : astar_complete(0),
@@ -68,6 +75,8 @@ namespace dltagger {
         numpixels.resize(3,0);
         frac_per_plane.resize(3,0);
         nufrac_per_plane.resize(3,0);
+        outermost_endpt_tyz.resize(3,0);
+        innermost_endpt_tyz.resize(3,0);
       };
         
     };
@@ -115,7 +124,9 @@ namespace dltagger {
     // Cosmic Selection
     std::vector<int> m_iscosmic_v;
     std::vector<CosmicSelectVars_t> m_select_vars_v;
-    void _calcDwall( const Gen3DEndpoints& endpts, float& outermost_dwall, float& innermost_dwall );
+    void _calcDwall( const Gen3DEndpoints& endpts, float& outermost_dwall, float& innermost_dwall,
+                     std::vector<float>& outermost_endpt_tyz,
+                     std::vector<float>& innermost_endpt_tyz );
     float _calcOutOfTimeTicks( const Gen3DEndpoints& endpts );
     void _calcOutOfROIfrac( const std::vector<larcv::Image2D>& wholeview_v,
                             const larcv::ROI& croi,
@@ -124,7 +135,13 @@ namespace dltagger {
                             std::vector<int>& npixs,
                             float& total_frac );
     
-    
+    // Cut Variable Values
+    // -------------------
+    float _cut_dtick_outoftime;
+    float _cut_frac_out_of_croi;
+    float _cut_frac_dwall_innermost;
+    float _cut_frac_dwall_outermost;
+    float _max_pixdist_from_path;
     
   };
 

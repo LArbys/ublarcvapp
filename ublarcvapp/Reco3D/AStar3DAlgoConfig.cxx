@@ -21,6 +21,7 @@ namespace reco3d {
     compression_mode  = 2;
     verbosity = 0;
     store_score_image = false;
+    max_steps = 1000;
   };
 
   AStar3DAlgoConfig AStar3DAlgoConfig::MakeFromPSet( const larcv::PSet& pset ) {
@@ -43,6 +44,7 @@ namespace reco3d {
     else
       cfg.path_restriction_radius = pset.get<float>("PathRestrictionRadius",0.0);
     cfg.store_score_image = pset.get<bool>("StoreScoreImage",false);
+    cfg.max_steps              = pset.get< int >( "MaxSteps", 1000 );
 
     return cfg;
   }
@@ -65,6 +67,7 @@ namespace reco3d {
     std::cout << " Compression Mode: " << compression_mode << std::endl;
     std::cout << " Verbosity: " << verbosity << std::endl;
     std::cout << " Store Score Image: " << store_score_image << std::endl;
+    std::cout << " Max Steps: " << max_steps << std::endl;
     std::cout << "--------------------------------" << std::endl;
   }
 

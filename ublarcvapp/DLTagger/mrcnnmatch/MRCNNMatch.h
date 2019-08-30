@@ -25,7 +25,8 @@ namespace dltagger {
 
     void matchMasksAcrossPlanes( const std::vector< std::vector<larcv::ClusterMask> >& clustermask_vv,
                                  const std::vector<larcv::Image2D>& wholeview_v,
-                                 const larcv::EventChStatus& ev_chstatus );
+                                 const larcv::EventChStatus& ev_chstatus,
+                                 bool use_gap_ch=false );
 
     std::vector< MaskCombo >         m_combo_3plane_v;   ///< matches across planes
     std::vector< CropMaskCombo >     m_combo_crops_v;    ///< cropped images from matches

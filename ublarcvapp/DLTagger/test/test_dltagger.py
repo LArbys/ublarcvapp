@@ -14,13 +14,15 @@ rt.gStyle.SetOptStat(0)
 
 #inputfile = "out_larcv_test.root"
 #inputfile = "../../../../out_larcv_test.root"
-inputfile = "testset1/out_larcv_test.root"
+#inputfile = "testset1/out_larcv_test.root"
+inputfiles = ["../bin/testset2/supera-Run007704-SubRun000023.root", "../bin/testset2/mrcnn-mcc9_v13_nueintrinsics_overlay_run1-Run007704-SubRun000023.root"]
 
 dltagger = ublarcvapp.dltagger.DLTagger()
 dltagger.set_verbosity(0)
 
-io = larcv.IOManager(larcv.IOManager.kREAD, "IO" )
-io.add_in_file( inputfile )
+io = larcv.IOManager(larcv.IOManager.kREAD, "IO", larcv.IOManager.kTickBackward )
+for inputfile in inputfies:
+    io.add_in_file( inputfile )
 io.initialize()
 
 nentries = io.get_n_entries()

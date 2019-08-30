@@ -8,6 +8,8 @@
 #include "LArUtil/LArProperties.h"
 #include "LArUtil/Geometry.h"
 
+#include "Geo2D/Core/Geo2D.h"
+
 namespace ublarcvapp {
 namespace dltagger {
 
@@ -44,8 +46,9 @@ namespace dltagger {
     _mask_match_algo.set_verbosity( logger().level() );
 
     // make matches
-    LARCV_DEBUG() << "run MRCNNMatch::matchMasksAcrossPlanes" << std::endl;    
-    _mask_match_algo.matchMasksAcrossPlanes( clustermask_vv, wholeview_v, ev_chstatus );
+    LARCV_DEBUG() << "run MRCNNMatch::matchMasksAcrossPlanes" << std::endl;
+    bool use_gap_ch = true;
+    _mask_match_algo.matchMasksAcrossPlanes( clustermask_vv, wholeview_v, ev_chstatus, use_gap_ch );
 
     // make pixel clusters
     _makePixelClusters( wholeview_v, _mask_match_algo, m_pixel_cluster_vv, m_pixel_cluster_meta_v );
@@ -182,12 +185,15 @@ namespace dltagger {
     // we use the matches with a good AStar track
     for (int icombo=0; icombo<nastar; icombo++ ) {
 
-      LARCV_DEBUG() << "tagging with combo[" << icombo << "] of naster" << std::endl;
+      LARCV_DEBUG() << "--------------------------------------" << std::endl;
+      LARCV_DEBUG() << "tagging with combo[" << icombo << "] from AStar list" << std::endl;
       
       auto& astarcombo = matchdata.m_combo_astar_v[icombo];
+      auto& endptcombo = matchdata.m_combo_endpt3d_v[icombo];
 
       // for now, skip on tracks that did not complete
       if ( astarcombo.astar_completed==0 ) {
+        LARCV_DEBUG() << "astar not complete. fill empty pixel cluster" << std::endl;
         // create an empty clusters
         for ( size_t p=0; p<wholeview_v.size(); p++ ) {
           pixel_cluster_vv[p].push_back( larcv::Pixel2DCluster() );
@@ -349,12 +355,56 @@ namespace dltagger {
           auto const& contourmeta = contourmeta_v[ictr];
           auto const& qpixels = contourmeta.getChargePixels();
 
+
+          int nearpath = 0;
+          int farpath  = 0;
           for ( auto const& pix2d : qpixels ) {
             int col = pix2d.x;
             int row = pix2d.y;
             if ( col<0 || col>=(int)cropmeta->cols() ) continue;
             if ( row<0 || row>=(int)cropmeta->rows() ) continue;
 
+            // pixels need to stay close to the line (in pixel coords)
+            // if astar, find closest segment and then distance to segment
+            float distfrompath = 0.;
+            if ( astarcombo.used_astar ) {
+              // astar method
+              int closest_segment = -1;
+              float min_seg_dist = 0;
+              for ( int inode=0; inode<(int)astarcombo.astar_path.size()-1; inode++ ) {
+                auto const& nodeA = astarcombo.astar_path.at(inode);
+                auto const& nodeB = astarcombo.astar_path.at(inode+1);
+                float pixdistA = sqrt((col-nodeA.cols[p])*(col-nodeA.cols[p]) + (row-nodeA.row)*(row-nodeA.row));
+                float pixdistB = sqrt((col-nodeB.cols[p])*(col-nodeB.cols[p]) + (row-nodeB.row)*(row-nodeB.row));
+                float pixdist = pixdistA + pixdistB;
+                if ( closest_segment<0 || pixdist<min_seg_dist ) {
+                  closest_segment = inode;
+                  min_seg_dist = pixdist;
+                }
+              }
+
+              // define line segment and point in Geo2D, then get dist to line
+              auto const& closenodeA = astarcombo.astar_path[closest_segment];
+              auto const& closenodeB = astarcombo.astar_path[closest_segment+1];              
+              geo2d::LineSegment<float> segment( closenodeA.cols[p], closenodeA.row, closenodeB.cols[p], closenodeB.row );
+              geo2d::Vector<float> pt( col, row );
+              distfrompath = geo2d::Distance( segment, pt );
+            }
+            else {
+              // straight line method
+              geo2d::LineSegment<float> segment( astarcombo.astar_path.front().cols[p], astarcombo.astar_path.front().row,
+                                                 astarcombo.astar_path.back().cols[p], astarcombo.astar_path.back().row );
+              geo2d::Vector<float> pt( col, row );
+              distfrompath = geo2d::Distance( segment, pt );
+            }
+
+            if ( distfrompath>_max_pixdist_from_path ) {
+              farpath++;
+              continue;
+            }
+            else
+              nearpath++;
+            
             float wire = cropmeta->pos_x(col);
             float tick = cropmeta->pos_y(row);
 
@@ -363,16 +413,19 @@ namespace dltagger {
 
             int xcol = fullmeta.col(wire);
             int xrow = fullmeta.row(tick);
-
+            
             fillimg.set_pixel( row, col,  1.0 );
 
             larcv::Pixel2D pix(xcol,xrow);
             pix.Intensity( wholeview_v[p].pixel( xrow, xcol ) );
             pixcluster += pix;
           }
-          
+          LARCV_DEBUG() << "  kept contour[" << ictr << "] "
+                        << " (pixels close to path)=" << nearpath
+                        << " (pixels far from path)=" << farpath
+                        << std::endl;
         }
-
+        LARCV_DEBUG() << "-- pixels in cluster plane[" << p << "]: " << pixcluster.size() << std::endl;
         plane_fill_images_v[p].emplace_back( std::move(fillimg) );
         pixel_cluster_vv[p].emplace_back( std::move(pixcluster) );
         
@@ -486,7 +539,8 @@ namespace dltagger {
       auto const& endptdata = matchdata.m_combo_endpt3d_v.at(imatch);
       
       // measure of containment
-      _calcDwall( endptdata, vars.dwall_outermost, vars.dwall_innermost );
+      _calcDwall( endptdata, vars.dwall_outermost, vars.dwall_innermost,
+                  vars.outermost_endpt_tyz, vars.innermost_endpt_tyz );
 
       // measure within intime
       vars.dtick_outoftime = _calcOutOfTimeTicks( endptdata );
@@ -516,31 +570,35 @@ namespace dltagger {
       for ( size_t p=0; p<vars.frac_per_plane.size(); p++ )
         LARCV_DEBUG() << "     plane[" << p << "] fraction: " << vars.frac_per_plane[p] << std::endl;
       LARCV_DEBUG() << "  DWALL: innermost=" << vars.dwall_innermost << "  outermost=" << vars.dwall_outermost << std::endl;
-      LARCV_DEBUG() << "---------------------------------------" << std::endl;      
+
       
       // make decision
       // ---------------
 
-      if ( vars.dtick_outoftime<0 ) {
+      if ( vars.dtick_outoftime<_cut_dtick_outoftime ) {
         //iscosmic_v.push_back(1);
         iscosmic_v[imatch] = 1;
+        LARCV_DEBUG() << "  cosmic-tagged using [out-of-time]" << std::endl;
         continue;
       }
 
-      if ( vars.total_frac>0.75 ) {
+      if ( vars.total_frac>_cut_frac_out_of_croi ) {
         //iscosmic_v.push_back(1);
         iscosmic_v[imatch] = 1;
+        LARCV_DEBUG() << "  cosmic-tagged using [out-of-croi]" << std::endl;        
         continue;
       }
 
       // containment can save it
-      if ( vars.dwall_innermost>10.0 && vars.dwall_outermost>10.0 ) {
+      if ( vars.dwall_innermost<_cut_frac_dwall_innermost || vars.dwall_outermost<_cut_frac_dwall_outermost ) {
         //iscosmic_v.push_back(0);
-        iscosmic_v[imatch] = 0;        
+        iscosmic_v[imatch] = 1;
+        LARCV_DEBUG() << "  cosmic-tagged using [dwall]" << std::endl;
       }
       else {
         //iscosmic_v.push_back(1);
-        iscosmic_v[imatch] = 1;
+        iscosmic_v[imatch] = 0;
+        LARCV_DEBUG() << "  not-cosmic using [dwall]" << std::endl;        
       }
 
     }//end of loop over matches/clusters
@@ -553,7 +611,9 @@ namespace dltagger {
    */
   void DLTagger::_calcDwall( const Gen3DEndpoints& endpts,
                              float& outermost_dwall,
-                             float& innermost_dwall ) {
+                             float& innermost_dwall,
+                             std::vector<float>& outermost_endpt_tyz,
+                             std::vector<float>& innermost_endpt_tyz ) {
     
     const float tpc_halfheight = larutil::Geometry::GetME()->DetHalfHeight();
     const float tpc_length     = larutil::Geometry::GetME()->DetLength();
@@ -572,8 +632,20 @@ namespace dltagger {
       dwall_endpt_v.push_back( dwall_endpt );
     }
     
-    outermost_dwall = ( dwall_endpt_v[0]<dwall_endpt_v[1] ) ? dwall_endpt_v[0] : dwall_endpt_v[1];
-    innermost_dwall = ( dwall_endpt_v[0]>dwall_endpt_v[1] ) ? dwall_endpt_v[0] : dwall_endpt_v[1];
+    //outermost_dwall = ( dwall_endpt_v[0]<dwall_endpt_v[1] )  dwall_endpt_v[0] : dwall_endpt_v[1];
+    //innermost_dwall = ( dwall_endpt_v[0]>dwall_endpt_v[1] ) ? dwall_endpt_v[0] : dwall_endpt_v[1];
+    if ( dwall_endpt_v[0]<dwall_endpt_v[1] ) {
+      outermost_dwall = dwall_endpt_v[0];
+      outermost_endpt_tyz = endpts.endpt_tyz_v[0];
+      innermost_dwall = dwall_endpt_v[1];
+      innermost_endpt_tyz = endpts.endpt_tyz_v[1];
+    }
+    else {
+      outermost_dwall = dwall_endpt_v[1];
+      outermost_endpt_tyz = endpts.endpt_tyz_v[1];
+      innermost_dwall = dwall_endpt_v[0];
+      innermost_endpt_tyz = endpts.endpt_tyz_v[0];
+    }
   }
   
   /**

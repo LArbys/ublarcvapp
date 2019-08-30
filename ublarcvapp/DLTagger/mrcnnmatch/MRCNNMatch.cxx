@@ -20,7 +20,8 @@ namespace dltagger {
    */
   void MRCNNMatch::matchMasksAcrossPlanes( const std::vector<std::vector<larcv::ClusterMask>>& clustermask_vv,
                                            const std::vector<larcv::Image2D>& wholeview_v,
-                                           const larcv::EventChStatus& ev_chstatus ) {
+                                           const larcv::EventChStatus& ev_chstatus,
+                                           bool use_gap_ch ) {
 
     // make badch image
     ublarcvapp::EmptyChannelAlgo badchalgo;
@@ -34,6 +35,8 @@ namespace dltagger {
                                 wholeimage_meta.pixel_height(),
                                 wholeimage_meta.pixel_width(),                                
                                 ev_chstatus );
+
+    std::vector<larcv::Image2D> gapch_v = badchalgo.findMissingBadChs( wholeview_v, badch_v, 1.0, 200 );
     
 
     // compile key match criteria for each mask
@@ -57,10 +60,23 @@ namespace dltagger {
       matchdata_vv.emplace_back( std::move(data_v) );
     }
 
+    if ( use_gap_ch ) {
+      // add the bad ch
+      for ( size_t p=0; p<3; p++ ) {
+        auto const& gapch = gapch_v[p];
+        auto& badch = badch_v[p];
+        for ( size_t c=0; c<gapch.meta().cols(); c++ ) {
+          if ( gapch.pixel(0,c)>0 && badch.pixel(0,c)<1 )
+            badch.paint_col( c, 50 );
+        }
+      }
+    }
+
     // make 3-plane matches
     run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
     // make 2-plane matches
     run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+
   }
 
   /**
@@ -155,7 +171,9 @@ namespace dltagger {
     // make crops, mask charge, contours on charge, contours on mask
     std::vector<int> pass;
     for ( size_t icombo=0; icombo<combo_3plane_v.size(); icombo++ ) {
-
+      LARCV_INFO() << "----------------------------------" << std::endl;
+      LARCV_INFO() << "Evaluate 3-Plane Combo[" << icombo << "]" << std::endl;
+      LARCV_INFO() << "----------------------------------" << std::endl;      
       auto& combo = combo_3plane_v[icombo];
 
       // greedy: if already used successfully, we do not reuse
@@ -312,7 +330,12 @@ namespace dltagger {
     // Analyze 2-plane combos
     std::vector<int> pass;
     int npassed = 0;
+    int icombo = -1;
     for ( auto const& combo : combo_v ) {
+      icombo++;
+      LARCV_INFO() << "----------------------------------" << std::endl;
+      LARCV_INFO() << "Evaluate 2-Plane Combo[" << icombo << "]" << std::endl;
+      LARCV_INFO() << "----------------------------------" << std::endl;      
 
       // greedy: if already used successfully, we do not reuse
       bool isused = false;
@@ -341,7 +364,7 @@ namespace dltagger {
                                _config.astar_max_downsample_factor,
                                _config.astar_store_score_image,
                                _config.astar_verbosity );
-      astar.set_verbosity((larcv::msg::Level_t)0);
+      //astar.set_verbosity((larcv::msg::Level_t)0);
                                
       if ( run ) {
         if (astar.astar_completed==1 ) {

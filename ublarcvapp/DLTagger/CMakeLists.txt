@@ -43,6 +43,7 @@ target_include_directories(${LIBNAME}
   $ENV{CILANTRO_INC_DIR}
   ${OpenCV_INCLUDE_DIRS}
   ${EIGEN3_INCLUDE_DIRS}
+  ${GEO2D_INC_DIR}
   PRIVATE
   ${CMAKE_CURRENT_SOURCE_DIR}/mrcnnmatch
   ${PROJECT_SOURCE_DIR}
