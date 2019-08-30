@@ -78,6 +78,8 @@ namespace dltagger {
     std::vector< float > _numpixels_plane0;
     std::vector< float > _numpixels_plane1;
     std::vector< float > _numpixels_plane2;
+    std::vector< std::vector<float> > _outermost_endpt_v;
+    std::vector< std::vector<float> > _innermost_endpt_v;    
     TTree* _ana_tree;
     
   };

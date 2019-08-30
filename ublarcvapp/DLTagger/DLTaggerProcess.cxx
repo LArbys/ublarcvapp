@@ -173,6 +173,8 @@ namespace dltagger {
     _ana_tree->Branch( "nufrac_plane0", &_nufrac_plane0);
     _ana_tree->Branch( "nufrac_plane1", &_nufrac_plane1);
     _ana_tree->Branch( "nufrac_plane2", &_nufrac_plane2);
+    _ana_tree->Branch( "outermost_endpt", &_outermost_endpt_v );
+    _ana_tree->Branch( "innermost_endpt", &_innermost_endpt_v );    
   }
 
   void DLTaggerProcess::clearAnaVars() {
@@ -191,7 +193,9 @@ namespace dltagger {
     _nufrac_total.clear();
     _numpixels_plane0.clear();
     _numpixels_plane1.clear();
-    _numpixels_plane2.clear();    
+    _numpixels_plane2.clear();
+    _outermost_endpt_v.clear();
+    _innermost_endpt_v.clear();
   }
 
   void DLTaggerProcess::fillAnaVars() {
@@ -219,7 +223,9 @@ namespace dltagger {
       _nufrac_plane2.push_back( vars.nufrac_per_plane[2] );      
       _numpixels_plane0.push_back( vars.numpixels[0] );
       _numpixels_plane1.push_back( vars.numpixels[1] );
-      _numpixels_plane2.push_back( vars.numpixels[2] );      
+      _numpixels_plane2.push_back( vars.numpixels[2] );
+      _outermost_endpt_v.push_back( vars.outermost_endpt_tyz );
+      _innermost_endpt_v.push_back( vars.innermost_endpt_tyz );
     }
     _ana_tree->Fill();
   }
