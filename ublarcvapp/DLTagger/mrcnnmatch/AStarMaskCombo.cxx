@@ -175,7 +175,7 @@ namespace dltagger {
     ublarcvapp::reco3d::AStar3DAlgoConfig config;
     config.store_score_image = _store_score_image;
     config.astar_neighborhood.resize(10,1); // tight path (2N+1)^3 nodes checked
-    config.max_steps = 1000;
+    config.max_steps = 2000;
 
     ublarcvapp::reco3d::AStar3DAlgo algo( config );
     algo.setVerbose(_astar_verbosity);

@@ -77,6 +77,7 @@ namespace dltagger {
     // make 2-plane matches
     run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
 
+
   }
 
   /**
@@ -382,6 +383,10 @@ namespace dltagger {
         }
 
         if ( pass.back()==1 || !_config.filter_astar_failures ) {
+
+          // for 2 plane matches, we won't have features, which we need later for pixel tagging. we do that now
+          
+          
           m_combo_3plane_v.emplace_back( std::move(combo) );
           m_combo_crops_v.emplace_back( std::move(cropmaker) );
           m_combo_features_v.emplace_back( std::move(features) );

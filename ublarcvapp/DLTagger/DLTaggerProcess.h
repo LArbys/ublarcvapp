@@ -3,6 +3,7 @@
 
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/Processor/ProcessFactory.h"
+#include "larcv/core/DataFormat/EventImage2D.h"
 
 #include "ublarcvapp/LArliteHandler/LArliteManager.h"
 #include "DLTagger.h"
@@ -61,7 +62,10 @@ namespace dltagger {
 
     void setupAnaTree();
     void clearAnaVars();
-    void fillAnaVars();
+    void fillAnaVars( const larcv::EventImage2D& ev_wholeview,
+                      const larcv::EventImage2D& ev_mcinstance,
+                      const larcv::EventImage2D& evout_tagged,
+                      const larcv::EventImage2D& evout_notcosmic );
     int _num_clusters;
     std::vector< int   > _astar_complete;
     std::vector< float > _dwall_outermost;
@@ -79,7 +83,10 @@ namespace dltagger {
     std::vector< float > _numpixels_plane1;
     std::vector< float > _numpixels_plane2;
     std::vector< std::vector<float> > _outermost_endpt_v;
-    std::vector< std::vector<float> > _innermost_endpt_v;    
+    std::vector< std::vector<float> > _innermost_endpt_v;
+    float _frac_wholeimg_cosmictag;
+    float _frac_wholeimg_notcosmictag;
+    float _frac_wholeimg_alltags;
     TTree* _ana_tree;
     
   };

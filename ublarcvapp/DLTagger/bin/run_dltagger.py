@@ -6,6 +6,7 @@ parser.add_argument('-olcv','--out-larcv',required=True,type=str,help="Filename 
 parser.add_argument('-oll', '--out-larlite',required=True,type=str,help="Filename for LArlite output")
 parser.add_argument("-c","--config",required=True,type=str,help="Configuration file")
 parser.add_argument('-op','--opreco',required=True,type=str,help='Input larlite opreco file')
+parser.add_argument("-mc",'--mcinfo',required=False,type=str,help='Input larcvtruth file')
 parser.add_argument('input_larcv',type=str,nargs='+',help="Input larcv files")
 
 args = parser.parse_args(sys.argv[1:])
@@ -42,5 +43,8 @@ nentries = driver.io().get_n_entries()
 
 for ientry in xrange(nentries):
     driver.process_entry(ientry)
+    #if ientry==0:
+    #    break
+#driver.process_entry(11)
 
 driver.finalize()

@@ -26,7 +26,7 @@ for inputfile in inputfiles:
     io.add_in_file( inputfile )
 io.initialize()
 
-io.read_entry(7)
+io.read_entry(0)
 
 ev_wire  = io.get_data(larcv.kProductImage2D, "wire" )
 ev_masks = io.get_data(larcv.kProductClusterMask, "mrcnn_masks" )
@@ -81,7 +81,8 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     else:
         astarout  = None
     
-    mask_contours = features.combo_mask_contour
+    #mask_contours = features.combo_mask_contour
+    mask_contours = features.combo_charge_contour    
 
     # get masks
     combo_indices = [ combo.indices.at(p) for p in xrange(3) ]

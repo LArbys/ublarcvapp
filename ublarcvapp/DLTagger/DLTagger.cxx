@@ -4,6 +4,7 @@
 
 #include "ublarcvapp/ubdllee/FixedCROIFromFlashConfig.h"
 #include "ublarcvapp/ubdllee/FixedCROIFromFlashAlgo.h"
+#include "ublarcvapp/ContourTools/ContourClusterAlgo.h"
 
 #include "LArUtil/LArProperties.h"
 #include "LArUtil/Geometry.h"
@@ -193,7 +194,7 @@ namespace dltagger {
 
       // for now, skip on tracks that did not complete
       if ( astarcombo.astar_completed==0 ) {
-        LARCV_DEBUG() << "astar not complete. fill empty pixel cluster" << std::endl;
+        LARCV_DEBUG() << "  astar not complete. fill empty pixel cluster" << std::endl;
         // create an empty clusters
         for ( size_t p=0; p<wholeview_v.size(); p++ ) {
           pixel_cluster_vv[p].push_back( larcv::Pixel2DCluster() );
@@ -211,23 +212,40 @@ namespace dltagger {
       //   = _mask_match_algo.m_combo_features_v[icombo].combo_mask_contour.m_plane_atomicmeta_v;
       
       // charge image: above threshold
-      auto const& plane_contours_vv
+      auto& plane_contours_vv
         = _mask_match_algo.m_combo_features_v[icombo].combo_charge_contour.m_plane_atomics_v;
-      auto const& plane_contour_metas_vv
+      auto& plane_contour_metas_vv
         = _mask_match_algo.m_combo_features_v[icombo].combo_charge_contour.m_plane_atomicmeta_v;
+
 
       const std::vector<reco3d::AStar3DNode>& path = astarcombo.astar_path;
 
       for ( size_t p=0; p<plane_contours_vv.size(); p++ ) {
 
         const larcv::ImageMeta* cropmeta = &matchdata.m_combo_crops_v[icombo].crops_v[p].meta();
-        if ( cropmeta->cols()==0 || cropmeta->rows()==0 )
+        if ( cropmeta->cols()==0 || cropmeta->rows()==0 ) {
+          // 2 plane match, where this plane crop is empty
+          // replace using missing image
           cropmeta = &_mask_match_algo.m_combo_crops_v[icombo].missing_v[p].meta();
+
+          // also out contours will be missing
+          // we place them here
+          ContourClusterAlgo clusteralgo;
+          ContourList_t contour_v;
+          std::vector<ContourIndices_t> hull_v;
+          std::vector<Defects_t> defects_v;
+          clusteralgo.analyzeImage( _mask_match_algo.m_combo_crops_v[icombo].missing_v[p],
+                                    contour_v,
+                                    hull_v,
+                                    defects_v,
+                                    plane_contours_vv.at(p),
+                                    plane_contour_metas_vv.at(p) );
+        }
 
         // the image we fill with contour pixels. around crop
         larcv::Image2D fillimg(*cropmeta);
         fillimg.paint(0.0);
-        LARCV_DEBUG() << "fill image: " << cropmeta->dump() << std::endl;
+        //LARCV_DEBUG() << "fill image: " << cropmeta->dump() << std::endl;
         
         auto const& contours_v    = plane_contours_vv[p];
         auto const& contourmeta_v = plane_contour_metas_vv[p];
@@ -235,18 +253,18 @@ namespace dltagger {
         int ncontours = contours_v.size();
         int naccepted = 0;
 
-        LARCV_DEBUG() << "contours in image: " << ncontours << std::endl;
+        //LARCV_DEBUG() << "contours in image: " << ncontours << std::endl;
         
         for ( size_t inode=0; inode<path.size()-1; inode++ ) {
           auto& node     = path[inode];
           auto& nextnode = path[inode+1];
 
-          LARCV_DEBUG() << "node[" << inode << "]" << std::endl;          
+          //LARCV_DEBUG() << "node[" << inode << "]" << std::endl;          
           // want step end points in pixel coordinates (same coordinates as contours)
-          float endpt[2]    = { (float)node.cols[p],     (float)cropmeta->row(node.tyz[0]) };
-          float startpt[2]  = { (float)nextnode.cols[p], (float)cropmeta->row(nextnode.tyz[0]) };
-          LARCV_DEBUG() << "node[" << inode << "] start=(" << startpt[0] << "," << startpt[1] << ") "
-                        << "end=(" << endpt[0] << "," << endpt[1] << ")" << std::endl;
+          float startpt[2] = { (float)node.cols[p],     (float)cropmeta->row(node.tyz[0]) };
+          float endpt[2]   = { (float)nextnode.cols[p], (float)cropmeta->row(nextnode.tyz[0]) };
+          //LARCV_DEBUG() << "node[" << inode << "] start=(" << startpt[0] << "," << startpt[1] << ") "
+          //              << "end=(" << endpt[0] << "," << endpt[1] << ")" << std::endl;
           
           // get dir and length between nodes
           float stepdir[2] = {0};
@@ -260,11 +278,11 @@ namespace dltagger {
           
           // step in the smallest dimension (as long as its not zero)
           float step = 1.0;
-          if ( stepdir[0]==0 )      step = 1.0/stepdir[1];
-          else if ( stepdir[1]==0 ) step = 1.0/stepdir[0];
-          else {
-            step = ( stepdir[0]>stepdir[1] ) ? 1.0/stepdir[0] : 1.0/stepdir[1];
-          }
+          // if ( stepdir[0]==0 )      step = 1.0/stepdir[1];
+          // else if ( stepdir[1]==0 ) step = 1.0/stepdir[0];
+          // else {
+          //   step = ( stepdir[0]>stepdir[1] ) ? 1.0/stepdir[0] : 1.0/stepdir[1];
+          // }
 
           // set number of steps
           int nsteps = (steplen/step);
@@ -278,6 +296,8 @@ namespace dltagger {
           float maxy = ( startpt[1] > endpt[1] ) ? startpt[1] : endpt[1];
 
           // expand bounding box by downsample factor
+          minx -= 16;
+          miny -= 16*6;
           maxx += 16;
           maxy += 16*6;
 
@@ -300,7 +320,7 @@ namespace dltagger {
             test_indices.push_back(ictr);
           }//end of loop over contours
 
-          LARCV_DEBUG() << "node[" << inode << "] contours to test: " << test_indices.size() << std::endl;
+          //LARCV_DEBUG() << "node[" << inode << "] contours to test: " << test_indices.size() << std::endl;
           
           // nothing to test
           if ( test_indices.size()==0 )
@@ -333,7 +353,7 @@ namespace dltagger {
               break;
           }//end of loop over step between node points
 
-          LARCV_DEBUG() << "node[" << inode << "] contours accepted " << ntestok << std::endl;          
+          //LARCV_DEBUG() << "  node[" << inode << "] contours accepted " << ntestok << std::endl;          
 
           // we accepted all the contours in this crop. done!
           if ( naccepted==ncontours )
@@ -341,9 +361,11 @@ namespace dltagger {
           
         }// loop over node points
 
+        LARCV_DEBUG() << "  contours accepted plane[" << p << "]: accepted=" << naccepted << " of ncontours=" << ncontours << std::endl;
+        
         // got accepted contours
         // mark up image
-
+        
         // contour metas have the charge pixels conveniently collected
         auto& fullmeta = wholeview_v[p].meta();
 

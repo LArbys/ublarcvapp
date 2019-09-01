@@ -37,6 +37,19 @@ namespace ublarcvapp {
                         const int hull_edge_pts_split=50,
                         const int n_allowed_breaks=10,
                         const int verbosity=2 );
+
+    void analyzeImage( const larcv::Image2D& img,
+                       ContourList_t& contour_v,
+                       std::vector<ContourIndices_t>& hull_v,
+                       std::vector<Defects_t>& defects_v,
+                       ContourList_t& atomics_v,
+                       std::vector< ContourShapeMeta >& atomicmeta_v,
+                        const float threshold=10.0, const int iterations=2,
+                        const int min_defect_size=5,
+                        const int hull_edge_pts_split=50,
+                        const int n_allowed_breaks=10,
+                        const int verbosity=2 );
+
     
     void clear_intermediate_images();
 

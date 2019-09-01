@@ -143,7 +143,7 @@ namespace dltagger {
 
     m_tagger.transferCROI( *ev_croi, *ev_croi_merged );
 
-    fillAnaVars();
+    fillAnaVars( *ev_wire, *ev_mcinstance, *evout_tagged, *evout_notcosmic  );
     
     return true;
   }
@@ -174,7 +174,10 @@ namespace dltagger {
     _ana_tree->Branch( "nufrac_plane1", &_nufrac_plane1);
     _ana_tree->Branch( "nufrac_plane2", &_nufrac_plane2);
     _ana_tree->Branch( "outermost_endpt", &_outermost_endpt_v );
-    _ana_tree->Branch( "innermost_endpt", &_innermost_endpt_v );    
+    _ana_tree->Branch( "innermost_endpt", &_innermost_endpt_v );
+    _ana_tree->Branch( "frac_wholeimg_cosmictag", &_frac_wholeimg_cosmictag, "frac_wholeimg_cosmictag/F" );
+    _ana_tree->Branch( "frac_wholeimg_notcosmictag", &_frac_wholeimg_notcosmictag, "frac_wholeimg_notcosmictag/F" );
+    _ana_tree->Branch( "frac_wholeimg_alltags", &_frac_wholeimg_alltags, "frac_wholeimg_alltags/F" );
   }
 
   void DLTaggerProcess::clearAnaVars() {
@@ -198,7 +201,10 @@ namespace dltagger {
     _innermost_endpt_v.clear();
   }
 
-  void DLTaggerProcess::fillAnaVars() {
+  void DLTaggerProcess::fillAnaVars( const larcv::EventImage2D& ev_wholeview,
+                                     const larcv::EventImage2D& ev_mcinstance,
+                                     const larcv::EventImage2D& evout_tagged,
+                                     const larcv::EventImage2D& evout_notcosmic ) {
     if ( !has_ana_file() ) {
       LARCV_DEBUG() << "No anatree to fill" << std::endl;
       return;
@@ -227,6 +233,48 @@ namespace dltagger {
       _outermost_endpt_v.push_back( vars.outermost_endpt_tyz );
       _innermost_endpt_v.push_back( vars.innermost_endpt_tyz );
     }
+
+    // if have instance image, we can evaluate fraction of cosmic pixels tagged
+    if ( _has_mcinstance_img ) {
+      float total_iscosmic = 0.;
+      _frac_wholeimg_cosmictag = 0;
+      _frac_wholeimg_notcosmictag = 0;
+      _frac_wholeimg_alltags = 0;
+      for ( size_t p=0; p<ev_wholeview.Image2DArray().size(); p++ ) {
+        auto const& adcimg       = ev_wholeview.Image2DArray().at(p);
+        auto const& instanceimg  = ev_mcinstance.Image2DArray().at(p);
+        auto const& cosmictagimg = evout_tagged.Image2DArray().at(p);
+        auto const& notcosmicimg = evout_notcosmic.Image2DArray().at(p);
+        int npixthresh = 0; // pixels above threshold
+        int npixcosmic = 0; // pixels above threshold + cosmic (i.e. zero instance id)
+        int npixtagged = 0; // pixel above threshold + true cosmic + tagged
+        int npixrecoed = 0; // pixel above threshold + true cosmic + (tagged cosmic or not-cosmic)
+        for ( size_t c=0; c<adcimg.meta().cols(); c++ ) {
+          for ( size_t r=0; r<adcimg.meta().rows(); r++ ) {
+            if ( adcimg.pixel(r,c)<10.0 ) continue;
+            npixthresh++;
+            if ( instanceimg.pixel(r,c)>0 ) continue;
+            npixcosmic++;
+            if ( cosmictagimg.pixel(r,c)>0 )
+              npixtagged++;
+            if ( cosmictagimg.pixel(r,c)>0 || notcosmicimg.pixel(r,c)>0 )
+              npixrecoed++;
+          }
+        }
+        total_iscosmic += (float)npixcosmic;
+        _frac_wholeimg_cosmictag += (float)npixtagged;
+        _frac_wholeimg_alltags   += (float)npixrecoed;
+      }//end of plane loop
+
+      if ( total_iscosmic>0 ) {
+        _frac_wholeimg_cosmictag /= total_iscosmic;
+        _frac_wholeimg_alltags   /= total_iscosmic;
+      }
+      LARCV_INFO() << "fraction of cosmic pixels tagged as cosmic: " << _frac_wholeimg_cosmictag << std::endl;
+      LARCV_INFO() << "fraction of cosmic pixels reco'd: " << _frac_wholeimg_alltags << std::endl;
+    }// end of has mc instance
+
+    
     _ana_tree->Fill();
   }
 

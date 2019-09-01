@@ -220,6 +220,89 @@ namespace ublarcvapp {
   }
 
   /**
+   * analyze images
+   *
+   */
+  void ContourClusterAlgo::analyzeImage( const larcv::Image2D& img,
+                                         ContourList_t& contour_v,
+                                         std::vector<ContourIndices_t>& hull_v,
+                                         std::vector<Defects_t>& defects_v,
+                                         ContourList_t& atomics_v,
+                                         std::vector< ContourShapeMeta >& atomicmeta_v,                                         
+                                         const float threshold,
+                                         const int dilate_iterations,
+                                         const int min_defect_size,
+                                         const int hull_edge_pts_split,
+                                         const int n_allowed_breaks,
+                                         const int verbosity ) {
+
+    if ( img.meta().cols()==0 || img.meta().rows()==0 )
+      return;
+    
+    cv::Mat cvimg = larcv::as_gray_mat( img, threshold, 256.0, 1.0 );
+    cv::Mat cvrgb = larcv::as_mat_greyscale2bgr( img, threshold, 100.0 );
+    cv::Mat thresh( cvimg );
+    cv::threshold( cvimg, thresh, 0, 255, cv::THRESH_BINARY );
+
+    // dilate image first
+    cv::dilate( thresh, thresh, cv::Mat(), cv::Point(-1,-1), dilate_iterations, 1, 1 );
+      
+    // find contours
+    //ContourList_t contour_v;
+    contour_v.clear();
+    cv::findContours( thresh, contour_v, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE );
+
+    // for each contour, find convex hull, find defect points
+    hull_v.clear();
+    defects_v.clear();    
+    hull_v.resize( contour_v.size() );
+    defects_v.resize( contour_v.size() );
+    
+    for ( int idx=0; idx<(int)contour_v.size(); idx++ ) {
+
+      Contour_t& contour = contour_v[idx];
+      if ( contour.size()<10 )
+        continue;
+	
+      // draw contours
+      //cv::drawContours( cvimg_stage0_v[p], contour_v, idx, cv::Scalar( rand.Uniform(10,255),rand.Uniform(10,255),rand.Uniform(10,255),255), 1 );	
+	
+      // convex hull
+      cv::convexHull( cv::Mat( contour ), hull_v[idx], false );
+      
+      if ( hull_v[idx].size()<=3 ) {
+        // store 
+        continue; // no defects can be found
+      }
+      
+      // defects
+      cv::convexityDefects( contour, hull_v[idx], defects_v[idx] );
+    }
+
+    // split contours
+    larocv::DefectBreaker defectb;
+    defectb.Configure( min_defect_size,
+                       hull_edge_pts_split,
+                       n_allowed_breaks );
+
+
+    atomics_v.clear();
+    atomicmeta_v.clear();
+    for ( auto& contour : contour_v ) {
+      larocv::data::TrackClusterCompound atomics = defectb.BreakContour( contour ); // returns a vector<AtomicContour>
+      for ( auto& ctr : atomics ) {
+        if ( ctr.size()<4 )
+          continue;
+        
+        ContourShapeMeta ctrinfo( ctr, img );
+        atomics_v.push_back( std::move(ctr) );
+	atomicmeta_v.emplace_back( std::move(ctrinfo) );
+      }
+    }    
+    
+  }
+
+  /**
    * make images with index stored in cluster
    *
    * @param[in] img_v original larcv images
