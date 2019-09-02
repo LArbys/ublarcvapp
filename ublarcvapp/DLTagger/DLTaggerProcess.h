@@ -4,6 +4,7 @@
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/Processor/ProcessFactory.h"
 #include "larcv/core/DataFormat/EventImage2D.h"
+#include "larcv/core/DataFormat/EventROI.h"
 
 #include "ublarcvapp/LArliteHandler/LArliteManager.h"
 #include "DLTagger.h"
@@ -43,6 +44,7 @@ namespace dltagger {
     std::string _input_opflash_producer;  //< name of producer for in-beam window opflash
     std::string _input_ophit_producer;    //< name of producer for in-beam window ophit
     std::string _input_mask_producer;     //< name of producer containing Mask R-CNN output masks
+    std::string _input_mcpart_larcvtruth; //< name of producer containing partroi info about MC truth particles
     std::string _output_tagged_image;     //< name to give event container storing whole-view images tagged with clusters labeled as cosmic
     std::string _output_notcosmic_image;  //< name to give event container storing whole-view images tagged with clusters labeled as not-cosmi
     std::string _output_cosmic_clusters;    //< name to give event container storing pixels from found tracks
@@ -63,7 +65,8 @@ namespace dltagger {
     void setupAnaTree();
     void clearAnaVars();
     void fillAnaVars( const larcv::EventImage2D& ev_wholeview,
-                      const larcv::EventImage2D& ev_mcinstance,
+                      const larcv::EventImage2D* ev_mcinstance,
+                      const larcv::EventROI* ev_mcpartroi,
                       const larcv::EventImage2D& evout_tagged,
                       const larcv::EventImage2D& evout_notcosmic );
     int _num_clusters;
@@ -87,6 +90,12 @@ namespace dltagger {
     float _frac_wholeimg_cosmictag;
     float _frac_wholeimg_notcosmictag;
     float _frac_wholeimg_alltags;
+
+    float _frac_wholeimg_nu_cosmictag;
+    float _frac_wholeimg_nu_notcosmictag;
+    float _frac_wholeimg_vtx_cosmictag;
+    float _frac_wholeimg_vtx_notcosmictag;
+    
     TTree* _ana_tree;
     
   };

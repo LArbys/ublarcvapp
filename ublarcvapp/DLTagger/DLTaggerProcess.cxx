@@ -1,5 +1,8 @@
 #include "DLTaggerProcess.h"
 
+#include "LArUtil/Geometry.h"
+#include "LArUtil/LArProperties.h"
+
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/EventChStatus.h"
 #include "larcv/core/DataFormat/EventClusterMask.h"
@@ -19,6 +22,7 @@ namespace dltagger {
 
     _has_mcinstance_img      = pset.get<bool>("HasMCInstanceImage",false);
     _input_instance_image    = pset.get<std::string>("InputInstanceProducer","instance");
+    _input_mcpart_larcvtruth = pset.get<std::string>("InputLArCVMCparticleProducer","segment");
 
     // larlite inputs
     _input_opflash_producer  = pset.get<std::string>("InputOpFlashProducer");
@@ -71,14 +75,23 @@ namespace dltagger {
     larcv::EventClusterMask* ev_clustermask
       = (larcv::EventClusterMask*)mgr.get_data(larcv::kProductClusterMask, _input_mask_producer );
 
-    larcv::EventImage2D* ev_mcinstance = nullptr;
-    if ( _has_mcinstance_img ) {
-      ev_mcinstance = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D, _input_instance_image);
-    }
 
     LARCV_NORMAL() << "Processing entry[" << mgr.current_entry() << "] "
                    << "rse=(" << mgr.event_id().run() << "," << mgr.event_id().subrun() << "," << mgr.event_id().event() << ")"
                    << std::endl;
+    
+    larcv::EventImage2D* ev_mcinstance = nullptr;
+    larcv::EventROI*     ev_mcpartroi  = nullptr;
+    if ( _has_mcinstance_img ) {
+      LARCV_INFO() << "Has MC information: mcinstance and particle ROI" << std::endl;
+      ev_mcinstance = (larcv::EventImage2D*)mgr.get_data(larcv::kProductImage2D, _input_instance_image);
+      ev_mcpartroi  = (larcv::EventROI*)mgr.get_data(larcv::kProductROI, _input_mcpart_larcvtruth );
+      LARCV_INFO() << "MC Particle ROI:" << std::endl;
+      for (auto const& roi : ev_mcpartroi->ROIArray() ) {
+        LARCV_INFO() << roi.dump() << std::endl;
+      }
+    }
+
 
     // GET LARLITE INPUT
     _larlite_io->syncEntry( mgr );
@@ -143,7 +156,7 @@ namespace dltagger {
 
     m_tagger.transferCROI( *ev_croi, *ev_croi_merged );
 
-    fillAnaVars( *ev_wire, *ev_mcinstance, *evout_tagged, *evout_notcosmic  );
+    fillAnaVars( *ev_wire, ev_mcinstance, ev_mcpartroi, *evout_tagged, *evout_notcosmic  );
     
     return true;
   }
@@ -178,6 +191,11 @@ namespace dltagger {
     _ana_tree->Branch( "frac_wholeimg_cosmictag", &_frac_wholeimg_cosmictag, "frac_wholeimg_cosmictag/F" );
     _ana_tree->Branch( "frac_wholeimg_notcosmictag", &_frac_wholeimg_notcosmictag, "frac_wholeimg_notcosmictag/F" );
     _ana_tree->Branch( "frac_wholeimg_alltags", &_frac_wholeimg_alltags, "frac_wholeimg_alltags/F" );
+    _ana_tree->Branch( "frac_nupixel_cosmictag",     &_frac_wholeimg_nu_cosmictag,    "frac_nupixel_cosmictag/F" );
+    _ana_tree->Branch( "frac_nupixel_notcosmictag",  &_frac_wholeimg_nu_notcosmictag, "frac_nupixel_notcosmictag/F" );
+    _ana_tree->Branch( "frac_vtxpixel_cosmictag",    &_frac_wholeimg_vtx_cosmictag,    "frac_vtxpixel_cosmictag/F" );
+    _ana_tree->Branch( "frac_vtxpixel_notcosmictag", &_frac_wholeimg_vtx_notcosmictag, "frac_vtxpixel_notcosmictag/F" );
+    
   }
 
   void DLTaggerProcess::clearAnaVars() {
@@ -199,12 +217,21 @@ namespace dltagger {
     _numpixels_plane2.clear();
     _outermost_endpt_v.clear();
     _innermost_endpt_v.clear();
+    _frac_wholeimg_cosmictag = 0;
+    _frac_wholeimg_notcosmictag = 0;
+    _frac_wholeimg_alltags = 0;
+    _frac_wholeimg_nu_cosmictag = 0;
+    _frac_wholeimg_nu_notcosmictag = 0;
+    _frac_wholeimg_vtx_cosmictag = 0;
+    _frac_wholeimg_vtx_notcosmictag = 0;
   }
 
   void DLTaggerProcess::fillAnaVars( const larcv::EventImage2D& ev_wholeview,
-                                     const larcv::EventImage2D& ev_mcinstance,
+                                     const larcv::EventImage2D* ev_mcinstance,
+                                     const larcv::EventROI* ev_mcparticle,                                     
                                      const larcv::EventImage2D& evout_tagged,
                                      const larcv::EventImage2D& evout_notcosmic ) {
+
     if ( !has_ana_file() ) {
       LARCV_DEBUG() << "No anatree to fill" << std::endl;
       return;
@@ -236,42 +263,139 @@ namespace dltagger {
 
     // if have instance image, we can evaluate fraction of cosmic pixels tagged
     if ( _has_mcinstance_img ) {
+      // MC ANALYSIS
+
+      // get vertex: find neutrino
+      std::vector<double> vertex_xyzt(3,0.0);
+      double tstart = 0;
+      bool foundvertex = false;
+      for ( auto const& roi : ev_mcparticle->ROIArray() ) {
+        int pdgcode = abs(roi.PdgCode());
+        if ( pdgcode==12 || pdgcode==14 || pdgcode==16 ) {
+          vertex_xyzt[0] = roi.X();
+          vertex_xyzt[1] = roi.Y();
+          vertex_xyzt[2] = roi.Z();
+          tstart = roi.T();
+          foundvertex = true;
+          break;
+        }
+      }
+      // vertex image coordinates
+      bool inimage = true;
+      if ( vertex_xyzt[0]<0 || vertex_xyzt[0]>larutil::Geometry::GetME()->DetHalfWidth()*2 )
+        inimage = false;
+      if ( vertex_xyzt[1]<-larutil::Geometry::GetME()->DetHalfHeight() || vertex_xyzt[1]>larutil::Geometry::GetME()->DetHalfHeight() )
+        inimage = false;
+      if ( vertex_xyzt[2]<0 || vertex_xyzt[2]>larutil::Geometry::GetME()->DetLength() )
+        inimage = false;
+
+      float tick = 3200 + vertex_xyzt[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+      int true_row = ev_wholeview.Image2DArray().front().meta().row(tick);
+      std::vector<int> true_wire_v(3,0);
+      std::vector<int> true_col_v(3,0);
+      
+      for ( size_t p=0; p<3; p++ ) {
+        true_wire_v[p] = larutil::Geometry::GetME()->WireCoordinate( vertex_xyzt, p );
+        if ( true_wire_v[p]<0 ) true_wire_v[p] = 0;
+        if ( true_wire_v[p]>=larutil::Geometry::GetME()->Nwires(p) )
+          true_wire_v[p] = (int)larutil::Geometry::GetME()->Nwires(p)-1;
+      }
+
+      
       float total_iscosmic = 0.;
+      float total_nupix = 0;
+      float total_vtxpix = 0;
       _frac_wholeimg_cosmictag = 0;
       _frac_wholeimg_notcosmictag = 0;
       _frac_wholeimg_alltags = 0;
+      _frac_wholeimg_nu_cosmictag = 0;
+      _frac_wholeimg_nu_notcosmictag = 0;
+      _frac_wholeimg_vtx_cosmictag = 0;
+      _frac_wholeimg_vtx_notcosmictag = 0;
       for ( size_t p=0; p<ev_wholeview.Image2DArray().size(); p++ ) {
         auto const& adcimg       = ev_wholeview.Image2DArray().at(p);
-        auto const& instanceimg  = ev_mcinstance.Image2DArray().at(p);
+        auto const& instanceimg  = ev_mcinstance->Image2DArray().at(p);
         auto const& cosmictagimg = evout_tagged.Image2DArray().at(p);
         auto const& notcosmicimg = evout_notcosmic.Image2DArray().at(p);
         int npixthresh = 0; // pixels above threshold
         int npixcosmic = 0; // pixels above threshold + cosmic (i.e. zero instance id)
         int npixtagged = 0; // pixel above threshold + true cosmic + tagged
         int npixrecoed = 0; // pixel above threshold + true cosmic + (tagged cosmic or not-cosmic)
+        int npixnu     = 0;
+        int npixnu_tag = 0;
+        int npixnu_not = 0;
+        int npixvtx    = 0;
+        int npixvtx_tag = 0;
+        int npixvtx_not = 0;
         for ( size_t c=0; c<adcimg.meta().cols(); c++ ) {
           for ( size_t r=0; r<adcimg.meta().rows(); r++ ) {
             if ( adcimg.pixel(r,c)<10.0 ) continue;
             npixthresh++;
-            if ( instanceimg.pixel(r,c)>0 ) continue;
-            npixcosmic++;
-            if ( cosmictagimg.pixel(r,c)>0 )
-              npixtagged++;
-            if ( cosmictagimg.pixel(r,c)>0 || notcosmicimg.pixel(r,c)>0 )
-              npixrecoed++;
+            if ( instanceimg.pixel(r,c)>0 ) {
+              // on neutrino pixel
+              npixnu++;
+              if ( cosmictagimg.pixel(r,c)>0 )
+                npixnu_tag++;
+              if ( notcosmicimg.pixel(r,c)>0 )
+                npixnu_not++;
+
+              if ( inimage ) {
+                int drow = abs( true_row - (int)r );
+                int dcol = abs( true_col_v[p] - (int)c );
+                
+                if ( drow<=20 || dcol<=20 ) {
+                  npixvtx++;
+                  if ( cosmictagimg.pixel(r,c)>0 )
+                    npixvtx_tag++;
+                  if ( notcosmicimg.pixel(r,c)>0 )
+                    npixvtx_not++;
+                }
+              }
+            }
+            else {
+              // on cosmic overlay pixel
+              npixcosmic++;
+              if ( cosmictagimg.pixel(r,c)>0 )
+                npixtagged++;
+              if ( cosmictagimg.pixel(r,c)>0 || notcosmicimg.pixel(r,c)>0 )
+                npixrecoed++;
+            }
           }
         }
+        
         total_iscosmic += (float)npixcosmic;
+        total_nupix    += (float)npixnu;
+        total_vtxpix   += (float)npixvtx;
+        
         _frac_wholeimg_cosmictag += (float)npixtagged;
         _frac_wholeimg_alltags   += (float)npixrecoed;
+
+        _frac_wholeimg_nu_cosmictag += (float)npixnu_tag;
+        _frac_wholeimg_nu_notcosmictag += (float)npixnu_not;
+
+        _frac_wholeimg_vtx_cosmictag += (float)npixvtx_tag;
+        _frac_wholeimg_vtx_notcosmictag += (float)npixvtx_not;        
       }//end of plane loop
 
       if ( total_iscosmic>0 ) {
         _frac_wholeimg_cosmictag /= total_iscosmic;
         _frac_wholeimg_alltags   /= total_iscosmic;
       }
+      if ( total_nupix>0 ) {
+        _frac_wholeimg_nu_cosmictag /= total_nupix;
+        _frac_wholeimg_nu_notcosmictag /= total_nupix;
+      }
+      if ( total_vtxpix>0 ) {
+        _frac_wholeimg_vtx_cosmictag /= total_vtxpix;
+        _frac_wholeimg_vtx_notcosmictag /= total_vtxpix;
+      }
+      
       LARCV_INFO() << "fraction of cosmic pixels tagged as cosmic: " << _frac_wholeimg_cosmictag << std::endl;
       LARCV_INFO() << "fraction of cosmic pixels reco'd: " << _frac_wholeimg_alltags << std::endl;
+      LARCV_INFO() << "fraction of neutrino pixels tagged as cosmic: " << _frac_wholeimg_nu_cosmictag << std::endl;
+      LARCV_INFO() << "fraction of neutrino pixels tagged as not-cosmic: " << _frac_wholeimg_nu_notcosmictag << std::endl;
+      LARCV_INFO() << "fraction of vertex pixels tagged as cosmic: " << _frac_wholeimg_vtx_cosmictag << std::endl;
+      LARCV_INFO() << "fraction of vertex pixels tagged as not-cosmic: " << _frac_wholeimg_vtx_notcosmictag << std::endl;
     }// end of has mc instance
 
     
