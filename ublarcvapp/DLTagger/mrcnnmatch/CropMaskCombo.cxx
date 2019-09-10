@@ -20,7 +20,7 @@ namespace dltagger {
   {
     _crop_and_mask_image( adc );
     _make_missing_crop( adc, missing_v );
-    _prep_badch_crop( adc, crops_v, missing_v, badch_v );
+    _prep_badch_crop( wholeview_badch_v, crops_v, missing_v, badch_v );
   }
 
   void CropMaskCombo::_crop_and_mask_image( const std::vector<larcv::Image2D>& wholeview_v ) {

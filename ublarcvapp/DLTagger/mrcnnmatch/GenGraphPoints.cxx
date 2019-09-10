@@ -7,6 +7,12 @@
 
 #include <cilantro/kd_tree.hpp>
 
+#include <boost/graph/adjacency_list.hpp>
+#include <boost/graph/properties.hpp>
+#include <boost/property_map/property_map.hpp>
+#include <boost/graph/dijkstra_shortest_paths.hpp>
+#include <boost/graph/graph_utility.hpp>
+
 #include <set>
 #include <algorithm>
 
@@ -51,12 +57,14 @@ namespace dltagger {
     LARCV_DEBUG() << "make 3d point for min-x extremum" << std::endl;
     //std::vector< std::vector<float> > points3d_v;
     //std::vector< std::vector<float> > twid_v;
+    std::vector< std::vector<float> > minx_pts_v;
+    std::vector< std::vector<float> > minx_twid_v;
     make3Dpoints( crop_v[2].meta().pos_x( bounds_v[2].points[0][0] ),
                   crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
-                  min_wiretickpos_p0_v, min_wiretickpos_p1_v, m_points3d_v, m_twid_v,
+                  min_wiretickpos_p0_v, min_wiretickpos_p1_v, minx_pts_v, minx_twid_v,
                   true );
 
-
+    
     LARCV_DEBUG() << "[Gen (wire,tick) plane pairs for max-x end point]" << std::endl;    
     std::vector< std::vector<float> > max_wiretickpos_p0_v; // store 3d points from matching to U-plane
     std::vector< std::vector<float> > max_wiretickpos_p1_v; // store 3d points from matching to V-plane    
@@ -79,7 +87,7 @@ namespace dltagger {
                   crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
                   max_wiretickpos_p0_v, max_wiretickpos_p1_v, maxx_pts_v, maxx_twid_v,
                   true );
-
+    
     // scan across x: making body points of graph
     std::vector< std::vector<float> > mid_points3d_v;
     std::vector< std::vector<float> > mid_twid_v;
@@ -118,7 +126,11 @@ namespace dltagger {
     // assemble points
     // ---------------
 
-    // already added start points
+    // add start points
+    // for (size_t i=0; i<minx_pts_v.size(); i++) {
+    //   m_points3d_v.push_back( minx_pts_v[i] );
+    //   m_twid_v.push_back( minx_twid_v[i] );
+    // }
 
     // add mid points
     for ( size_t i=0; i<mid_points3d_v.size(); i++ ) {
@@ -127,13 +139,15 @@ namespace dltagger {
     }
     
     // add end points
-    for (size_t i=0; i<maxx_pts_v.size(); i++) {
-      m_points3d_v.push_back( maxx_pts_v[i] );
-    }
+    // for (size_t i=0; i<maxx_pts_v.size(); i++) {
+    //   m_points3d_v.push_back( maxx_pts_v[i] );
+    //   m_twid_v.push_back( maxx_twid_v[i] );
+    // }
     
     if ( logger().debug() ) {
       std::stringstream ptlist;
       ptlist << "{ ";
+      
       for ( auto& pt : m_points3d_v ) {
         ptlist << "(" << pt[0] << "," << pt[1] << "," << pt[2] << ") ";
       }
@@ -142,10 +156,22 @@ namespace dltagger {
     }
     
     // make graph components
-    std::vector<Eigen::Vector3f > graph_nodes;
-    std::map< std::pair<int,int>, float > distmap;
-    std::map< std::pair<int,int>, float > pixgapmap;
-    makeGraph( m_points3d_v, graph_nodes, distmap, pixgapmap );
+    makeGraph( m_points3d_v, m_graph_nodes, m_distmap, m_pixgapmap );
+
+    shortestpath( m_graph_nodes, m_distmap, m_pixgapmap, m_maxgapdist, m_path_xyz );
+
+    // conversion path to image coordinates
+    m_path_twid_v.clear();
+    m_path_twid_v.reserve(m_path_xyz.size());
+    for ( auto& xyz : m_path_xyz ) {
+      std::vector<float> twid = { xyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200,
+                                  larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{xyz[0],xyz[1],xyz[2]}, 0 ),
+                                  larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{xyz[0],xyz[1],xyz[2]}, 1 ),
+                                  larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{xyz[0],xyz[1],xyz[2]}, 2 ) };
+      m_path_twid_v.push_back( twid );
+    }
+    
+    
   }
 
   /**
@@ -650,29 +676,78 @@ namespace dltagger {
     auto const& badch_v = pfeatures->pcropdata->badch_v;
 
 
-    // for each point, we define edge using
-    //  1) distance. limit distance to nearest neighbor
+    // for each point, we define edges in two ways
+    //  1) distance. limit distance to nearest neighbor radius
     //  2) gap in pixels to point
+
+    // we evaluate edges using a search radius
+    // and based on list adjacency.
+    // the latter is to help jump dead channel gaps
+
+    // adjacency first: z
+    std::vector< std::vector<float> > adj_detz;
+    adj_detz.reserve(points.size()); // list of points sorted in det-z
+    
+    for ( size_t idx=0; idx<points.size(); idx++ ) {
+      adj_detz.push_back( std::vector<float>{ points[idx][2], (float)idx } );
+    }
+    std::sort( adj_detz.begin(), adj_detz.end() );
+    
+    for ( size_t ii=0; ii<(int)adj_detz.size()-1; ii++ ) {
+      int idx1 = (int)adj_detz[ii][1];
+      int idx2 = (int)adj_detz[ii+1][1];
+      auto& vertex   = points.at(idx1);
+      auto& neighbor = points.at(idx2);
+      float realdist = 0.;
+      for ( int i=0; i<3; i++ )
+        realdist += (vertex[i]-neighbor[i])*(vertex[i]-neighbor[i]);
+      realdist = sqrt(realdist);
+
+      //bool dump = (realdist>10) ? true : false;// for debug
+      bool dump = false;
+      
+      float pixgap = get_max_pixelgap( crop_v, badch_v, vertex, neighbor, 0.3, 3, dump );
+      pixgapdist[ std::pair<int,int>( (int)idx1, (int)idx2) ] = pixgap;
+      distmap[ std::pair<int,int>( (int)idx1, (int)idx2) ]    = realdist;
+      
+      pixgapdist[ std::pair<int,int>( (int)idx2, (int)idx1) ] = pixgap;
+      distmap[ std::pair<int,int>( (int)idx2, (int)idx1) ]    = realdist;
+      LARCV_DEBUG() << "adjacent edge [" << idx1 << "->" << idx2 << "] pixgap=" << pixgap << " realdist=" << realdist << std::endl;
+    }
+    
     size_t max_n_neighbors = 5;
-    float max_neighbor_dist = 50;
+    float max_neighbor_dist = 10;
     float nedges_per_vertex = 0;
     
     for ( size_t idx=0; idx<points.size(); idx++ ) {
       auto& vertex = points.at(idx);
       cilantro::NeighborSet<float> nn;
       //= tree.kNNInRadiusSearch(vertex, max_n_neighbors, max_neighbor_dist );
-      tree.radiusSearch( vertex, max_neighbor_dist, nn );
+      tree.radiusSearch( vertex, max_neighbor_dist*max_neighbor_dist, nn );
 
       int numneighbors = 0;
       for ( size_t inn=0; inn<nn.size(); inn++ ) {
         auto& neighbor = nn.at(inn);
-        if ( neighbor.value==0 )
+        if ( idx==neighbor.index )
           continue; // no self-connections
+
+        if ( pixgapdist.find( std::pair<int,int>(idx,neighbor.index) )!=pixgapdist.end() ) {
+          // already defined
+          continue;
+        }
+        
         auto& neighbornode = points[ neighbor.index ];
         numneighbors++;
         float pixgap = get_max_pixelgap( crop_v, badch_v, vertex, neighbornode, 0.3, 3 );
+
+        if ( pixgap>5.0 )
+          continue; // not a neighbor
+        
         pixgapdist[ std::pair<int,int>( (int)idx, (int)neighbor.index) ] = pixgap;
-        distmap[ std::pair<int,int>( (int)idx, (int)neighbor.index) ]    = neighbor.value;
+        //pixgapdist[ std::pair<int,int>( (int)neighbor.index, (int)idx) ] = pixgap;
+        
+        distmap[ std::pair<int,int>( (int)idx, (int)neighbor.index) ]    = sqrt(neighbor.value);
+        //distmap[ std::pair<int,int>( (int)neighbor.index, (int)idx) ]    = sqrt(neighbor.value);
       }
       nedges_per_vertex += (float)numneighbors;
     }
@@ -687,10 +762,11 @@ namespace dltagger {
    */
   float GenGraphPoints::get_max_pixelgap( const std::vector<larcv::Image2D>& input_v,
                                           const std::vector<larcv::Image2D>& badch_v,
-                                          const Eigen::Vector3f& start,
-                                          const Eigen::Vector3f& end,
+                                          const Eigen::Vector3f& start, // in (x,y,z)
+                                          const Eigen::Vector3f& end,   // in (x,y,z)
                                           const float max_steplen,
-                                          const int pixel_search_width ) {
+                                          const int pixel_search_width,
+                                          bool dump ) {
 
     //float max_steplen = 0.3; // cm
     //int pixel_search_width = 3;
@@ -715,6 +791,8 @@ namespace dltagger {
     int nsteps = pathlen/max_steplen;
     if ( fabs(pathlen-max_steplen*nsteps)>0.0001 )
       nsteps++;
+    if ( nsteps<2 )
+      nsteps = 2; // need at least 2 steps to do anything sensible
     float steplen = pathlen/float(nsteps);
 
     double pos[3] = {0};
@@ -731,20 +809,29 @@ namespace dltagger {
       std::vector<float> seg_v; // list of segs we've seen
       std::vector<int>   state_v; // list of states of the seg's we've seen
       SegmentState_t()
-        : state(1), // start in good state
+        : state(-1), // start in good state
           curr_seg_len(0.0),
           max_good_seg(0.0),
           max_bad_seg(0.0)
       {};
       void update( int currentstate, float steplen ) {
+        if ( state==-1 ) {
+          // first state: set and move on
+          curr_seg_len = 0;
+          state = currentstate;
+          return;
+        }
+        
         if ( currentstate==state ) {
           // continuation of state
           curr_seg_len += steplen;
           return;
         }
         else {
-          // change of state
+            
           if ( state==1 ) {
+            // good to bad
+            // -----------
             // transition in the middle
             curr_seg_len += 0.5*steplen;
             // was good
@@ -764,11 +851,15 @@ namespace dltagger {
           curr_seg_len = 0.5*steplen;
         };
       };
+      void finish() {
+        seg_v.push_back( curr_seg_len );
+        state_v.push_back( state );
+      }
       float get_max_bad_seg_notfirst() {
         float maxbad = 0.;
-        // skip the first, because the end point might not very good at first
+        // skip the first, because the end point might not be very good at first
         for ( size_t s=1; s<seg_v.size(); s++ ) {
-          if ( seg_v[s]>maxbad )
+          if ( state_v[s]==0 && seg_v[s]>maxbad )
             maxbad = seg_v[s];
         }
         return maxbad;
@@ -777,22 +868,27 @@ namespace dltagger {
         float maxbad = 0.;
         // skip the first, because the end point might not very good at first
         for ( size_t s=0; s<seg_v.size(); s++ ) {
-          if ( seg_v[s]>maxbad )
+          if ( state_v[s]==0 && seg_v[s]>maxbad )
             maxbad = seg_v[s];
         }
         return maxbad;
       };
     } segstate;
-    
-    for (int istep=1; istep<nsteps-1; istep++ ) {
+
+    // STEP LOOP
+    int ngoodsteps = 0; // points in good region
+    int nbadsteps = 0;  // points in bad region
+    int ninimg = 0;
+    for (int istep=0; istep<nsteps; istep++ ) {
       for ( int i=0; i<3; i++ )
         pos[i] = start[i] + steplen*istep*dir[i];
 
       // back to ticks
-      float tick = pos[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+      float tick = pos[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5+3200;
       if ( tick<input_v[0].meta().min_y() || tick>=input_v[0].meta().max_y() ) {
         // not in the image. seems bad.
         segstate.update(0,steplen);
+        nbadsteps++;
         continue;
       }
       
@@ -811,15 +907,22 @@ namespace dltagger {
       if ( rowcol_v.size()!=(1+nplanes) ) {
         // bad point by out of bounds step
         segstate.update(0,steplen);
+        nbadsteps++;        
         continue;
       }
-
+      
       // we have a good point in the image
       auto it = pixel_map.find( rowcol_v );
+      ninimg++;
+      
       if ( it!=pixel_map.end() ) {
         // already in the set, no need to revaluate
         // all points in the set are good (good idea?)
         segstate.update(it->second,steplen);
+        if ( it->second==0 )
+          nbadsteps++;
+        else
+          ngoodsteps++;
         continue;
       }
 
@@ -832,21 +935,35 @@ namespace dltagger {
       for ( size_t pl=0; pl<nplanes; pl++ ) {
 
         float maxpixval = 0.;
+        float maxbadval  = 0.;
         for ( int dc=-pixel_search_width; dc<=pixel_search_width; dc++ ) {
           int c = rowcol_v[pl+1]+dc;
           if ( c<0 || c>=(int)input_v[pl].meta().cols() ) continue; // skip it
           float pixval = input_v[pl].pixel( rowcol_v[0], c );
           if ( pixval>maxpixval )
             maxpixval = pixval;
+          float badval  = badch_v[pl].pixel( rowcol_v[0], c );
+          if ( badval > maxbadval )
+            maxbadval = badval;
         }
         
         if ( maxpixval>10.0 )
           nplanes_w_charge++;
-        else {
+        else if ( maxbadval>0 ) {
           // check badch
-          if ( badch_v[pl].pixel( rowcol_v[0], rowcol_v[pl+1]) > 0.5 )
-            nplanes_w_badch++;
+          nplanes_w_badch++;
         }
+      }//end of plane loop
+
+      if ( dump ) {
+        std::cout << "  dumpstep[" << istep << "] "
+                  << " rowcol=(" << input_v[0].meta().pos_y(rowcol_v[0])
+                  << "," << input_v[0].meta().pos_x(rowcol_v[1])
+                  << "," << input_v[1].meta().pos_x(rowcol_v[2])
+                  << "," << input_v[2].meta().pos_x(rowcol_v[3]) << ") "
+                  << " nplanes_w_charge=" << nplanes_w_charge
+                  << " nplanes_w_badch=" << nplanes_w_badch
+                  << std::endl;
       }
       
       if ( nplanes_w_charge==3 ) {
@@ -854,54 +971,164 @@ namespace dltagger {
         pixel_map[rowcol_v] = 1;
         // pixel_list.push_back( rowcol_v );
         // pixel_tyz.push_back( step_tyz );
+        ngoodsteps++;
+      }
+      else if ( (nplanes_w_charge + nplanes_w_badch) >= 3 && nplanes_w_badch<3 ) {
+        segstate.update(1,steplen);
+        pixel_map[rowcol_v] = 1;
+        // pixel_list.push_back( rowcol_v );
+        // pixel_tyz.push_back( step_tyz );
+        ngoodsteps++;        
       }
       else {
-        // not charge complete
-        if ( nplanes_w_badch==1 ) {
-          segstate.update(1,steplen);
-          pixel_map[rowcol_v] = 1;
-          // pixel_list.push_back( rowcol_v );
-          // pixel_tyz.push_back( step_tyz );          
-        }
+        // everything else is bad
+        pixel_map[rowcol_v] = 0;
+        segstate.update(0,steplen);
+        nbadsteps++;
       }
-
-      // everything else is bad
-      pixel_map[rowcol_v] = 0;
-      segstate.update(0,steplen);
       // pixel_list.push_back( rowcol_v );
       // pixel_tyz.push_back( step_tyz );
     }//end of step loop
-
+    segstate.finish();
+    
+    // for debug: inspect the step results
+    if (dump) {
+      std::stringstream statestr;
+      statestr << "{ ";
+      for ( auto& s : segstate.state_v ) {
+        statestr << s << " ";
+      }
+      statestr << "}";
+      std::cout << "segment analyzed: max_bad=" << segstate.get_max_bad_seg() << " len=" << pathlen
+                << " nsteps=" << nsteps << " good=" << ngoodsteps << " bad=" << nbadsteps << " inimg=" << ninimg 
+              << " nsegs=" << segstate.state_v.size()
+                << " " << statestr.str()
+                << std::endl;
+      // std::cin.get();
+    }
+    
     // make astar node list
     return  segstate.get_max_bad_seg();
   }
 
 
-  /*
+
   void GenGraphPoints::shortestpath( const std::vector< Eigen::Vector3f >& points,            // node list: position of (x,y,z)
                                      const std::map< std::pair<int,int>, float >& distmap,    // distance between nodes
-                                     const std::map< std::pair<int,int>, float >& pixgapdist) // pixel gap between vertices
+                                     const std::map< std::pair<int,int>, float >& pixgapdist, // pixel gap between vertices
+                                     float& maxgapdist,
+                                     std::vector< std::vector<float> >& path_xyz ) 
   {
 
     struct VertexData {
       int index;
       int pred;
       int dist;
+      std::vector<float> pos;
     };
 
     struct EdgeData {
       float dist;
+      float realdist;
     };
 
     // define boost graph
     typedef boost::adjacency_list<boost::vecS, boost::vecS,
-                                  boost::undirectedS,
-                                  VertexData,
-                                  EdgeData> MyGraphType;
-    // root node
-    int v0 = 0;
+                                  boost::directedS,
+                                  VertexData, EdgeData> GraphDefinition_t;
+
+    // make graph and define vertex values
+    GraphDefinition_t G(points.size());
+    for ( size_t inode=0; inode<points.size(); inode++ ) {
+      auto const& pt = points[inode];
+      G[inode].index = inode;
+      G[inode].pos = { pt[0], pt[1], pt[2] };
+    }
+
+    // define edges
+    //for ( auto it=distmap.begin(); it!=distmap.end(); it++ ) {
+    for ( auto it=pixgapdist.begin(); it!=pixgapdist.end(); it++ ) {    
+      const std::pair<int,int>&  key = it->first;
+      const float gapdist  = it->second;
+      auto it_realdist = distmap.find( key );
+      float realdist = 0.;
+      if ( it_realdist!=distmap.end() )
+        realdist = it_realdist->second;
+      else {
+        LARCV_CRITICAL() << "Could not find distmap for edge pair [" << key.first << "," << key.second << "]" << std::endl;
+        std::stringstream msg;
+        msg << __FILE__ << ":" << __LINE__ << std::endl;
+        throw std::runtime_error(msg.str());
+      }
+      //auto edge = add_edge( key.first, key.second, { dist, realdist }, G ).first;
+      auto edge = add_edge( key.first, key.second, { realdist, gapdist }, G ).first;
+    }
     
+    boost::print_graph(G, boost::get(&VertexData::index, G));
+    
+    dijkstra_shortest_paths(G, 0,
+                            predecessor_map(get(&VertexData::pred, G))
+                            .distance_map(get(&VertexData::dist, G))
+                            .weight_map(get(&EdgeData::dist, G)));
+
+    
+
+    // we can trace out the path back to the root node.
+    // we find the longest gap and the total real distance.
+    LARCV_DEBUG() << "node dump after dijkstra." << std::endl;
+    for ( size_t i=0; i<points.size(); i++ ) {
+      LARCV_DEBUG() << "   node[" << i << "] index=" << G[i].index
+                    << " pos=(" << G[i].pos[0] << "," << G[i].pos[1] << "," << G[i].pos[2] << ") "
+                    << " pred=" << G[i].pred << " dist=" << G[i].dist << std::endl;
+    }
+    
+    LARCV_DEBUG() << "Ran dijkstra_shortest_path. Trace out path from end node to start node." << std::endl;    
+    int curr = points.size()-1;
+    int pred = G[curr].pred;
+
+
+    path_xyz.clear();
+    path_xyz.push_back( G[curr].pos );    
+
+    float totdist = 0.;
+    maxgapdist = 0.;
+    while ( pred!=0 && curr!=pred ) {
+      //bool exists = boost::edge( curr, pred, G ).second;      
+      //auto edge = boost::edge( curr, pred, G ).first;
+      // if ( !exists ) {
+      //   LARCV_CRITICAL() << "edge between node index [" << curr << "] -> [" << pred << "] does not exist" << std::endl;
+      //   std::stringstream msg;
+      //   msg << __FILE__ << ":" << __LINE__ << std::endl;
+      //   throw std::runtime_error(msg.str());        
+      //   break;
+      // }
+      std::pair<int,int> key(curr,pred);
+      auto it_gap = pixgapdist.find(key);
+      auto it_real = distmap.find(key);
+      float gapdist = -1;
+      float realdist = -1;
+      if ( it_gap!=pixgapdist.end() ) gapdist  = it_gap->second;
+      if ( it_real!=distmap.end() )   realdist = it_real->second;
+      LARCV_DEBUG() << "    node[" << curr <<"] -> pred[" << pred << "] "
+                    << " pos=(" << G[curr].pos[0] << "," << G[curr].pos[1] << "," << G[curr].pos[2] << ") "
+                    << " gapdist="  << gapdist
+                    << " realdist=" << realdist
+                    << std::endl;
+      //<< " gapdist="  << get(&EdgeData::dist, G)[edge]
+      //          << " realdist=" << get(&EdgeData::realdist,G)[edge] << std::endl;
+      totdist += realdist;
+      if (maxgapdist < gapdist ) {
+        maxgapdist = gapdist;
+      }
+      path_xyz.push_back( G[pred].pos );
+      curr = pred;
+      pred = G[curr].pred;
+    }
+    if ( pred==0 ) {
+      path_xyz.push_back( G[pred].pos );
+    }
+    LARCV_DEBUG() << "end of path. npoints=" << path_xyz.size() << " totlength=" << totdist << " maxgapdist=" << maxgapdist << std::endl;
   }
-  */
+
 }
 }

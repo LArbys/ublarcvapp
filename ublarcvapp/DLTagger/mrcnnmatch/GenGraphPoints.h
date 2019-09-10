@@ -69,10 +69,28 @@ namespace dltagger {
                             const Eigen::Vector3f& start,
                             const Eigen::Vector3f& end,
                             const float max_steplen,
-                            const int pixel_search_width );
-  
+                            const int pixel_search_width,
+                            bool dump=false );
+
+    void shortestpath( const std::vector< Eigen::Vector3f >& points,             // node list: position of (x,y,z)
+                       const std::map< std::pair<int,int>, float >& distmap,     // distance between nodes
+                       const std::map< std::pair<int,int>, float >& pixgapdist,
+                       float& maxgapdist,
+                       std::vector< std::vector<float> >& path_tyz ); // pixel gap between vertices
+    
+
+    // 3d points from spatial scans
     std::vector< std::vector<float> > m_points3d_v;
-    std::vector< std::vector<float> > m_twid_v;    
+    std::vector< std::vector<float> > m_twid_v;
+
+    // graph definitions
+    std::vector<Eigen::Vector3f > m_graph_nodes;
+    std::map< std::pair<int,int>, float > m_distmap;
+    std::map< std::pair<int,int>, float > m_pixgapmap;
+
+    float m_maxgapdist;
+    std::vector< std::vector<float> > m_path_xyz;    // output path
+    std::vector< std::vector<float> > m_path_twid_v; // output path in image coordinates   
     
   };
   

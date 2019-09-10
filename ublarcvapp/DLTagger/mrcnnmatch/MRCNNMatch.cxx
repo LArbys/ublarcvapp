@@ -238,8 +238,8 @@ namespace dltagger {
       }
 
       // for debug
-      // if ( m_combo_3plane_v.size()>=2 )
-      //   break;
+      //if ( m_combo_3plane_v.size()>=2 )
+      //break;
     }
 
     LARCV_INFO() << "Number of 3-plane matches: " << m_combo_3plane_v.size() << std::endl;
