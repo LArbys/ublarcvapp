@@ -26,7 +26,9 @@ namespace dltagger {
       _pcombo(nullptr)
     {};
     
-    CropMaskCombo( const MaskCombo& combo, const std::vector<larcv::Image2D>& adc,
+    CropMaskCombo( const MaskCombo& combo,
+                   const std::vector<larcv::Image2D>& adc,
+                   const std::vector<larcv::Image2D>& wholeview_badch_v,
                    float pixel_threshold=10.0,
                    int tick_padding=6, int downsample_factor=8 );
     
@@ -35,6 +37,7 @@ namespace dltagger {
     std::vector<larcv::Image2D> crops_v;
     std::vector<larcv::Image2D> mask_v;
     std::vector<larcv::Image2D> missing_v; ///< adds non-empty image for plane that is missing in crops_v and mask_v
+    std::vector<larcv::Image2D> badch_v;   ///< crop from bad channel image
     int ngoodplanes;
     int badplane;
     const MaskCombo& getCombo() const { return *_pcombo; };
@@ -46,6 +49,11 @@ namespace dltagger {
     void _crop_and_mask_image( const std::vector<larcv::Image2D>& wholeview_v );
     void _make_missing_crop( const std::vector<larcv::Image2D>& wholeview_v,
                              std::vector<larcv::Image2D>& out_v );
+    void _prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v,
+                           const std::vector<larcv::Image2D>& crop_v,
+                           const std::vector<larcv::Image2D>& missing_v,
+                           std::vector<larcv::Image2D>& badch_crop_v );
+    
 
     // parameters
     float _threshold;         //< pixel value threshold

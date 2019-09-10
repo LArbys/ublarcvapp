@@ -6,7 +6,9 @@
 namespace ublarcvapp {
 namespace dltagger {
   
-  CropMaskCombo::CropMaskCombo( const MaskCombo& xcombo, const std::vector<larcv::Image2D>& adc,
+  CropMaskCombo::CropMaskCombo( const MaskCombo& xcombo,
+                                const std::vector<larcv::Image2D>& adc,
+                                const std::vector<larcv::Image2D>& wholeview_badch_v,
                                 float pixel_threshold,  int tick_padding, int downsample_factor )
     : larcv::larcv_base("CropMaskCombo"),
       _pcombo(&xcombo),
@@ -18,6 +20,7 @@ namespace dltagger {
   {
     _crop_and_mask_image( adc );
     _make_missing_crop( adc, missing_v );
+    _prep_badch_crop( adc, crops_v, missing_v, badch_v );
   }
 
   void CropMaskCombo::_crop_and_mask_image( const std::vector<larcv::Image2D>& wholeview_v ) {
@@ -130,7 +133,7 @@ namespace dltagger {
 
         try {
           float ptwire = mask.meta.pos_x( mask.box.min_x() + col );
-          float pttick = mask.meta.pos_y( mask.box.min_y() + row );
+          float pttick = mask.meta.pos_y( mask.box.min_y() + row ) + mask.meta.pixel_height(); // offset
           
           int xrow = cropmeta.row( pttick );
           int xcol = cropmeta.col( ptwire );
@@ -258,6 +261,36 @@ namespace dltagger {
     }
     
   }
+
+  /**
+   * make a bad channel cropped image to match size of ADC cropped images.
+   *
+   * @param[in] whole_badch_v Bad channel image of the whole view for each plane.
+   * @param[in] crop_v        The ADC cropped images. We crop bad channel image to match size.
+   *
+   */
+  void CropMaskCombo::_prep_badch_crop( const std::vector<larcv::Image2D>& whole_badch_v,
+                                        const std::vector<larcv::Image2D>& input_crop_v,
+                                        const std::vector<larcv::Image2D>& input_missing_v,
+                                        std::vector<larcv::Image2D>& badch_crop_v ) {
+    
+    badch_crop_v.clear();
+
+    // get cropped mask images as well
+    //const std::vector<larcv::Image2D>& mask_v = pEndpoint->pfeatures->pcropdata->mask_v;
+
+    for ( size_t p=0; p<input_crop_v.size(); p++ ) {
+      auto const& cropimg = input_crop_v[p];
+      const larcv::ImageMeta* cropmeta = &cropimg.meta();
+      if ( cropmeta->cols()==0 || cropmeta->rows()==0 )
+        cropmeta = &input_missing_v[p].meta();
+      larcv::Image2D badchcrop = whole_badch_v.at(p).crop( *cropmeta );
+      badch_crop_v.emplace_back( std::move(badchcrop) );
+      
+    }//end of plane loop
+    
+  }
+  
   
 }
 }

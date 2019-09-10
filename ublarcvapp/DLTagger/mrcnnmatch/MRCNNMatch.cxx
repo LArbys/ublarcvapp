@@ -75,7 +75,7 @@ namespace dltagger {
     // make 3-plane matches
     run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
     // make 2-plane matches
-    run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    //run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
 
 
   }
@@ -172,10 +172,14 @@ namespace dltagger {
     // make crops, mask charge, contours on charge, contours on mask
     std::vector<int> pass;
     for ( size_t icombo=0; icombo<combo_3plane_v.size(); icombo++ ) {
-      LARCV_INFO() << "----------------------------------" << std::endl;
-      LARCV_INFO() << "Evaluate 3-Plane Combo[" << icombo << "]" << std::endl;
-      LARCV_INFO() << "----------------------------------" << std::endl;      
       auto& combo = combo_3plane_v[icombo];
+      LARCV_INFO() << "----------------------------------" << std::endl;
+      LARCV_INFO() << "Evaluate 3-Plane Combo[" << icombo << "] "
+                   << "maskindices="
+                   << "(" << combo.maskdata_indices[0] << "," << combo.maskdata_indices[1] << "," << combo.maskdata_indices[2] << ")"
+                   << std::endl;
+      LARCV_INFO() << "----------------------------------" << std::endl;      
+      
 
       // greedy: if already used successfully, we do not reuse
       bool isused = false;
@@ -188,11 +192,14 @@ namespace dltagger {
       // we step through a number of data products
 
       // make crop around mask. make image of both charge and mask pixels
-      CropMaskCombo     cropmaker( combo, wholeview_v );
+      CropMaskCombo     cropmaker( combo, wholeview_v, badch_v );
       // extract contours, PCA of mask pixels
       FeaturesMaskCombo features( cropmaker );
       // attempt to define 3D endpoints
       Gen3DEndpoints    endpoints( features );
+      // scan for 3D points for later AStar graph
+      GenGraphPoints    graphpoints( features, larcv::msg::kDEBUG );
+      
 
       // run astar only if the 3d points are fairly consistent
       bool runastar = true;
@@ -204,6 +211,9 @@ namespace dltagger {
                                _config.astar_store_score_image,
                                _config.astar_verbosity );
 
+      // for debug
+      runastar = true;
+      
       if ( runastar ) {
         if (astar.astar_completed==1 ) {
           pass.push_back(1);
@@ -216,19 +226,20 @@ namespace dltagger {
         else {
           pass.push_back(0);
         }
-
+        
         if ( pass.back()==1 || !_config.filter_astar_failures ) {
           m_combo_3plane_v.emplace_back( std::move(combo) );
           m_combo_crops_v.emplace_back( std::move(cropmaker) );
           m_combo_features_v.emplace_back( std::move(features) );
+          m_combo_graphpts_v.emplace_back( std::move(graphpoints) );
           m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
           m_combo_astar_v.emplace_back( std::move(astar) );
         }
       }
 
       // for debug
-      //if ( icombo==0 )
-      //  break;
+      // if ( m_combo_3plane_v.size()>=2 )
+      //   break;
     }
 
     LARCV_INFO() << "Number of 3-plane matches: " << m_combo_3plane_v.size() << std::endl;
@@ -350,14 +361,14 @@ namespace dltagger {
       }
 
       // make crop around mask. make image of both charge and mask pixels
-      CropMaskCombo     cropmaker( combo, wholeview_v );
+      CropMaskCombo     cropmaker( combo, wholeview_v, badch_v );
       // extract contours, PCA of mask pixels
       FeaturesMaskCombo features( cropmaker );
       // attempt to define 3D endpoints
       Gen3DEndpoints    endpoints( features );
 
       bool run = true;
-      if (endpoints.endpt_tpc_v[0]==0 || endpoints.endpt_tpc_v[1]==0 )
+      if (endpoints.endpt_tpc_v[0]==0 || endpoints.endpt_tpc_v[1]==0)
         run = false;
       
       // astar
@@ -381,7 +392,7 @@ namespace dltagger {
         else {
           pass.push_back(0);
         }
-
+      
         if ( pass.back()==1 || !_config.filter_astar_failures ) {
 
           // for 2 plane matches, we won't have features, which we need later for pixel tagging. we do that now

@@ -64,6 +64,10 @@ file( GLOB LAROPENCV_LIBS "$ENV{LARLITE_LIBDIR}/libLArOpenCV_*.so" )
 set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
 find_package( cilantro REQUIRED )
 
+#---Boost Graph library
+find_package( Boost 1.65 COMPONENTS graph REQUIRED )
+#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+
 
 ## Setup
 

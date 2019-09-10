@@ -11,17 +11,21 @@ larcv.load_rootutil()
 
 rt.gStyle.SetOptStat(0)
 
+DRAW_ASTAR = False
+DRAW_GRAPH_PTS = True
+
 # make folder to save images
 os.system("mkdir -p example_combos/")
 
 #inputfile = "out_larcv_test_compare.root"
-#inputfile = "out_larcv_test.root"
-#inputfile = "../../../../out_larcv_test.root"
-inputfiles = ["../bin/testset2/supera-Run007704-SubRun000023.root", "../bin/testset2/mrcnn-mcc9_v13_nueintrinsics_overlay_run1-Run007704-SubRun000023.root"]
+inputfiles = ["out_larcv_test.root"]
+#inputfiles = ["../../../../out_larcv_test.root"]
+#inputfiles = ["../bin/testset2/supera-Run007704-SubRun000023.root", "../bin/testset2/mrcnn-mcc9_v13_nueintrinsics_overlay_run1-Run007704-SubRun000023.root"]
 
 matchalgo = ublarcvapp.dltagger.MRCNNMatch()
 
-io = larcv.IOManager(larcv.IOManager.kREAD, "IO", larcv.IOManager.kTickBackward )
+#io = larcv.IOManager(larcv.IOManager.kREAD, "IO", larcv.IOManager.kTickBackward )
+io = larcv.IOManager(larcv.IOManager.kREAD, "IO")
 for inputfile in inputfiles:
     io.add_in_file( inputfile )
 io.initialize()
@@ -45,7 +49,7 @@ print("Number of masks: ",[mask_vv.at(x).size() for x in range(3)])
 hwire_v = [ larcv.as_th2d( ev_wire.as_vector().at(p), "hwire_p%d"%(p) ) for p in xrange(3) ]
 meta_v  = [ ev_wire.as_vector().at(p).meta() for p in xrange(3) ]
 
-matchalgo.set_verbosity(1)
+matchalgo.set_verbosity(0)
 matchalgo.matchMasksAcrossPlanes( mask_vv, ev_wire.Image2DArray(), ev_chstatus, True )
 
 # visualize individual matches
@@ -58,6 +62,7 @@ tmarkers = {0:[],1:[],2:[]}
 tcontours = {0:[],1:[],2:[]}
 gpca_v = {0:[],1:[],2:[]}
 tendpt_v = {0:[],1:[],2:[]}
+tgpt_v = {0:[],1:[],2:[]}
 tastar_v = {0:[],1:[],2:[]}
 
 for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
@@ -80,6 +85,10 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
         astarout  = matchalgo.m_combo_astar_v.at(icombo)
     else:
         astarout  = None
+    if icombo<matchalgo.m_combo_graphpts_v.size():
+        graphpts = matchalgo.m_combo_graphpts_v.at(icombo)
+    else:
+        graphpts = None
     
     #mask_contours = features.combo_mask_contour
     mask_contours = features.combo_charge_contour    
@@ -237,9 +246,21 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             tendpt_v[p].append(tendpt)
             hcrop[p].SetTitle("Plane %d: tri=(%.3f,%.3f) x=(%d,%d);wire;tick"%(p,endpt3d.endpt_tri_v[0],endpt3d.endpt_tri_v[1],endpt3d.endpt_tpc_v[0],endpt3d.endpt_tpc_v[1]))
 
+        # 3d Graph points (projected of course)
+        if graphpts is not None and DRAW_GRAPH_PTS:
+            tgpt = rt.TGraph( graphpts.m_twid_v.size() )
+            for ipt in xrange( graphpts.m_twid_v.size() ):
+                tgpt.SetPoint(ipt, graphpts.m_twid_v[ipt][p+1], graphpts.m_twid_v[ipt][0] )
+            tgpt.SetMarkerStyle(23)
+            tgpt.SetMarkerSize(1)
+            tgpt.SetMarkerColor( rt.kCyan )
+            tgpt.SetLineColor( rt.kCyan )            
+            tgpt.Draw("PL")
+            tgpt_v[p].append(tgpt)
+            
         
         # astar path
-        if astarout is not None:
+        if astarout is not None and DRAW_ASTAR:
             astar_path = astarout.astar_path
             tastar = rt.TGraph( astar_path.size() )
             tastar.SetMarkerStyle(24)            
@@ -290,6 +311,8 @@ for p in xrange(3):
 call.Update()
 call.Draw()
 call.SaveAs("example_combos/all_combos_pass1.png")
+
+sys.exit(0)
 
 cbadch = rt.TCanvas("cbadch", "Bad channel image", 1200, 1500 )
 cbadch.Divide(1,3)
