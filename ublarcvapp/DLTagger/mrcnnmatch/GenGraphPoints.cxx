@@ -80,7 +80,10 @@ namespace dltagger {
                   max_wiretickpos_p0_v, max_wiretickpos_p1_v, maxx_pts_v, maxx_twid_v,
                   true );
 
-    // scan across x
+    // scan across x: making body points of graph
+    std::vector< std::vector<float> > mid_points3d_v;
+    std::vector< std::vector<float> > mid_twid_v;
+    
     std::vector< std::vector<float> > ywire_points_v;
     for ( int icol=bounds_v[2].points[0][0]+1; icol<(int)bounds_v[2].points[1][0]-1; icol+=2 ) {
       std::vector< std::vector<float> > yscan_points_v;
@@ -103,18 +106,31 @@ namespace dltagger {
 
         make3Dpoints( yscan_points_v.front()[0],
                       yscan_points_v.front()[1],
-                      wtpos_p0_v, wtpos_p1_v, m_points3d_v, m_twid_v,
+                      wtpos_p0_v, wtpos_p1_v, mid_points3d_v, mid_twid_v,
                       false );
       }//if yscan
     }// column loop
-    LARCV_DEBUG() << "number of 3d points defined: " << m_points3d_v.size() << " twid_v=" << m_twid_v.size() << std::endl;
+    LARCV_DEBUG() << "number of 3d points defined in det-z scan: " << mid_points3d_v.size() << " twid_v=" << mid_twid_v.size() << std::endl;
+    //std::sort( mid_points3d_v.begin(), mid_points3d_v.end() );
 
+
+    
+    // assemble points
+    // ---------------
+
+    // already added start points
+
+    // add mid points
+    for ( size_t i=0; i<mid_points3d_v.size(); i++ ) {
+      m_points3d_v.push_back( mid_points3d_v[i] );
+      m_twid_v.push_back( mid_twid_v[i] );
+    }
+    
     // add end points
     for (size_t i=0; i<maxx_pts_v.size(); i++) {
       m_points3d_v.push_back( maxx_pts_v[i] );
     }
-      
-    std::sort( m_points3d_v.begin(), m_points3d_v.end() );
+    
     if ( logger().debug() ) {
       std::stringstream ptlist;
       ptlist << "{ ";
@@ -859,6 +875,7 @@ namespace dltagger {
     // make astar node list
     return  segstate.get_max_bad_seg();
   }
+
 
   /*
   void GenGraphPoints::shortestpath( const std::vector< Eigen::Vector3f >& points,            // node list: position of (x,y,z)
