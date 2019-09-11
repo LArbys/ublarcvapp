@@ -260,7 +260,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
                 tgpt.SetPoint(ipt, graphpts.m_twid_v[ipt][p+1], graphpts.m_twid_v[ipt][0] )
             tgpt.SetMarkerStyle(23)
             tgpt.SetMarkerSize(1)
-            tgpt.SetMarkerColor( rt.kCyan )
+            tgpt.SetMarkerColor( rt.kOrange )
             tgpt.SetLineColor( rt.kCyan )            
             tgpt.Draw("P")
             tgpt_v[p].append(tgpt)
@@ -285,7 +285,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
                 for ipt in xrange( gpath.size() ):
                     tgpt.SetPoint( ipt, gpath[ipt][p+1], gpath[ipt][0] )
                 if graphpts.m_maxgapdist < 50:
-                    tgpt.SetLineColor(rt.kRed)                
+                    tgpt.SetLineColor(rt.kCyan)
                     tgpt.SetLineWidth(2)
                 else:
                     tgpt.SetLineColor(rt.kBlack)
@@ -297,7 +297,7 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
 
         
         # astar path
-        if astarout is not None and DRAW_ASTAR:
+        if astarout is not None and (DRAW_ASTAR or (combocrop.istwoplane() and astarout.astar_completed==1)):
             astar_path = astarout.astar_path
             tastar = rt.TGraph( astar_path.size() )
             tastar.SetMarkerStyle(24)            
@@ -310,21 +310,23 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             if astarout.astar_completed==1:
                 tastar.SetMarkerColor( rt.kCyan )
                 tastar.SetLineColor( rt.kCyan )
+                tastar.SetLineWidth( 2 )
             else:
-                tastar.SetMarkerColor( rt.kBlue )
-                tastar.SetLineColor( rt.kBlue )
-            tastar.SetLineWidth( 2 )                
-            tastar.Draw("LP")
+                tastar.SetMarkerColor( rt.kBlack )
+                tastar.SetLineColor( rt.kBlack )
+                tastar.SetLineWidth( 1 )      
+            tastar.Draw("L")
             tastar_v[p].append( tastar )
 
             # astar canvas
-            castar.cd(1+p)
-            if astarout.score_crop_v.size()>0:
-                hastar = larcv.as_th2d( astarout.score_crop_v.at( p ), "hastar_combo%d_p%d"%(icombo,p) )
-                hastar.Draw("colz")
-                tastar.Draw("LP")
-                hastar_v.append(hastar)
-            castar.Update()
+            if DRAW_ASTAR:
+                castar.cd(1+p)
+                if astarout.score_crop_v.size()>0:
+                    hastar = larcv.as_th2d( astarout.score_crop_v.at( p ), "hastar_combo%d_p%d"%(icombo,p) )
+                    hastar.Draw("colz")
+                    tastar.Draw("L")
+                    hastar_v.append(hastar)
+                castar.Update()
     
     ccombos.Draw()
     ccombos.Update()
@@ -341,7 +343,7 @@ for p in xrange(3):
     call.cd(1+p)
     hwire_v[p].Draw("colz")
     for g in tastar_v[p]:
-        g.Draw("LP")
+        g.Draw("L")
     for g in gpca_v[p]:
         g.Draw("LP")
     for g in tbox_v[p]:

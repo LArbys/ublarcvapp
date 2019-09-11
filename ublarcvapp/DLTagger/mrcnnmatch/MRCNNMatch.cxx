@@ -74,8 +74,20 @@ namespace dltagger {
 
     // make 3-plane matches
     run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    
+    LARCV_INFO() << "------------------------------------------------" << std::endl;
+    LARCV_INFO() << "After 3-plane matches. Masked used in matches" << std::endl;
+    std::vector<int> used_v( 3, 0 );
+    for ( size_t p=0; p<3; p++ ) {
+      for ( auto const& matchdata : matchdata_vv[p] ) {
+        if ( matchdata.used ) used_v[p]++;
+      }
+      LARCV_INFO() << "  Plane[" << p<< "]: " << used_v[p] << " of " << matchdata_vv[p].size() << std::endl;
+    }
+    LARCV_INFO() << "------------------------------------------------" << std::endl;
+    
     // make 2-plane matches
-    //run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
 
 
   }
@@ -203,13 +215,19 @@ namespace dltagger {
         if ( triarea_score>_config.triarea_maximum ) good_tri_area = false;
 
       bool isochronous = false;
-      if ( cropmaker.crops_v.front().meta().height()<400.0 )
+      if ( cropmaker.crops_v.front().meta().height()<400.0 ) {
         isochronous = true;
+        LARCV_INFO() << "  combo evaluated as isochronous" << std::endl;
+      }
       
-      if ( good_tri_area ) features.extendMaskWithPCAregion(10.0);
+      if ( good_tri_area ) {
+        features.extendMaskWithPCAregion(10.0);
+        LARCV_INFO() << "  combo has consistency end points built from mask PCA" << std::endl;
+      }
       
       // scan for 3D points for later AStar graph
-      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kDEBUG );
+      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kINFO );
+      LARCV_INFO() << "  max good pixel gap from graph reco: " << graphpoints.m_maxgapdist << std::endl;
 
       // run astar only if the 3d points are fairly consistent
       //bool runastar = good_tri_area;
@@ -222,15 +240,16 @@ namespace dltagger {
 
       if ( good_tri_area || isochronous ) {
         
-        if (astar.astar_completed==1 || graphpoints.m_maxgapdist < 20.0 ) {
+        if (astar.astar_completed==1 || graphpoints.m_maxgapdist < 50.0 ) {
           pass.push_back(1);
-
+          LARCV_INFO() << "  combo passes reco." << std::endl;
           // we mark the mask data in the combo as used
           for ( size_t p=0; p<combo.maskdata_indices.size(); p++ )
             matchdata_vv[p][ combo.maskdata_indices[p] ].used = true;
           
         }
         else {
+          LARCV_INFO() << "  combo fails reco." << std::endl;
           pass.push_back(0);
         }
         
@@ -363,63 +382,68 @@ namespace dltagger {
         if ( matchdata_vv[p][ combo.maskdata_indices[p] ].used ) isused = true;
       }
       if ( isused ) {
-        //std::cout << "combo is used." << std::endl;        
+        LARCV_INFO() << "masks in combo are used." << std::endl;        
         continue;
       }
 
       // make crop around mask. make image of both charge and mask pixels
       CropMaskCombo     cropmaker( combo, wholeview_v, badch_v );
       // extract contours, PCA of mask pixels
-      FeaturesMaskCombo features( cropmaker );
+      FeaturesMaskCombo features( cropmaker, true );
       // attempt to define 3D endpoints
       Gen3DEndpoints    endpoints( features );
 
       bool run = true;
-      if (endpoints.endpt_tpc_v[0]==0 || endpoints.endpt_tpc_v[1]==0)
+      if (endpoints.endpt_tpc_v[0]==0 || endpoints.endpt_tpc_v[1]==0) {
         run = false;
+        LARCV_INFO() << "  skipping astar for this combo (no end points)" << std::endl;
+      }
+      else {
+        LARCV_INFO() << "  running astar for this combo" << std::endl;
+      }
       
-      // astar
       AStarMaskCombo    astar( endpoints, badch_v, run,
                                _config.astar_max_downsample_factor,
                                _config.astar_store_score_image,
                                _config.astar_verbosity );
       //astar.set_verbosity((larcv::msg::Level_t)0);
                                
-      if ( run ) {
-        if (astar.astar_completed==1 ) {
-          pass.push_back(1);
-          npassed++;
-          
-          // we mark the mask data in the combo as used
-          for ( size_t p=0; p<combo.maskdata_indices.size(); p++ ) {
-            if ( combo.maskdata_indices[p]!=-1 )
-              matchdata_vv[p][ combo.maskdata_indices[p] ].used = true;
-          }
+      if (astar.astar_completed==1 ) {
+        pass.push_back(1);
+        npassed++;
+        
+        // we mark the mask data in the combo as used
+        for ( size_t p=0; p<combo.maskdata_indices.size(); p++ ) {
+          if ( combo.maskdata_indices[p]!=-1 )
+            matchdata_vv[p][ combo.maskdata_indices[p] ].used = true;
         }
-        else {
-          pass.push_back(0);
-        }
-      
-        if ( pass.back()==1 || !_config.filter_astar_failures ) {
+      }
+      else {
+        pass.push_back(0);
+      }
 
-          // for 2 plane matches, we won't have features, which we need later for pixel tagging. we do that now
-          
-          
-          m_combo_3plane_v.emplace_back( std::move(combo) );
-          m_combo_crops_v.emplace_back( std::move(cropmaker) );
-          m_combo_features_v.emplace_back( std::move(features) );
-          m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
-          m_combo_astar_v.emplace_back( std::move(astar) );
-          //std::cout << "STORE 2-PLANE COMBO" << std::endl;
-        }
+      if ( pass.back()==1 ) 
+        LARCV_INFO() << " combo passes reco." << std::endl;
+      else
+        LARCV_INFO() << " combo fails reco" << std::endl;
+      
+      if ( pass.back()==1 || !_config.filter_astar_failures ) {
+        
+        // for 2 plane matches, we won't have features, which we need later for pixel tagging. we do that now
+        m_combo_3plane_v.emplace_back( std::move(combo) );
+        m_combo_crops_v.emplace_back( std::move(cropmaker) );
+        m_combo_features_v.emplace_back( std::move(features) );
+        m_combo_endpt3d_v.emplace_back( std::move(endpoints) );
+        m_combo_astar_v.emplace_back( std::move(astar) );
+        //std::cout << "STORE 2-PLANE COMBO" << std::endl;
       }
 
     }//end of combo loop
-
+    
     LARCV_INFO() << "Number of 2-plane matches: " << npassed << std::endl;
 
   }
-
+  
   /**
    * clear output containers
    *

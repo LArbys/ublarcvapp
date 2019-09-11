@@ -290,8 +290,7 @@ namespace dltagger {
     for ( size_t p=0; p<crops_v.size(); p++ ) {
       if ( (int)p==_badplane ) {
         // we make a blank image, but with this bounding box for the mask image
-        larcv::Image2D missingmask( crop.meta() );
-        missingmask.paint(0.0);
+        larcv::Image2D missingmask( crop ); // make copy
 
         // add crop into missing image container
         miss_out_v.push_back( crop ); // deprecate

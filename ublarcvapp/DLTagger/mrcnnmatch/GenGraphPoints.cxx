@@ -412,7 +412,7 @@ namespace dltagger {
         // x back into tick
         tyz[0] = tyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200; // [cm]/[cm/usec]/[usec/tick] + trigger offset
         
-        std::cout << "step[" << istep << "] tyz=(" << tyz[0] << "," << tyz[1] << "," << tyz[2] << ")" << std::endl;
+        //std::cout << "step[" << istep << "] tyz=(" << tyz[0] << "," << tyz[1] << "," << tyz[2] << ")" << std::endl;
         
         if ( tyz[0]<crops_v.front().meta().min_y() || tyz[0]>=crops_v.front().meta().max_y() )
           continue;
@@ -1016,7 +1016,7 @@ namespace dltagger {
         
         auto& neighbornode = points[ neighbor.index ];
         numneighbors++;
-        float pixgap = get_max_pixelgap( crop_v, badch_v, vertex, neighbornode, 0.3, 3 );
+        float pixgap = get_max_pixelgap( crop_v, badch_v, vertex, neighbornode, 0.3, 3, false );
 
         if ( pixgap>5.0 )
           continue; // not a neighbor
@@ -1341,8 +1341,11 @@ namespace dltagger {
       //auto edge = add_edge( key.first, key.second, { dist, realdist }, G ).first;
       auto edge = add_edge( key.first, key.second, { realdist, gapdist }, G ).first;
     }
-    
-    boost::print_graph(G, boost::get(&VertexData::index, G));
+
+    if (logger().debug()) {
+      LARCV_DEBUG() << "Dump graph" << std::endl;      
+      boost::print_graph(G, boost::get(&VertexData::index, G));
+    }
     
     dijkstra_shortest_paths(G, 0,
                             predecessor_map(get(&VertexData::pred, G))
