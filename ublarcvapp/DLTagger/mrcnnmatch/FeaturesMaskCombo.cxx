@@ -5,7 +5,11 @@
 namespace ublarcvapp {
 namespace dltagger {
 
-  FeaturesMaskCombo::FeaturesMaskCombo( const CropMaskCombo& cropdata )
+  /**
+   * class containing contour and PCA information for cropped images
+   *
+   */
+  FeaturesMaskCombo::FeaturesMaskCombo( CropMaskCombo& cropdata )
     : pcropdata(&cropdata)
   {
     _make_contours(cropdata);
@@ -21,9 +25,9 @@ namespace dltagger {
     // contour clusters on charge crops
     combo_charge_contour.analyzeImages( cropdata.crops_v );
     combo_charge_contour.clear_intermediate_images();
-    
+
+    // contour on mask clusters
     combo_mask_contour.analyzeImages( cropdata.mask_v, 0.5, 1 );
-    //combo_mask_contour.analyzeImages( cropdata.crops_v, 10, 1 );    
     combo_mask_contour.clear_intermediate_images();
     
   }

@@ -20,10 +20,10 @@ namespace dltagger {
       : pcropdata(nullptr)
     {}; ///< default constructor. do not use. for ROOT dictionary building.
 
-    FeaturesMaskCombo( const CropMaskCombo& cropdata );
+    FeaturesMaskCombo( CropMaskCombo& cropdata );
     virtual ~FeaturesMaskCombo() {};
 
-    const CropMaskCombo* pcropdata; ///< inputs used to generate information from this class
+    CropMaskCombo* pcropdata; ///< inputs used to generate information from this class
 
     // outputs: contours
     ublarcvapp::ContourClusterAlgo combo_charge_contour; // contours on the charge

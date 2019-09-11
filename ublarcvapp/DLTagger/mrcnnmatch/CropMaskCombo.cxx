@@ -289,11 +289,21 @@ namespace dltagger {
     
     for ( size_t p=0; p<crops_v.size(); p++ ) {
       if ( (int)p==_badplane ) {
-        std::swap(out_v[p],crop);
+        // we make a blank image, but with this bounding box for the mask image
+        larcv::Image2D missingmask( crop.meta() );
+        missingmask.paint(0.0);
+
+        // add crop into missing image container
         miss_out_v.push_back( crop ); // deprecate
+        
+        // swap out missing plane image in crops_v and mask_v
+        std::swap(out_v[p],crop);
+        std::swap(mask_v[p],missingmask);
+        
       }
       else {
-        miss_out_v.emplace_back(larcv::Image2D()); // empty. deprecate.
+        // add empty image to good planes. [deprecate]
+        miss_out_v.emplace_back(larcv::Image2D());
       }
     }
     
