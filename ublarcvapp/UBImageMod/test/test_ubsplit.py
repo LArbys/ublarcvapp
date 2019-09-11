@@ -10,7 +10,8 @@ rt.gStyle.SetOptStat(0)
 superafile = sys.argv[1]
 input_adc_producer = sys.argv[2]
 
-io = larcv.IOManager(larcv.IOManager.kREAD,"",larcv.IOManager.kTickBackward)
+#io = larcv.IOManager(larcv.IOManager.kREAD,"",larcv.IOManager.kTickBackward)
+io = larcv.IOManager(larcv.IOManager.kREAD,"")
 io.add_in_file( superafile )
 io.initialize()
 
@@ -32,7 +33,7 @@ CoveredZWidth: 310
 FillCroppedYImageCompletely: true
 DebugImage: false
 MaxImages: -1
-RandomizeCrops: false
+RandomizeCrops: 0
 MaxRandomAttempts: 50
 MinFracPixelsInCrop: -0.0001
 """
@@ -58,10 +59,11 @@ nentries = io.get_n_entries()
 print "Num Entries: ",nentries
 nentries = 1
 
+
 for n in range(nentries):
     io.read_entry(n)
 
-    ev_adc = io.get_data(larcv.kProductImage2D,"wiremc")
+    ev_adc = io.get_data(larcv.kProductImage2D,input_adc_producer)
     adc_v  = ev_adc.Image2DArray()
 
     roi_v = std.vector("larcv::ROI")()
@@ -110,5 +112,7 @@ for i in xrange(io2.get_n_entries()):
     io2.read_entry(i)
     evdetsplit = io2.get_data(larcv.kProductImage2D,"detsplit")
     print "entry ",i,": desplit images = ",evdetsplit.Image2DArray().size()
+    for i in xrange(evdetsplit.Image2DArray().size()):
+        print "  image[",i,"] ",evdetsplit.Image2DArray().at(i).meta().dump()
 
 print "FIN"

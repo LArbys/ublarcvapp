@@ -27,11 +27,11 @@ namespace ublarcvapp {
   int   UBSplitDetector::num_calls = 0;
 
   UBSplitDetector::UBSplitDetector(const std::string name)
-    : larcv::ProcessBase(name)
+    : larcv::ProcessBase(name),
+    _num_expected_crops(-1),
+    _numcrops_changed(false),
+    _randomize_crops(false)
   {
-    _num_expected_crops = -1;
-    _numcrops_changed = false;
-
     elapsed_genbbox = 0;
     elapsed_crop = 0;
     elapsed_alloc = 0;
@@ -177,7 +177,7 @@ namespace ublarcvapp {
 
     // ---------------------------------------------------------------
     // get data
-
+    LARCV_DEBUG() << "Defining crops. Randomize=" << _randomize_crops << std::endl;
 
     // first define the lattice of 3D points
     // set lattice (y,z) pitch using width of image

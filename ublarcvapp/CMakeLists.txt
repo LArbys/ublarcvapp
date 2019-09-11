@@ -1,5 +1,9 @@
 
 
+
+add_subdirectory(dbscan)
+add_subdirectory(Reco3D)
+
 if (HAS_LARLITE)
   add_subdirectory(LArliteHandler)
   add_subdirectory(UBImageMod)
@@ -11,4 +15,4 @@ endif()
 
 if (LARCV_USE_GEO2D)
   add_subdirectory(LArOpenCVHandle)
-sendif()
+endif()

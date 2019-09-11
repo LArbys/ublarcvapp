@@ -9,6 +9,7 @@
 #pragma link C++ class ublarcvapp::InfillDataCropper+;
 #pragma link C++ class ublarcvapp::InfillSparsifyImage+;
 #pragma link C++ class ublarcvapp::InfillImageStitcher+;
+#pragma link C++ class ublarcvapp::EmptyChannelAlgo+;
 #endif
 
 

@@ -53,6 +53,8 @@ namespace ublarcvapp {
                           std::vector<larcv::Image2D>& image_label_v,
                           larcv::EventChStatus* ev_chstatus);
 
+    static std::vector<larcv::Image2D> ChStatusToLabelsX(larcv::EventChStatus& ev_chstatus);
+
     static std::map<int, std::vector<int>> DeadChannelAnalyzer(
                           const std::vector<larcv::Image2D>& image_label_v,
                           const int cropwidth);
@@ -65,7 +67,7 @@ namespace ublarcvapp {
 
     static std::vector<larcv::ImageMeta> defineBoundingBoxFromCropCoords(
                            const std::vector<larcv::Image2D>& img_v,
-  									       const int box_pixel_width,
+			   const int box_pixel_width,
                            const int box_pixel_height,
                            const double t2, const double u1,
                            const double v1, const double y1);

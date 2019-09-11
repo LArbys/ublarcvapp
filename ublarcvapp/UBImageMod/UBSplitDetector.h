@@ -49,19 +49,19 @@ namespace ublarcvapp {
 
     // algo functions
 
-    bool process( const std::vector<larcv::Image2D>& img_v, 
+    bool process( const std::vector<larcv::Image2D>& img_v,
 		  std::vector<larcv::Image2D>& outimg_v, 
 		  std::vector<larcv::ROI>& outbbox_v);
-    
+
     // static functions are defined to allow them to be reused in a stand-alone manner
     static larcv::ROI defineBoundingBoxFromCropCoords( const std::vector<larcv::Image2D>& img_v,
-						       const int box_pixel_width, const int box_pixel_height, 
+						       const int box_pixel_width, const int box_pixel_height,
 						       const int t1, const int t2,
 						       const int u1, const int u2,
 						       const int v1, const int v2,
-						       const int y1, const int y2, 
+						       const int y1, const int y2,
 						       const bool tick_forward);
-    
+
     static bool cropUsingBBox2D( const larcv::ROI& bbox_vec,
 				 const std::vector<larcv::Image2D>& img_v,
 				 const int y1, const int y2, bool fill_y_image,
@@ -77,20 +77,21 @@ namespace ublarcvapp {
 				 const int first_outidx,
 				 const bool copy_imgs,
 				 std::vector<larcv::Image2D>& outimg_v );
-    
-    
-    static std::vector<int> defineImageBoundsFromPosZT( const float zwire, const float tmid, 
+
+
+    static std::vector<int> defineImageBoundsFromPosZT( const float zwire, const float tmid,
 							const float zwidth, const float dtick,
 							const int box_pixel_width, const int box_pixel_height,
-							const std::vector<larcv::Image2D>& img_v, 
+							const std::vector<larcv::Image2D>& img_v,
 							const bool tick_forward );
-    
-    
+
+
     void printElapsedTime();
     void clearElapsedTime();
-    
+    bool willRandomize() { return _randomize_crops; };
+
   private:
-    
+
     // config parameters
     std::string _input_producer;
     std::string _output_bbox_producer;
@@ -113,7 +114,7 @@ namespace ublarcvapp {
     // cropping variables
     std::vector< std::vector<int> > m_lattice;    //< defines (t,u,v,y) wire coordinates that serve as center of cropped subimages
     std::vector<larcv::Image2D>     m_coverage_v; //< images used to mark how many times pixels are a part of subimage
-    
+
     // timetracking
     static float elapsed_genbbox;
     static float elapsed_crop;
@@ -141,4 +142,3 @@ namespace ublarcvapp {
 
 #endif
 /** @} */ // end of doxygen group
-

@@ -19,15 +19,19 @@ find_package( larcv REQUIRED )
 if (USE_OPENCV)
   find_package(OpenCV REQUIRED)
   if (NOT OpenCV_FOUND)
+    message("OpenCV NOT FOUND")
     set(USE_OPENCV 0)
   endif()
+  message("OpenCV FOUND")
+else()
+  message("OpenCV not activated")
 endif()
 
 #---larbys GEO2D
 # use it if env variables defined
 if (DEFINED ENV{GEO2D_BASEDIR})
   set(LARCV_USE_GEO2D 1)
-
+  
   # unless explicitly told no
   if (DEFINED ENV{USE_GEO2D} AND NOT $USE_GEO2D)
     set(LARCV_USE_GEO2D 0)
@@ -42,6 +46,8 @@ else()
   message("DISABLING modules needing Geo2D")  
 endif()
 
+#---Eigen3
+find_package(Eigen3 REQUIRED)
 
 #---LArLite
 set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" )
@@ -53,6 +59,14 @@ file( GLOB LARLITE_LIBS "$ENV{LARLITE_LIBDIR}/libLArLite*.so" )
 set( LAROPENCV_INC_DIR "$ENV{LAROPENCV_BASEDIR}" )
 set( LAROPENCV_LIB_DIR "$ENV{LARLITE_LIBDIR}" )
 file( GLOB LAROPENCV_LIBS "$ENV{LARLITE_LIBDIR}/libLArOpenCV_*.so" )
+
+#---Cilantro
+set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
+find_package( cilantro REQUIRED )
+
+#---Boost Graph library
+find_package( Boost 1.65 COMPONENTS graph REQUIRED )
+#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 
 ## Setup
