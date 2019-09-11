@@ -20,7 +20,9 @@ namespace dltagger {
       : pcropdata(nullptr)
     {}; ///< default constructor. do not use. for ROOT dictionary building.
 
-    FeaturesMaskCombo( CropMaskCombo& cropdata );
+    FeaturesMaskCombo( CropMaskCombo& cropdata,
+                       bool extend_mask_wpca=true,
+                       float max_dist_2_pcaline=10.0 );
     virtual ~FeaturesMaskCombo() {};
 
     CropMaskCombo* pcropdata; ///< inputs used to generate information from this class
@@ -35,10 +37,13 @@ namespace dltagger {
     std::vector< std::vector<float> > pca2_dir_vv;        // 2nd PCA-axis direction for each plane
     std::vector< std::vector<float> > pca_eigenvalues_vv; // eigenvalues for each plane
 
+    void extendMaskWithPCAregion( const float max_dist_2_pcaline=10.0 );
+    
   protected:
 
     void _make_contours( const CropMaskCombo& cropdata );
     void _calc_mask_pca( const CropMaskCombo& cropdata );
+
 
   };
 

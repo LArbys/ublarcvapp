@@ -5,6 +5,7 @@
 
 #include "larcv/core/Base/larcv_base.h"
 #include "FeaturesMaskCombo.h"
+#include "Gen3DEndpoints.h"
 
 #include <Eigen/Dense>
 
@@ -21,7 +22,9 @@ namespace dltagger {
     {};
     virtual ~GenGraphPoints() {};
 
-    GenGraphPoints( const FeaturesMaskCombo& featuredata, larcv::msg::Level_t msglevel=larcv::msg::kNORMAL );
+    GenGraphPoints( const FeaturesMaskCombo& featuredata,
+                    const Gen3DEndpoints& endpointdata,
+                    larcv::msg::Level_t msglevel=larcv::msg::kNORMAL );
 
     const FeaturesMaskCombo* pfeatures;
 
@@ -38,9 +41,16 @@ namespace dltagger {
       
     };
 
-
-    void DefineBoundPoints( const FeaturesMaskCombo& features,
-                            std::vector< MaskExtrema_t >& maskbounds_v );
+    void DefineBoundPointsWithPCAEndpoints( const Gen3DEndpoints& endpointdata,
+                                            const float maxstepsize,
+                                            const int pixradius,
+                                            std::vector< std::vector<float> >& good_twid_v,
+                                            std::vector< std::vector<float> >& good_xyz_v,                                            
+                                            std::vector< int >& is_good_pt_v );
+    
+    
+    void DefineBoundPointsWithContourMeta( const FeaturesMaskCombo& features,
+                                           std::vector< MaskExtrema_t >& maskbounds_v );
 
     void makePointsFixedZ( const FeaturesMaskCombo& features,
                            const float detz, const int plane, const float tick,

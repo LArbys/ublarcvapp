@@ -42,6 +42,7 @@ namespace dltagger {
     const MaskCombo& getCombo() const { return *_pcombo; };
     bool istwoplane() const { return _twoplane_mode; };
     int  badPlane() const   { return _badplane; };
+    float getThreshold() const { return _threshold; };
     
   protected:
     

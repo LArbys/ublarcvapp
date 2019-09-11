@@ -11,8 +11,11 @@ larcv.load_rootutil()
 
 rt.gStyle.SetOptStat(0)
 
+DRAW_MASK_IMG = True # else will draw FULL ADC (crops_v) image
 DRAW_ASTAR = False
 DRAW_GRAPH_PTS = True
+DRAW_BADCH = False
+DRAW_GAPCH = False
 
 # make folder to save images
 os.system("mkdir -p example_combos/")
@@ -63,6 +66,8 @@ tcontours = {0:[],1:[],2:[]}
 gpca_v = {0:[],1:[],2:[]}
 tendpt_v = {0:[],1:[],2:[]}
 tgpt_v = {0:[],1:[],2:[]}
+tgtrack_v = {0:[],1:[],2:[]}
+tedges_v = {0:[],1:[],2:[]}
 tastar_v = {0:[],1:[],2:[]}
 
 for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
@@ -108,15 +113,17 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
 
 
     # draw canvas and boxes
-    hcrop  = [ None if combo_indices[p]<0 else larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(icombo,p) ) for p in xrange(3) ]
-    is3plane = True    
-    for ip,h in enumerate(hcrop):
-        if h is None:
-            is3plane = False
-            hcrop[ip] = larcv.as_th2d( combocrop.missing_v[ip], "hmissingcrop_combo%d_p%d"%(icombo,p))
+    #hcrop  = [ None if combo_indices[p]<0 else larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(icombo,p) ) for p in xrange(3) ]
+    if DRAW_MASK_IMG:
+        hcrop  = [ larcv.as_th2d( combocrop.mask_v.at(p), "hcrop_combo%d_p%d"%(icombo,p) ) for p in xrange(3) ]
+    else:
+        hcrop  = [ larcv.as_th2d( combocrop.crops_v.at(p), "hcrop_combo%d_p%d"%(icombo,p) ) for p in xrange(3) ]
+    is3plane = not combocrop.istwoplane()
 
-    castar = rt.TCanvas("caster","ASTAR", 1500, 500 )
-    castar.Divide(3,1)
+    if DRAW_ASTAR:
+        castar = rt.TCanvas("caster","ASTAR", 1500, 500 )
+        castar.Divide(3,1)
+        
     hastar_v = []
     for p in xrange(3):
         ccombos.cd(1+p)
@@ -255,9 +262,39 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
             tgpt.SetMarkerSize(1)
             tgpt.SetMarkerColor( rt.kCyan )
             tgpt.SetLineColor( rt.kCyan )            
-            tgpt.Draw("PL")
+            tgpt.Draw("P")
             tgpt_v[p].append(tgpt)
-            
+
+            it = graphpts.m_pixgapmap.begin()
+            ngood_edges = 0
+            nbad_edges  = 0
+            for it in graphpts.m_pixgapmap:
+                idx1 = it.first.first
+                idx2 = it.first.second
+                val  = it.second
+                if val>2.0:
+                    nbad_edges += 1
+                    #print("idx=%d idx2=%d val=%f"%(idx1,idx2,val))                    
+                else:
+                    ngood_edges += 1
+            print("ngood edges=%d nbad_edges=%d"%(ngood_edges,nbad_edges))
+
+            if graphpts.m_path_twid_v.size()>0:
+                gpath = graphpts.m_path_twid_v
+                tgpt = rt.TGraph( gpath.size() )
+                for ipt in xrange( gpath.size() ):
+                    tgpt.SetPoint( ipt, gpath[ipt][p+1], gpath[ipt][0] )
+                if graphpts.m_maxgapdist < 50:
+                    tgpt.SetLineColor(rt.kRed)                
+                    tgpt.SetLineWidth(2)
+                else:
+                    tgpt.SetLineColor(rt.kBlack)
+                    tgpt.SetLineWidth(1)
+                    
+                tgpt.Draw("L")
+                tgtrack_v[p].append( tgpt )
+
+
         
         # astar path
         if astarout is not None and DRAW_ASTAR:
@@ -293,9 +330,10 @@ for icombo in xrange( matchalgo.m_combo_3plane_v.size() ):
     ccombos.Update()
     ccombos.SaveAs("example_combos/combo_%02d.png"%(icombo))
 
-    castar.Draw()
-    castar.Update()
-    castar.SaveAs("example_combos/astar_%02d.png"%(icombo))
+    if DRAW_ASTAR:
+        castar.Draw()
+        castar.Update()
+        castar.SaveAs("example_combos/astar_%02d.png"%(icombo))
 
 call = rt.TCanvas("call", "All", 1200,1500 )
 call.Divide(1,3)
@@ -308,28 +346,31 @@ for p in xrange(3):
         g.Draw("LP")
     for g in tbox_v[p]:
         g.Draw()
+    for g in tgtrack_v[p]:
+        g.Draw("L")
+        
 call.Update()
 call.Draw()
 call.SaveAs("example_combos/all_combos_pass1.png")
 
-sys.exit(0)
+if DRAW_BADCH:
+    cbadch = rt.TCanvas("cbadch", "Bad channel image", 1200, 1500 )
+    cbadch.Divide(1,3)
+    for p in xrange(3):
+        cbadch.cd(1+p)
+        hbadch_v[p].Draw("colz")
+    cbadch.Update()
+    cbadch.Draw()
+    cbadch.SaveAs("example_combos/badch_image.png")
 
-cbadch = rt.TCanvas("cbadch", "Bad channel image", 1200, 1500 )
-cbadch.Divide(1,3)
-for p in xrange(3):
-    cbadch.cd(1+p)
-    hbadch_v[p].Draw("colz")
-cbadch.Update()
-cbadch.Draw()
-cbadch.SaveAs("example_combos/badch_image.png")
-
-cgapch = rt.TCanvas("cgapch", "Gap channel image", 1200, 1500 )
-cgapch.Divide(1,3)
-for p in xrange(3):
-    cgapch.cd(1+p)
-    hgapch_v[p].Draw("colz")
-cgapch.Update()
-cgapch.Draw()
-cgapch.SaveAs("example_combos/gapch_image.png")
-
+if DRAW_GAPCH:
+    cgapch = rt.TCanvas("cgapch", "Gap channel image", 1200, 1500 )
+    cgapch.Divide(1,3)
+    for p in xrange(3):
+        cgapch.cd(1+p)
+        hgapch_v[p].Draw("colz")
+    cgapch.Update()
+    cgapch.Draw()
+    cgapch.SaveAs("example_combos/gapch_image.png")
+    
 raw_input()

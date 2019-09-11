@@ -193,29 +193,36 @@ namespace dltagger {
 
       // make crop around mask. make image of both charge and mask pixels
       CropMaskCombo     cropmaker( combo, wholeview_v, badch_v );
-      // extract contours, PCA of mask pixels
-      FeaturesMaskCombo features( cropmaker );
+      // extract contours, PCA of mask pixels. hold off extending mask.
+      FeaturesMaskCombo features( cropmaker, false );
       // attempt to define 3D endpoints
       Gen3DEndpoints    endpoints( features );
-      // scan for 3D points for later AStar graph
-      GenGraphPoints    graphpoints( features, larcv::msg::kDEBUG );
+
+      bool good_tri_area = true;
+      for ( auto const& triarea_score : endpoints.endpt_tri_v )
+        if ( triarea_score>_config.triarea_maximum ) good_tri_area = false;
+
+      bool isochronous = false;
+      if ( cropmaker.crops_v.front().meta().height()<400.0 )
+        isochronous = true;
       
+      if ( good_tri_area ) features.extendMaskWithPCAregion(10.0);
+      
+      // scan for 3D points for later AStar graph
+      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kDEBUG );
 
       // run astar only if the 3d points are fairly consistent
-      bool runastar = true;
-      for ( auto const& triarea_score : endpoints.endpt_tri_v )
-        if ( triarea_score>_config.triarea_maximum ) runastar = false;
+      //bool runastar = good_tri_area;
+      bool runastar = false;
       
       AStarMaskCombo    astar( endpoints, badch_v, runastar,
                                _config.astar_max_downsample_factor,
                                _config.astar_store_score_image,
                                _config.astar_verbosity );
 
-      // for debug
-      runastar = true;
-      
-      if ( runastar ) {
-        if (astar.astar_completed==1 ) {
+      if ( good_tri_area || isochronous ) {
+        
+        if (astar.astar_completed==1 || graphpoints.m_maxgapdist < 20.0 ) {
           pass.push_back(1);
 
           // we mark the mask data in the combo as used
@@ -238,7 +245,7 @@ namespace dltagger {
       }
 
       // for debug
-      //if ( m_combo_3plane_v.size()>=2 )
+      //if ( m_combo_3plane_v.size()>=3 )
       //break;
     }
 
