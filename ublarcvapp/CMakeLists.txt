@@ -15,11 +15,4 @@ endif()
 
 if (LARCV_USE_GEO2D)
   add_subdirectory(LArOpenCVHandle)
-  add_subdirectory(ContourTools)
-  add_subdirectory(Tagger)
-  add_subdirectory(DLTagger)  
-endif()  
-
-add_subdirectory(Stitchers)
-
-
+endif()
