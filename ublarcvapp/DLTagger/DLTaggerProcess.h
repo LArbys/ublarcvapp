@@ -29,6 +29,7 @@ namespace dltagger {
     void finalize();
 
     void add_larlite_infile( std::string inputfile ) { _larlite_files.push_back(inputfile); };
+    void set_larlite_outfile( std::string outputfile ) { _output_larlite_file = outputfile; };
 
   protected:
 
@@ -48,7 +49,8 @@ namespace dltagger {
     std::string _output_tagged_image;     //< name to give event container storing whole-view images tagged with clusters labeled as cosmic
     std::string _output_notcosmic_image;  //< name to give event container storing whole-view images tagged with clusters labeled as not-cosmi
     std::string _output_cosmic_clusters;    //< name to give event container storing pixels from found tracks
-    std::string _output_notcosmic_clusters; //< name to give event container storing pixels from found tracksa    
+    std::string _output_notcosmic_clusters; //< name to give event container storing pixels from found tracksa
+    std::string _output_allreco_clusters;   //< name to give event container storing pixels for all reco'd tracks    
     std::string _output_larlite_file;     //< name of output larlite file
     std::string _output_tracks;           //< name to give event container storing found 3D tracks
     std::string _output_croi;             //< name to give container storing collection of CROIs

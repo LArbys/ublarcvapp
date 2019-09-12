@@ -35,7 +35,8 @@ namespace dltagger {
     std::vector< GenGraphPoints >    m_combo_graphpts_v; ///< 3D points for graph astar
     std::vector< Gen3DEndpoints >    m_combo_endpt3d_v;  ///< 3D endpoints created for mask-combo
     std::vector< AStarMaskCombo >    m_combo_astar_v;    ///< AStar path
-
+    std::vector< int >               m_pass;             ///< if entry 1, above products represent a good reco.
+    
     void clear();
     size_t numMatches() const { return m_combo_3plane_v.size(); };
 

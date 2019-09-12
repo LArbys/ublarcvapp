@@ -21,14 +21,14 @@ DRAW_GAPCH = False
 os.system("mkdir -p example_combos/")
 
 #inputfile = "out_larcv_test_compare.root"
-inputfiles = ["out_larcv_test.root"]
+#inputfiles = ["out_larcv_test.root"]
 #inputfiles = ["../../../../out_larcv_test.root"]
-#inputfiles = ["../bin/testset2/supera-Run007704-SubRun000023.root", "../bin/testset2/mrcnn-mcc9_v13_nueintrinsics_overlay_run1-Run007704-SubRun000023.root"]
+inputfiles = ["../bin/testset2/supera-Run007704-SubRun000023.root", "../bin/testset2/mrcnn-mcc9_v13_nueintrinsics_overlay_run1-Run007704-SubRun000023.root"]
 
 matchalgo = ublarcvapp.dltagger.MRCNNMatch()
 
-#io = larcv.IOManager(larcv.IOManager.kREAD, "IO", larcv.IOManager.kTickBackward )
-io = larcv.IOManager(larcv.IOManager.kREAD, "IO")
+io = larcv.IOManager(larcv.IOManager.kREAD, "IO", larcv.IOManager.kTickBackward )
+#io = larcv.IOManager(larcv.IOManager.kREAD, "IO")
 for inputfile in inputfiles:
     io.add_in_file( inputfile )
 io.initialize()

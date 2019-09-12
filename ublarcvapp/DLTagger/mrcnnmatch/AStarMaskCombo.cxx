@@ -543,19 +543,35 @@ namespace dltagger {
       astar_path[ipt+1].tyz = pixel_tyz[ipt];
     }
 
-    max_discontinuity_cm = segstate.get_max_bad_seg_notfirst();
+    //max_discontinuity_cm = segstate.get_max_bad_seg_notfirst();
+    max_discontinuity_cm = segstate.get_max_bad_seg();
     if ( max_discontinuity_cm>20.0  ) 
       astar_completed = 0;
     else
       astar_completed = 1;
     
     // return this
-    LARCV_DEBUG() << "-----------------------------------------" << std::endl;    
+    LARCV_INFO() << "-----------------------------------------" << std::endl;    
     LARCV_INFO() << "linear test. max_discontinuity_cm=" << max_discontinuity_cm << "  nsteps=" << astar_path.size() << " completed=" << astar_completed << std::endl;
-    if ( logger().debug() ) {
+    if ( logger().info() || logger().debug() ) {
       for ( auto const& node : astar_path )
         LARCV_DEBUG() << node.str() << std::endl;
-      LARCV_DEBUG() << "-----------------------------------------" << std::endl;
+
+      std::stringstream statestr;
+      statestr << "{ ";
+      for ( size_t is=0; is<segstate.state_v.size(); is++ ) {
+        auto& s = segstate.state_v[is];
+        auto& sd = segstate.seg_v[is];
+        statestr << s << "(" << sd << ") ";
+      }
+      statestr << "}";
+      LARCV_INFO() << "segment analyzed: max_bad=" << segstate.get_max_bad_seg() << " len=" << pathlen
+                   << " nsegs=" << segstate.state_v.size()
+                   << " " << statestr.str()
+                   << std::endl;
+      // std::cin.get();
+      
+      LARCV_INFO() << "-----------------------------------------" << std::endl;
     }
   }
   

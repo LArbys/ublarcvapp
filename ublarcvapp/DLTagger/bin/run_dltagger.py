@@ -36,14 +36,15 @@ processors = driver.process_map()
 it_process = processors.find("DLTaggerProcess")
 dltagger = driver.process_ptr(it_process.second)
 dltagger.add_larlite_infile( args.opreco )
+dltagger.set_larlite_outfile( args.out_larlite )
 
 driver.initialize()
 
 nentries = driver.io().get_n_entries()
 
-for ientry in xrange(nentries):
+for ientry in xrange(0,nentries):
     driver.process_entry(ientry)
-    #if ientry==0:
+    #if ientry==1:
     #    break
 #driver.process_entry(11)
 

@@ -74,36 +74,49 @@ namespace dltagger {
                     << " twid=(" << endpts_twid_v[1][0] << "," << endpts_twid_v[1][1] << "," << endpts_twid_v[1][2] << "," << endpts_twid_v[1][3] << ")"
                     << std::endl;
       
-      bounds_v.resize(4);
-      //if ( isgood_v[0]==1 && isgood_v[1]==1 ) {
-      // we can modify the bounds
-      int startidx = 0;
-      int endidx = 1;
-      if ( endpointdata.endpt_tyz_v[0][2] > endpointdata.endpt_tyz_v[1][2] ) {
-        startidx = 1;
-        endidx = 0;
-      }
-      
-      for ( size_t p=0; p<3; p++ ) {
-        auto const& meta = crop_v[p].meta();
-        bounds_v[p].points[0][0] = meta.col( endpointdata.endpt_wid_v[startidx][p] ); // min wire
-        bounds_v[p].points[0][1] = meta.row( endpointdata.endpt_tyz_v[startidx][0] );
-        bounds_v[p].points[1][0] = meta.col( endpointdata.endpt_wid_v[endidx][p] ); // max wire
-        bounds_v[p].points[1][1] = meta.row( endpointdata.endpt_tyz_v[endidx][0] );
-      }
 
-      minx_pts_v.push_back( endpointdata.endpt_tyz_v[startidx] );
-      minx_twid_v.push_back( std::vector<float>{ endpointdata.endpt_tyz_v[startidx][0],
-            endpointdata.endpt_wid_v[startidx][0],
-            endpointdata.endpt_wid_v[startidx][1],
-            endpointdata.endpt_wid_v[startidx][2] } );
-      maxx_pts_v.push_back( endpointdata.endpt_tyz_v[endidx] );
-      maxx_twid_v.push_back( std::vector<float>{ endpointdata.endpt_tyz_v[endidx][0],
-            endpointdata.endpt_wid_v[endidx][0],
-            endpointdata.endpt_wid_v[endidx][1],
-            endpointdata.endpt_wid_v[endidx][2] } );
+      if ( isgood_v[0]==1 && isgood_v[1]==1 ) {
+        // we can modify the bounds
+        int startidx = 0;
+        int endidx = 1;
+        if ( endpointdata.endpt_tyz_v[0][2] > endpointdata.endpt_tyz_v[1][2] ) {
+          startidx = 1;
+          endidx = 0;
+        }
+        
+        for ( size_t p=0; p<3; p++ ) {
+          auto const& meta = crop_v[p].meta();
+          float min_wire = endpointdata.endpt_wid_v[startidx][p];
+          float max_wire = endpointdata.endpt_wid_v[endidx][p];
+
+          if ( min_wire<0 ) // happens when original end point is outside of the detector (oops)
+            min_wire = endpts_twid_v[startidx][p+1];
+          if ( max_wire<0 )
+            max_wire = endpts_twid_v[endidx][p+1];
+          
+          bounds_v[p].points[0][0] = meta.col( min_wire, __FILE__, __LINE__ ); // min wire
+          bounds_v[p].points[0][1] = meta.row( endpointdata.endpt_tyz_v[startidx][0], __FILE__, __LINE__ );
+          bounds_v[p].points[1][0] = meta.col( max_wire, __FILE__, __LINE__ ); // max wire
+          bounds_v[p].points[1][1] = meta.row( endpointdata.endpt_tyz_v[endidx][0], __FILE__, __LINE__  );
+        }
+
+        minx_pts_v.push_back( endpointdata.endpt_tyz_v[startidx] );
+        minx_twid_v.push_back( std::vector<float>{ endpointdata.endpt_tyz_v[startidx][0],
+              endpointdata.endpt_wid_v[startidx][0],
+              endpointdata.endpt_wid_v[startidx][1],
+              endpointdata.endpt_wid_v[startidx][2] } );
+        maxx_pts_v.push_back( endpointdata.endpt_tyz_v[endidx] );
+        maxx_twid_v.push_back( std::vector<float>{ endpointdata.endpt_tyz_v[endidx][0],
+              endpointdata.endpt_wid_v[endidx][0],
+              endpointdata.endpt_wid_v[endidx][1],
+              endpointdata.endpt_wid_v[endidx][2] } );
+      }
+      else {
+        goodendpts = false;
+      }
     }
-    else {
+    
+    if ( !goodendpts ) {
       // Use bounds of contour meta on Y-plane to propose additional 3D endpoints     
       LARCV_DEBUG() << "[Gen (wire,tick) plane pairs for min-x end point]" << std::endl;
       
@@ -230,7 +243,7 @@ namespace dltagger {
     
     // make graph components
     makeGraph( m_points3d_v, m_graph_nodes, m_distmap, m_pixgapmap );
-
+    
     shortestpath( m_graph_nodes, m_distmap, m_pixgapmap, m_maxgapdist, m_path_xyz );
 
     // conversion path to image coordinates
@@ -417,7 +430,7 @@ namespace dltagger {
         if ( tyz[0]<crops_v.front().meta().min_y() || tyz[0]>=crops_v.front().meta().max_y() )
           continue;
 
-        int row = crops_v.front().meta().row( tyz[0] );
+        int row = crops_v.front().meta().row( tyz[0], __FILE__, __LINE__ );
         good_twid_v[idxstart][0] = tyz[0];
         
         int ngoodplanes = 0;
@@ -429,7 +442,7 @@ namespace dltagger {
             break;
           }
           
-          int col = crops_v[p].meta().col( wireco );
+          int col = crops_v[p].meta().col( wireco, __FILE__, __LINE__ );
           good_twid_v[idxstart][p+1] = wireco;          
 
           float maxpixval = 0;
@@ -524,8 +537,8 @@ namespace dltagger {
       return;
 
     // initial pixel coordinate
-    int col = maskimg.meta().col(wireco);
-    int row = maskimg.meta().row(tick);
+    int col = maskimg.meta().col(wireco, __FILE__, __LINE__ );
+    int row = maskimg.meta().row(tick, __FILE__, __LINE__ );
 
     // scan along ypos @ tick for charge.
     // to avoid duplicate points in same neighborhood, we find the maximum of a region with charge
@@ -554,7 +567,7 @@ namespace dltagger {
       }
 
       // get pixel coordinate of wire
-      col = maskimg.meta().col(wireco);
+      col = maskimg.meta().col(wireco, __FILE__, __LINE__ );
 
       // get pixel value
       pixval = maskimg.pixel(row,col);
@@ -626,7 +639,7 @@ namespace dltagger {
     }
     
     // initial pixel coordinate
-    int col = maskimg.meta().col(wireco);
+    int col = maskimg.meta().col(wireco, __FILE__, __LINE__ );
 
     // scan along ypos @ tick for charge.
     // to avoid duplicate points in same neighborhood, we find the maximum of a region with charge
@@ -732,8 +745,8 @@ namespace dltagger {
         // look for charge or bad ch
         bool hascharge = false;
         if ( missingwire>=crops_v[missingplane].meta().min_x() && missingwire<crops_v[missingplane].meta().max_x() ) {
-          int col = crops_v[missingplane].meta().col(missingwire);
-          int row = crops_v[missingplane].meta().row(tick);
+          int col = crops_v[missingplane].meta().col(missingwire, __FILE__, __LINE__ );
+          int row = crops_v[missingplane].meta().row(tick, __FILE__, __LINE__ );
           float maxpixval = 0;
           float maxbadval = 0;
           for ( int dr=-2; dr<=2; dr++ ) {
@@ -838,8 +851,8 @@ namespace dltagger {
         // look for charge or bad ch
         bool hascharge = false;
         if ( missingwire>=crops_v[missingplane].meta().min_x() && missingwire<crops_v[missingplane].meta().max_x() ) {
-          int col = crops_v[missingplane].meta().col(missingwire);
-          int row = crops_v[missingplane].meta().row(tick);
+          int col = crops_v[missingplane].meta().col(missingwire, __FILE__, __LINE__ );
+          int row = crops_v[missingplane].meta().row(tick, __FILE__, __LINE__ );
           float maxpixval = 0;
           float maxbadval = 0;
           for ( int dr=-2; dr<=2; dr++ ) {
@@ -1173,13 +1186,13 @@ namespace dltagger {
       // get wires
       std::vector<int> rowcol_v; // 4 coordinates (row,col on each plane...)
       rowcol_v.reserve(4);
-      rowcol_v.push_back( input_v[0].meta().row(tick) );
+      rowcol_v.push_back( input_v[0].meta().row(tick, __FILE__, __LINE__ ) );
       for ( size_t pl=0; pl<nplanes; pl++ ) {
         float wirecoord = larutil::Geometry::GetME()->WireCoordinate( pos, pl );
         if ( wirecoord<input_v[pl].meta().min_x() || wirecoord>=input_v[pl].meta().max_x() ) {
           break;
         }
-        rowcol_v.push_back( (int)input_v[pl].meta().col( wirecoord ) );
+        rowcol_v.push_back( (int)input_v[pl].meta().col( wirecoord, __FILE__, __LINE__ ) );
       }
       
       if ( rowcol_v.size()!=(1+nplanes) ) {

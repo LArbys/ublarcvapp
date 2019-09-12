@@ -33,7 +33,8 @@ namespace dltagger {
     _output_tagged_image       = pset.get<std::string>("OutputTaggerImage","thrumu");
     _output_notcosmic_image    = pset.get<std::string>("OutputNotCosmicImage","notcosmic");
     _output_cosmic_clusters    = pset.get<std::string>("OutputCosmicPixelCluster","thrumupixels");
-    _output_notcosmic_clusters = pset.get<std::string>("OutputNotCosmicPixelCluster", "notcosmic");    
+    _output_notcosmic_clusters = pset.get<std::string>("OutputNotCosmicPixelCluster", "notcosmic");
+    _output_allreco_clusters   = pset.get<std::string>("OutputAllRecoCluster","allreco");        
     _output_croi               = pset.get<std::string>("OutputCROI","croi");
     _output_croi_merged        = pset.get<std::string>("OutputMergedCROI","croimerged");
 
@@ -140,6 +141,8 @@ namespace dltagger {
       = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_cosmic_clusters );
     larcv::EventPixel2D* evout_notcosmic_clusters
       = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_notcosmic_clusters );
+    larcv::EventPixel2D* evout_allreco_clusters
+      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_allreco_clusters );
 
     larcv::EventROI* ev_croi
       = (larcv::EventROI*)mgr.get_data( larcv::kProductROI, _output_croi );
@@ -149,11 +152,24 @@ namespace dltagger {
     std::vector<larcv::Image2D> tagged_v;
     std::vector<larcv::Image2D> notcosmic_v;    
     m_tagger.transferImages( tagged_v, notcosmic_v );
+
     evout_tagged->Emplace( std::move(tagged_v) );
     evout_notcosmic->Emplace( std::move(notcosmic_v) );    
     
     m_tagger.transferPixelClusters( *evout_cosmic_clusters, *evout_notcosmic_clusters );
 
+    // copy contents of pixel clusters to all reco
+    for ( size_t p=0; p< 3; p++ ) {
+      auto const& pixcluster_v     = evout_cosmic_clusters->Pixel2DClusterArray(p);
+      auto const& pixclustermeta_v = evout_cosmic_clusters->ClusterMetaArray(p);
+      for ( size_t ic=0; ic<pixcluster_v.size(); ic++ ) 
+        evout_allreco_clusters->Append( p, pixcluster_v[ic], pixclustermeta_v[ic] );
+      auto const& pixcluster2_v     = evout_notcosmic_clusters->Pixel2DClusterArray(p);
+      auto const& pixclustermeta2_v = evout_notcosmic_clusters->ClusterMetaArray(p);
+      for ( size_t ic=0; ic<pixcluster2_v.size(); ic++ ) 
+        evout_allreco_clusters->Append( p, pixcluster2_v[ic], pixclustermeta2_v[ic] );
+    }
+    
     m_tagger.transferCROI( *ev_croi, *ev_croi_merged );
 
     fillAnaVars( *ev_wire, ev_mcinstance, ev_mcpartroi, *evout_tagged, *evout_notcosmic  );

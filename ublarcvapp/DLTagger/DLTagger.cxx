@@ -78,6 +78,7 @@ namespace dltagger {
     m_iscosmic_v.clear();
     m_select_vars_v.clear();
     _mask_match_algo.clear();
+    hasRun = false;
   }
 
   /**
@@ -188,19 +189,122 @@ namespace dltagger {
 
       LARCV_DEBUG() << "--------------------------------------" << std::endl;
       LARCV_DEBUG() << "tagging with combo[" << icombo << "] from AStar list" << std::endl;
-      
+
+      auto& cropcombo  = matchdata.m_combo_crops_v[icombo];
       auto& astarcombo = matchdata.m_combo_astar_v[icombo];
       auto& endptcombo = matchdata.m_combo_endpt3d_v[icombo];
+      auto& graphcombo = matchdata.m_combo_graphpts_v[icombo];
 
       // for now, skip on tracks that did not complete
-      if ( astarcombo.astar_completed==0 ) {
-        LARCV_DEBUG() << "  astar not complete. fill empty pixel cluster" << std::endl;
-        // create an empty clusters
+      if ( matchdata.m_pass[icombo]==0 ) {
+        LARCV_DEBUG() << "  reco considered failure. skip." << std::endl;
         for ( size_t p=0; p<wholeview_v.size(); p++ ) {
           pixel_cluster_vv[p].push_back( larcv::Pixel2DCluster() );
         }
         continue;
       }
+
+      // we use the graph path unless there is none and we have the astar path
+      // if we have to use the astar path, we get a list of tick,wid
+      std::vector< std::vector<float> > astar_twid_v;
+      if ( graphcombo.m_path_twid_v.size()==0 ) {
+        LARCV_DEBUG() << " fill astar_twid_v" << std::endl;
+        const std::vector<reco3d::AStar3DNode>& astar_path = astarcombo.astar_path;
+        for ( auto const& node : astar_path ) {
+          std::vector<float> node_twid(4,0);
+          // convert to wire in crop coord, then to whole image wid
+          node_twid[0] = cropcombo.crops_v[0].meta().pos_y( node.row );
+          for (int p=0; p<3; p++ ) {
+            node_twid[p+1] = cropcombo.crops_v[p].meta().pos_x( node.cols[p] );
+          }
+          astar_twid_v.push_back( node_twid );
+        }
+      }
+
+      std::vector< larcv::Pixel2DCluster > pix_v(wholeview_v.size());
+      const std::vector< std::vector<float> >* path_twid_v = nullptr;
+      if ( graphcombo.m_path_twid_v.size()>0 )
+        path_twid_v = &graphcombo.m_path_twid_v;
+      else
+        path_twid_v = &astar_twid_v;
+      
+
+      for ( int ipt=0; ipt<(int)path_twid_v->size()-1; ipt++ ) {
+
+        auto const& twid1_v = (*path_twid_v)[ipt];
+        auto const& twid2_v = (*path_twid_v)[ipt+1];
+        if ( twid1_v.size()!=wholeview_v.size()+1 || twid2_v.size()!=wholeview_v.size()+1 ) {
+          LARCV_CRITICAL() << "number of wire coordinates does not equal the number of planes!" << std::endl;
+          throw larcv::larbys();
+        }
+
+
+        float tick1 = twid1_v[0];
+        float tick2 = twid2_v[0];
+        if ( tick1<wholeview_v[0].meta().min_y() || tick1>=wholeview_v[0].meta().max_y() )
+          continue;
+        if ( tick2<wholeview_v[0].meta().min_y() || tick2>=wholeview_v[0].meta().max_y() )
+          continue;
+
+        for (size_t p=0; p<wholeview_v.size(); p++ ) {
+          auto const& meta = wholeview_v[p].meta();
+
+          float wid1 = twid1_v[p+1];
+          float wid2 = twid2_v[p+1];
+          if ( wid1<meta.min_x() || wid1>=meta.max_x() ) continue;
+          if ( wid2<meta.min_x() || wid2>=meta.max_x() ) continue;
+          
+          // move from point to the next
+          float dir[2] = { 0, 0 };
+          dir[0] = (float)meta.col(twid2_v[p+1])-(float)meta.col(twid1_v[p+1]);
+          dir[1] = (float)meta.row(twid2_v[0])-(float)meta.row(twid1_v[0]); // {wire,tick}
+          float dirlen = sqrt( dir[0]*dir[0] + dir[1]*dir[1] );
+          if (dirlen==0) continue;
+          for (int i=0; i<2; i++ ) dir[i] /= dirlen;
+          
+          int nsteps = dirlen/0.15 + 1;
+          float stepsize = dirlen/float(nsteps);
+          
+          for (int istep=0; istep<=nsteps; istep++ ) {
+            float col = (float)meta.col(twid1_v[p+1]) + istep*stepsize*dir[0];
+            float row = (float)meta.row(twid1_v[0]) + istep*stepsize*dir[1];
+            
+            for (int dr=-2; dr<=2; dr++ ) {
+              int r = (int)row+dr;
+              if ( r<0 || r>=(int)meta.rows() ) continue;
+              for (int dc=-2; dc<=2; dc++ ) {
+                int c = (int)col+dc;
+                if ( c<0 || c>=(int)meta.cols() ) continue;
+                
+                float pixval = wholeview_v[p].pixel(r,c);
+                if ( pixval>10.0 ) {
+                  larcv::Pixel2D pix( c, r );
+                  pix.Intensity( pixval );
+                  pix_v[p] += pix;
+                }
+              }//end of col neighorhood loop
+            }//end of row neighborhood
+          }//end of steps
+          
+        }//end of plane loop
+        
+      }//end of loop over path segements
+
+      for (size_t p=0; p<3; p++ ) {
+        pixel_cluster_vv[p].emplace_back( std::move(pix_v[p]) );
+      }
+      
+      // ------------
+      // CRUFT BELOW
+      // ------------
+      
+      //   LARCV_DEBUG() << "  astar not complete. fill empty pixel cluster" << std::endl;
+      //   // create an empty clusters
+      //   for ( size_t p=0; p<wholeview_v.size(); p++ ) {
+      //     pixel_cluster_vv[p].push_back( larcv::Pixel2DCluster() );
+      //   }
+      //   continue;
+      // }
       
       // we want to follow the track and pick up pixels within
       //  charge contour clusters close to the path
@@ -210,250 +314,255 @@ namespace dltagger {
       //   = _mask_match_algo.m_combo_features_v[icombo].combo_mask_contour.m_plane_atomics_v;
       // auto const& plane_contour_metas_vv
       //   = _mask_match_algo.m_combo_features_v[icombo].combo_mask_contour.m_plane_atomicmeta_v;
+
+      // this seems overly complicated. we just follow the 3d path and sweep up pixels
+      // below was code that found contours first, then something.
       
-      // charge image: above threshold
-      auto& plane_contours_vv
-        = _mask_match_algo.m_combo_features_v[icombo].combo_charge_contour.m_plane_atomics_v;
-      auto& plane_contour_metas_vv
-        = _mask_match_algo.m_combo_features_v[icombo].combo_charge_contour.m_plane_atomicmeta_v;
+      // // charge image: above threshold
+      // auto& plane_contours_vv
+      //   = _mask_match_algo.m_combo_features_v[icombo].combo_charge_contour.m_plane_atomics_v;
+      // auto& plane_contour_metas_vv
+      //   = _mask_match_algo.m_combo_features_v[icombo].combo_charge_contour.m_plane_atomicmeta_v;
 
 
-      const std::vector<reco3d::AStar3DNode>& path = astarcombo.astar_path;
+      // const std::vector<reco3d::AStar3DNode>& path = astarcombo.astar_path;
 
-      for ( size_t p=0; p<plane_contours_vv.size(); p++ ) {
+      // for ( size_t p=0; p<plane_contours_vv.size(); p++ ) {
 
-        const larcv::ImageMeta* cropmeta = &matchdata.m_combo_crops_v[icombo].crops_v[p].meta();
-        if ( cropmeta->cols()==0 || cropmeta->rows()==0 ) {
-          // 2 plane match, where this plane crop is empty
-          // replace using missing image
-          cropmeta = &_mask_match_algo.m_combo_crops_v[icombo].missing_v[p].meta();
+      //   const larcv::ImageMeta* cropmeta = &matchdata.m_combo_crops_v[icombo].crops_v[p].meta();
+      //   if ( cropmeta->cols()==0 || cropmeta->rows()==0 ) {
+      //     // 2 plane match, where this plane crop is empty
+      //     // replace using missing image
+      //     cropmeta = &_mask_match_algo.m_combo_crops_v[icombo].missing_v[p].meta();
 
-          // also out contours will be missing
-          // we place them here
-          ContourClusterAlgo clusteralgo;
-          ContourList_t contour_v;
-          std::vector<ContourIndices_t> hull_v;
-          std::vector<Defects_t> defects_v;
-          clusteralgo.analyzeImage( _mask_match_algo.m_combo_crops_v[icombo].missing_v[p],
-                                    contour_v,
-                                    hull_v,
-                                    defects_v,
-                                    plane_contours_vv.at(p),
-                                    plane_contour_metas_vv.at(p) );
-        }
+      //     // also out contours will be missing
+      //     // we place them here
+      //     ContourClusterAlgo clusteralgo;
+      //     ContourList_t contour_v;
+      //     std::vector<ContourIndices_t> hull_v;
+      //     std::vector<Defects_t> defects_v;
+      //     clusteralgo.analyzeImage( _mask_match_algo.m_combo_crops_v[icombo].missing_v[p],
+      //                               contour_v,
+      //                               hull_v,
+      //                               defects_v,
+      //                               plane_contours_vv.at(p),
+      //                               plane_contour_metas_vv.at(p) );
+      //   }
 
-        // the image we fill with contour pixels. around crop
-        larcv::Image2D fillimg(*cropmeta);
-        fillimg.paint(0.0);
-        //LARCV_DEBUG() << "fill image: " << cropmeta->dump() << std::endl;
+      //   // the image we fill with contour pixels. around crop
+      //   larcv::Image2D fillimg(*cropmeta);
+      //   fillimg.paint(0.0);
+      //   //LARCV_DEBUG() << "fill image: " << cropmeta->dump() << std::endl;
         
-        auto const& contours_v    = plane_contours_vv[p];
-        auto const& contourmeta_v = plane_contour_metas_vv[p];
-        std::vector<int> contourkept( contours_v.size(), 0 );
-        int ncontours = contours_v.size();
-        int naccepted = 0;
+      //   auto const& contours_v    = plane_contours_vv[p];
+      //   auto const& contourmeta_v = plane_contour_metas_vv[p];
+      //   std::vector<int> contourkept( contours_v.size(), 0 );
+      //   int ncontours = contours_v.size();
+      //   int naccepted = 0;
 
-        //LARCV_DEBUG() << "contours in image: " << ncontours << std::endl;
+      //   //LARCV_DEBUG() << "contours in image: " << ncontours << std::endl;
         
-        for ( size_t inode=0; inode<path.size()-1; inode++ ) {
-          auto& node     = path[inode];
-          auto& nextnode = path[inode+1];
+      //   for ( size_t inode=0; inode<path.size()-1; inode++ ) {
+      //     auto& node     = path[inode];
+      //     auto& nextnode = path[inode+1];
 
-          //LARCV_DEBUG() << "node[" << inode << "]" << std::endl;          
-          // want step end points in pixel coordinates (same coordinates as contours)
-          float startpt[2] = { (float)node.cols[p],     (float)cropmeta->row(node.tyz[0]) };
-          float endpt[2]   = { (float)nextnode.cols[p], (float)cropmeta->row(nextnode.tyz[0]) };
-          //LARCV_DEBUG() << "node[" << inode << "] start=(" << startpt[0] << "," << startpt[1] << ") "
-          //              << "end=(" << endpt[0] << "," << endpt[1] << ")" << std::endl;
+      //     //LARCV_DEBUG() << "node[" << inode << "]" << std::endl;          
+      //     // want step end points in pixel coordinates (same coordinates as contours)
+      //     float startpt[2] = { (float)node.cols[p],     (float)cropmeta->row(node.tyz[0]) };
+      //     float endpt[2]   = { (float)nextnode.cols[p], (float)cropmeta->row(nextnode.tyz[0]) };
+      //     //LARCV_DEBUG() << "node[" << inode << "] start=(" << startpt[0] << "," << startpt[1] << ") "
+      //     //              << "end=(" << endpt[0] << "," << endpt[1] << ")" << std::endl;
           
-          // get dir and length between nodes
-          float stepdir[2] = {0};
-          float steplen = 0.;
-          for (int i=0; i<2; i++ ) {
-            stepdir[i] = endpt[i]-startpt[i];
-            steplen += stepdir[i]*stepdir[i];
-          }
-          steplen = sqrt(steplen);
-          for ( int i=0; i<2; i++ ) stepdir[i] /= steplen;
+      //     // get dir and length between nodes
+      //     float stepdir[2] = {0};
+      //     float steplen = 0.;
+      //     for (int i=0; i<2; i++ ) {
+      //       stepdir[i] = endpt[i]-startpt[i];
+      //       steplen += stepdir[i]*stepdir[i];
+      //     }
+      //     steplen = sqrt(steplen);
+      //     for ( int i=0; i<2; i++ ) stepdir[i] /= steplen;
           
-          // step in the smallest dimension (as long as its not zero)
-          float step = 1.0;
-          // if ( stepdir[0]==0 )      step = 1.0/stepdir[1];
-          // else if ( stepdir[1]==0 ) step = 1.0/stepdir[0];
-          // else {
-          //   step = ( stepdir[0]>stepdir[1] ) ? 1.0/stepdir[0] : 1.0/stepdir[1];
-          // }
+      //     // step in the smallest dimension (as long as its not zero)
+      //     float step = 1.0;
+      //     // if ( stepdir[0]==0 )      step = 1.0/stepdir[1];
+      //     // else if ( stepdir[1]==0 ) step = 1.0/stepdir[0];
+      //     // else {
+      //     //   step = ( stepdir[0]>stepdir[1] ) ? 1.0/stepdir[0] : 1.0/stepdir[1];
+      //     // }
 
-          // set number of steps
-          int nsteps = (steplen/step);
+      //     // set number of steps
+      //     int nsteps = (steplen/step);
 
-          // because of the image downsampling used by Astar,
-          // we could be (or are usually?) far off the path initially
-          // we define a bounding box around the step with some padding
-          float minx = ( startpt[0] < endpt[0] ) ? startpt[0] : endpt[0];
-          float maxx = ( startpt[0] > endpt[0] ) ? startpt[0] : endpt[0];
-          float miny = ( startpt[1] < endpt[1] ) ? startpt[1] : endpt[1];
-          float maxy = ( startpt[1] > endpt[1] ) ? startpt[1] : endpt[1];
+      //     // because of the image downsampling used by Astar,
+      //     // we could be (or are usually?) far off the path initially
+      //     // we define a bounding box around the step with some padding
+      //     float minx = ( startpt[0] < endpt[0] ) ? startpt[0] : endpt[0];
+      //     float maxx = ( startpt[0] > endpt[0] ) ? startpt[0] : endpt[0];
+      //     float miny = ( startpt[1] < endpt[1] ) ? startpt[1] : endpt[1];
+      //     float maxy = ( startpt[1] > endpt[1] ) ? startpt[1] : endpt[1];
 
-          // expand bounding box by downsample factor
-          minx -= 16;
-          miny -= 16*6;
-          maxx += 16;
-          maxy += 16*6;
+      //     // expand bounding box by downsample factor
+      //     minx -= 16;
+      //     miny -= 16*6;
+      //     maxx += 16;
+      //     maxy += 16*6;
 
-          // test against all the contours, against bounding box first
-          std::vector<int> test_indices;
-          test_indices.reserve( contours_v.size() ); // reserve maximum size
-          for ( size_t ictr=0; ictr<contours_v.size(); ictr++ ) {
-            if ( contourkept[ictr]==1 ) continue; // already kept, no need to check further
+      //     // test against all the contours, against bounding box first
+      //     std::vector<int> test_indices;
+      //     test_indices.reserve( contours_v.size() ); // reserve maximum size
+      //     for ( size_t ictr=0; ictr<contours_v.size(); ictr++ ) {
+      //       if ( contourkept[ictr]==1 ) continue; // already kept, no need to check further
             
-            auto const& contour = contours_v[ictr];
-            auto const& contourmeta = contourmeta_v[ictr];
+      //       auto const& contour = contours_v[ictr];
+      //       auto const& contourmeta = contourmeta_v[ictr];
             
-            // we test bounding box first for quick test
-            if ( maxx < contourmeta.getMinX() ||
-                 minx > contourmeta.getMaxX() ||
-                 maxy < contourmeta.getMinY() ||
-                 miny > contourmeta.getMaxY() )
-              continue;
+      //       // we test bounding box first for quick test
+      //       if ( maxx < contourmeta.getMinX() ||
+      //            minx > contourmeta.getMaxX() ||
+      //            maxy < contourmeta.getMinY() ||
+      //            miny > contourmeta.getMaxY() )
+      //         continue;
             
-            test_indices.push_back(ictr);
-          }//end of loop over contours
+      //       test_indices.push_back(ictr);
+      //     }//end of loop over contours
 
-          //LARCV_DEBUG() << "node[" << inode << "] contours to test: " << test_indices.size() << std::endl;
+      //     //LARCV_DEBUG() << "node[" << inode << "] contours to test: " << test_indices.size() << std::endl;
           
-          // nothing to test
-          if ( test_indices.size()==0 )
-            continue;
+      //     // nothing to test
+      //     if ( test_indices.size()==0 )
+      //       continue;
           
-          // now we step along line, testing as we go
-          std::vector<int> accepted(test_indices.size(),0);
-          int ntestok = 0;
-          for (int istep=0; istep<nsteps; istep++ ) {
-            float x = startpt[0] + istep*step*stepdir[0];
-            float y = startpt[1] + istep*step*stepdir[1];
+      //     // now we step along line, testing as we go
+      //     std::vector<int> accepted(test_indices.size(),0);
+      //     int ntestok = 0;
+      //     for (int istep=0; istep<nsteps; istep++ ) {
+      //       float x = startpt[0] + istep*step*stepdir[0];
+      //       float y = startpt[1] + istep*step*stepdir[1];
 
-            // loop over contours to test
-            for ( size_t itest=0; itest<test_indices.size(); itest++ ) {
-              if ( accepted[itest]==1 ) continue; // no need to check further
-              float dist = cv::pointPolygonTest( contours_v[ test_indices[itest] ], cv::Point(x,y), true );
-              if ( fabs(dist)<16.0 ) {
-                accepted[itest] = 1;
-                contourkept[ test_indices[itest] ] = 1;
-                ntestok++;
-                naccepted++;
-              }
-              // all accepted, stop
-              if ( ntestok==test_indices.size() )
-                break;
-            }
+      //       // loop over contours to test
+      //       for ( size_t itest=0; itest<test_indices.size(); itest++ ) {
+      //         if ( accepted[itest]==1 ) continue; // no need to check further
+      //         float dist = cv::pointPolygonTest( contours_v[ test_indices[itest] ], cv::Point(x,y), true );
+      //         if ( fabs(dist)<16.0 ) {
+      //           accepted[itest] = 1;
+      //           contourkept[ test_indices[itest] ] = 1;
+      //           ntestok++;
+      //           naccepted++;
+      //         }
+      //         // all accepted, stop
+      //         if ( ntestok==test_indices.size() )
+      //           break;
+      //       }
             
-            /// all accepted, stop
-            if ( ntestok==test_indices.size() )
-              break;
-          }//end of loop over step between node points
+      //       /// all accepted, stop
+      //       if ( ntestok==test_indices.size() )
+      //         break;
+      //     }//end of loop over step between node points
 
-          //LARCV_DEBUG() << "  node[" << inode << "] contours accepted " << ntestok << std::endl;          
+      //     //LARCV_DEBUG() << "  node[" << inode << "] contours accepted " << ntestok << std::endl;          
 
-          // we accepted all the contours in this crop. done!
-          if ( naccepted==ncontours )
-            break;
+      //     // we accepted all the contours in this crop. done!
+      //     if ( naccepted==ncontours )
+      //       break;
           
-        }// loop over node points
+      //   }// loop over node points
 
-        LARCV_DEBUG() << "  contours accepted plane[" << p << "]: accepted=" << naccepted << " of ncontours=" << ncontours << std::endl;
+      //   LARCV_DEBUG() << "  contours accepted plane[" << p << "]: accepted=" << naccepted << " of ncontours=" << ncontours << std::endl;
         
-        // got accepted contours
-        // mark up image
+      //   // got accepted contours
+      //   // mark up image
         
-        // contour metas have the charge pixels conveniently collected
-        auto& fullmeta = wholeview_v[p].meta();
+      //   // contour metas have the charge pixels conveniently collected
+      //   auto& fullmeta = wholeview_v[p].meta();
 
-        larcv::Pixel2DCluster pixcluster;
+      //   larcv::Pixel2DCluster pixcluster;
         
-        for ( int ictr=0; ictr<ncontours; ictr++ ) {
-          if ( contourkept[ictr]==0 ) continue;
+      //   for ( int ictr=0; ictr<ncontours; ictr++ ) {
+      //     if ( contourkept[ictr]==0 ) continue;
 
-          auto const& contourmeta = contourmeta_v[ictr];
-          auto const& qpixels = contourmeta.getChargePixels();
+      //     auto const& contourmeta = contourmeta_v[ictr];
+      //     auto const& qpixels = contourmeta.getChargePixels();
 
 
-          int nearpath = 0;
-          int farpath  = 0;
-          for ( auto const& pix2d : qpixels ) {
-            int col = pix2d.x;
-            int row = pix2d.y;
-            if ( col<0 || col>=(int)cropmeta->cols() ) continue;
-            if ( row<0 || row>=(int)cropmeta->rows() ) continue;
+      //     int nearpath = 0;
+      //     int farpath  = 0;
+      //     for ( auto const& pix2d : qpixels ) {
+      //       int col = pix2d.x;
+      //       int row = pix2d.y;
+      //       if ( col<0 || col>=(int)cropmeta->cols() ) continue;
+      //       if ( row<0 || row>=(int)cropmeta->rows() ) continue;
 
-            // pixels need to stay close to the line (in pixel coords)
-            // if astar, find closest segment and then distance to segment
-            float distfrompath = 0.;
-            if ( astarcombo.used_astar ) {
-              // astar method
-              int closest_segment = -1;
-              float min_seg_dist = 0;
-              for ( int inode=0; inode<(int)astarcombo.astar_path.size()-1; inode++ ) {
-                auto const& nodeA = astarcombo.astar_path.at(inode);
-                auto const& nodeB = astarcombo.astar_path.at(inode+1);
-                float pixdistA = sqrt((col-nodeA.cols[p])*(col-nodeA.cols[p]) + (row-nodeA.row)*(row-nodeA.row));
-                float pixdistB = sqrt((col-nodeB.cols[p])*(col-nodeB.cols[p]) + (row-nodeB.row)*(row-nodeB.row));
-                float pixdist = pixdistA + pixdistB;
-                if ( closest_segment<0 || pixdist<min_seg_dist ) {
-                  closest_segment = inode;
-                  min_seg_dist = pixdist;
-                }
-              }
+      //       // pixels need to stay close to the line (in pixel coords)
+      //       // if astar, find closest segment and then distance to segment
+      //       float distfrompath = 0.;
+      //       if ( astarcombo.used_astar ) {
+      //         // astar method
+      //         int closest_segment = -1;
+      //         float min_seg_dist = 0;
+      //         for ( int inode=0; inode<(int)astarcombo.astar_path.size()-1; inode++ ) {
+      //           auto const& nodeA = astarcombo.astar_path.at(inode);
+      //           auto const& nodeB = astarcombo.astar_path.at(inode+1);
+      //           float pixdistA = sqrt((col-nodeA.cols[p])*(col-nodeA.cols[p]) + (row-nodeA.row)*(row-nodeA.row));
+      //           float pixdistB = sqrt((col-nodeB.cols[p])*(col-nodeB.cols[p]) + (row-nodeB.row)*(row-nodeB.row));
+      //           float pixdist = pixdistA + pixdistB;
+      //           if ( closest_segment<0 || pixdist<min_seg_dist ) {
+      //             closest_segment = inode;
+      //             min_seg_dist = pixdist;
+      //           }
+      //         }
 
-              // define line segment and point in Geo2D, then get dist to line
-              auto const& closenodeA = astarcombo.astar_path[closest_segment];
-              auto const& closenodeB = astarcombo.astar_path[closest_segment+1];              
-              geo2d::LineSegment<float> segment( closenodeA.cols[p], closenodeA.row, closenodeB.cols[p], closenodeB.row );
-              geo2d::Vector<float> pt( col, row );
-              distfrompath = geo2d::Distance( segment, pt );
-            }
-            else {
-              // straight line method
-              geo2d::LineSegment<float> segment( astarcombo.astar_path.front().cols[p], astarcombo.astar_path.front().row,
-                                                 astarcombo.astar_path.back().cols[p], astarcombo.astar_path.back().row );
-              geo2d::Vector<float> pt( col, row );
-              distfrompath = geo2d::Distance( segment, pt );
-            }
+      //         // define line segment and point in Geo2D, then get dist to line
+      //         auto const& closenodeA = astarcombo.astar_path[closest_segment];
+      //         auto const& closenodeB = astarcombo.astar_path[closest_segment+1];              
+      //         geo2d::LineSegment<float> segment( closenodeA.cols[p], closenodeA.row, closenodeB.cols[p], closenodeB.row );
+      //         geo2d::Vector<float> pt( col, row );
+      //         distfrompath = geo2d::Distance( segment, pt );
+      //       }
+      //       else {
+      //         // straight line method
+      //         geo2d::LineSegment<float> segment( astarcombo.astar_path.front().cols[p], astarcombo.astar_path.front().row,
+      //                                            astarcombo.astar_path.back().cols[p], astarcombo.astar_path.back().row );
+      //         geo2d::Vector<float> pt( col, row );
+      //         distfrompath = geo2d::Distance( segment, pt );
+      //       }
 
-            if ( distfrompath>_max_pixdist_from_path ) {
-              farpath++;
-              continue;
-            }
-            else
-              nearpath++;
+      //       if ( distfrompath>_max_pixdist_from_path ) {
+      //         farpath++;
+      //         continue;
+      //       }
+      //       else
+      //         nearpath++;
             
-            float wire = cropmeta->pos_x(col);
-            float tick = cropmeta->pos_y(row);
+      //       float wire = cropmeta->pos_x(col);
+      //       float tick = cropmeta->pos_y(row);
 
-            if ( wire<fullmeta.min_x() || wire>=fullmeta.max_x() ) continue;
-            if ( tick<fullmeta.min_y() || tick>=fullmeta.max_y() ) continue;
+      //       if ( wire<fullmeta.min_x() || wire>=fullmeta.max_x() ) continue;
+      //       if ( tick<fullmeta.min_y() || tick>=fullmeta.max_y() ) continue;
 
-            int xcol = fullmeta.col(wire);
-            int xrow = fullmeta.row(tick);
+      //       int xcol = fullmeta.col(wire);
+      //       int xrow = fullmeta.row(tick);
             
-            fillimg.set_pixel( row, col,  1.0 );
+      //       fillimg.set_pixel( row, col,  1.0 );
 
-            larcv::Pixel2D pix(xcol,xrow);
-            pix.Intensity( wholeview_v[p].pixel( xrow, xcol ) );
-            pixcluster += pix;
-          }
-          LARCV_DEBUG() << "  kept contour[" << ictr << "] "
-                        << " (pixels close to path)=" << nearpath
-                        << " (pixels far from path)=" << farpath
-                        << std::endl;
-        }
-        LARCV_DEBUG() << "-- pixels in cluster plane[" << p << "]: " << pixcluster.size() << std::endl;
-        plane_fill_images_v[p].emplace_back( std::move(fillimg) );
-        pixel_cluster_vv[p].emplace_back( std::move(pixcluster) );
+      //       larcv::Pixel2D pix(xcol,xrow);
+      //       pix.Intensity( wholeview_v[p].pixel( xrow, xcol ) );
+      //       pixcluster += pix;
+      //     }
+      //     LARCV_DEBUG() << "  kept contour[" << ictr << "] "
+      //                   << " (pixels close to path)=" << nearpath
+      //                   << " (pixels far from path)=" << farpath
+      //                   << std::endl;
+      //   }
+      //   LARCV_DEBUG() << "-- pixels in cluster plane[" << p << "]: " << pixcluster.size() << std::endl;
+      //   plane_fill_images_v[p].emplace_back( std::move(fillimg) );
+      //   pixel_cluster_vv[p].emplace_back( std::move(pixcluster) );
         
-      }//end of loop over planes
+      // }//end of loop over planes
       
     }//end of loop over matches
+
+    LARCV_INFO() << "number of pixel clusters made: " << pixel_cluster_vv.front().size() << std::endl;
     
   }
   
