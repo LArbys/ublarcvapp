@@ -12,6 +12,7 @@
 
 // larlite
 #include "DataFormat/opflash.h"
+#include "DataFormat/track.h"
 
 // mrcnnmatch
 #include "MRCNNMatch.h"
@@ -48,6 +49,10 @@ namespace dltagger {
                                 larcv::EventPixel2D& notcosmic_clusters );
 
     void transferCROI( larcv::EventROI& ev_croi_v, larcv::EventROI& ev_croi_merged );
+
+    void getCosmicTracks( larlite::event_track& ev_track );
+    void getNotCosmicTracks( larlite::event_track& ev_track );
+    void getAllGoodTracks( larlite::event_track& ev_track );
     
     bool hasData() { return hasRun; };
 
@@ -134,6 +139,15 @@ namespace dltagger {
                             std::vector<float>& frac_per_plane,
                             std::vector<int>& npixs,
                             float& total_frac );
+
+    // Track
+    // ------
+    larlite::event_track m_track_v;
+    void _makeTracks( const std::vector<larcv::Image2D>& wholeview_v,
+                      const MRCNNMatch& matchdata,
+                      larlite::event_track& ev_track_v );
+    
+    void _getTracks( int track_type, larlite::event_track& ev_track );
     
     // Cut Variable Values
     // -------------------

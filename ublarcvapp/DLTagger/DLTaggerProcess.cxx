@@ -40,7 +40,7 @@ namespace dltagger {
 
     // larlite output
     _output_larlite_file     = pset.get<std::string>("OutputLArLiteFile","dltaggerout_larlite.root");
-    _output_tracks           = pset.get<std::string>("OutputTracks","thrumu");
+    _output_tracks           = pset.get<std::string>("OutputTracks","dltagger");
 
     // BNB window
     _inbeam_win_start_tick = pset.get<int>("InBeamWindowStartTick");//215;
@@ -126,28 +126,20 @@ namespace dltagger {
     
     // OUTPUTS
 
-    // precuts
+    // croi    
+    larcv::EventROI* ev_croi
+      = (larcv::EventROI*)mgr.get_data( larcv::kProductROI, _output_croi );
+    larcv::EventROI* ev_croi_merged
+      = (larcv::EventROI*)mgr.get_data( larcv::kProductROI, _output_croi_merged );
+
+    m_tagger.transferCROI( *ev_croi, *ev_croi_merged );
     
-    // croi
-    
-    // tagger
+    // tagger images
     larcv::EventImage2D* evout_tagged
       = (larcv::EventImage2D*)mgr.get_data( larcv::kProductImage2D, _output_tagged_image );
 
     larcv::EventImage2D* evout_notcosmic
       = (larcv::EventImage2D*)mgr.get_data( larcv::kProductImage2D, _output_notcosmic_image );
-
-    larcv::EventPixel2D* evout_cosmic_clusters
-      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_cosmic_clusters );
-    larcv::EventPixel2D* evout_notcosmic_clusters
-      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_notcosmic_clusters );
-    larcv::EventPixel2D* evout_allreco_clusters
-      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_allreco_clusters );
-
-    larcv::EventROI* ev_croi
-      = (larcv::EventROI*)mgr.get_data( larcv::kProductROI, _output_croi );
-    larcv::EventROI* ev_croi_merged
-      = (larcv::EventROI*)mgr.get_data( larcv::kProductROI, _output_croi_merged );
 
     std::vector<larcv::Image2D> tagged_v;
     std::vector<larcv::Image2D> notcosmic_v;    
@@ -155,24 +147,47 @@ namespace dltagger {
 
     evout_tagged->Emplace( std::move(tagged_v) );
     evout_notcosmic->Emplace( std::move(notcosmic_v) );    
+
+    // pixel clusters
+    larcv::EventPixel2D* evout_cosmic_clusters
+      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_cosmic_clusters );
+    larcv::EventPixel2D* evout_notcosmic_clusters
+      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_notcosmic_clusters );
+    larcv::EventPixel2D* evout_allreco_clusters
+      = (larcv::EventPixel2D*)mgr.get_data( larcv::kProductPixel2D, _output_allreco_clusters );
     
     m_tagger.transferPixelClusters( *evout_cosmic_clusters, *evout_notcosmic_clusters );
 
     // copy contents of pixel clusters to all reco
     for ( size_t p=0; p< 3; p++ ) {
       auto const& pixcluster_v     = evout_cosmic_clusters->Pixel2DClusterArray(p);
-      auto const& pixclustermeta_v = evout_cosmic_clusters->ClusterMetaArray(p);
-      for ( size_t ic=0; ic<pixcluster_v.size(); ic++ ) 
-        evout_allreco_clusters->Append( p, pixcluster_v[ic], pixclustermeta_v[ic] );
+      if ( pixcluster_v.size()>0 ) {
+        auto const& pixclustermeta_v = evout_cosmic_clusters->ClusterMetaArray(p);
+        for ( size_t ic=0; ic<pixcluster_v.size(); ic++ ) 
+          evout_allreco_clusters->Append( p, pixcluster_v[ic], pixclustermeta_v[ic] );
+      }
       auto const& pixcluster2_v     = evout_notcosmic_clusters->Pixel2DClusterArray(p);
-      auto const& pixclustermeta2_v = evout_notcosmic_clusters->ClusterMetaArray(p);
-      for ( size_t ic=0; ic<pixcluster2_v.size(); ic++ ) 
-        evout_allreco_clusters->Append( p, pixcluster2_v[ic], pixclustermeta2_v[ic] );
+      if ( pixcluster2_v.size()>0 ) {
+        auto const& pixclustermeta2_v = evout_notcosmic_clusters->ClusterMetaArray(p);
+        for ( size_t ic=0; ic<pixcluster2_v.size(); ic++ ) 
+          evout_allreco_clusters->Append( p, pixcluster2_v[ic], pixclustermeta2_v[ic] );
+      }
     }
-    
-    m_tagger.transferCROI( *ev_croi, *ev_croi_merged );
 
+    // larlite tracks
+    larlite::event_track* evout_track_cosmic
+      = (larlite::event_track*)_larlite_io->get_data( larlite::data::kTrack, _output_tracks+"_cosmic" );
+    larlite::event_track* evout_track_notcosmic
+      = (larlite::event_track*)_larlite_io->get_data( larlite::data::kTrack, _output_tracks+"_notcosmic" );
+    larlite::event_track* evout_track_allreco
+      = (larlite::event_track*)_larlite_io->get_data( larlite::data::kTrack, _output_tracks+"_allreco" );
+    m_tagger.getCosmicTracks( *evout_track_cosmic );
+    m_tagger.getNotCosmicTracks( *evout_track_notcosmic );
+    m_tagger.getAllGoodTracks( *evout_track_allreco );
+      
     fillAnaVars( *ev_wire, ev_mcinstance, ev_mcpartroi, *evout_tagged, *evout_notcosmic  );
+
+    _larlite_io->next_event(); // store data
     
     return true;
   }

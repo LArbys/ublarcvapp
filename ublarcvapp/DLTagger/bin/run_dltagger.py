@@ -44,8 +44,8 @@ nentries = driver.io().get_n_entries()
 
 for ientry in xrange(0,nentries):
     driver.process_entry(ientry)
-    #if ientry==1:
-    #    break
+    if ientry==0:
+        break
 #driver.process_entry(11)
 
 driver.finalize()

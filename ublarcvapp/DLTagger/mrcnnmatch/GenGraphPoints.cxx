@@ -101,15 +101,15 @@ namespace dltagger {
         }
 
         minx_pts_v.push_back( endpointdata.endpt_tyz_v[startidx] );
-        minx_twid_v.push_back( std::vector<float>{ endpointdata.endpt_tyz_v[startidx][0],
-              endpointdata.endpt_wid_v[startidx][0],
-              endpointdata.endpt_wid_v[startidx][1],
-              endpointdata.endpt_wid_v[startidx][2] } );
+        minx_twid_v.push_back( std::vector<float>{ (float)endpointdata.endpt_tyz_v[startidx][0],
+              (float)endpointdata.endpt_wid_v[startidx][0],
+              (float)endpointdata.endpt_wid_v[startidx][1],
+              (float)endpointdata.endpt_wid_v[startidx][2] } );
         maxx_pts_v.push_back( endpointdata.endpt_tyz_v[endidx] );
-        maxx_twid_v.push_back( std::vector<float>{ endpointdata.endpt_tyz_v[endidx][0],
-              endpointdata.endpt_wid_v[endidx][0],
-              endpointdata.endpt_wid_v[endidx][1],
-              endpointdata.endpt_wid_v[endidx][2] } );
+        maxx_twid_v.push_back( std::vector<float>{ (float)endpointdata.endpt_tyz_v[endidx][0],
+              (float)endpointdata.endpt_wid_v[endidx][0],
+              (float)endpointdata.endpt_wid_v[endidx][1],
+              (float)endpointdata.endpt_wid_v[endidx][2] } );
       }
       else {
         goodendpts = false;
@@ -251,7 +251,7 @@ namespace dltagger {
     m_path_twid_v.reserve(m_path_xyz.size());
     for ( auto& xyz : m_path_xyz ) {
       std::vector<double> dxyz = {(double)xyz[0],(double)xyz[1],(double)xyz[2]};
-      std::vector<float> twid = { xyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200,
+      std::vector<float> twid = { (float)(xyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200.0),
                                   (float)larutil::Geometry::GetME()->WireCoordinate( dxyz, 0 ),
                                   (float)larutil::Geometry::GetME()->WireCoordinate( dxyz, 1 ),
                                   (float)larutil::Geometry::GetME()->WireCoordinate( dxyz, 2 ) };
