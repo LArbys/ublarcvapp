@@ -71,8 +71,10 @@ namespace dltagger {
                       const larcv::EventROI* ev_mcpartroi,
                       const larcv::EventImage2D& evout_tagged,
                       const larcv::EventImage2D& evout_notcosmic );
-    int _num_clusters;
-    std::vector< int   > _astar_complete;
+
+    // RECO CLUSTER VARS
+    int _num_clusters; ///< number of reco'd cosmic tracks/clusters    
+    std::vector< int   > _astar_complete; 
     std::vector< float > _dwall_outermost;
     std::vector< float > _dwall_innermost;
     std::vector< float > _dtick_outoftime;
@@ -89,14 +91,21 @@ namespace dltagger {
     std::vector< float > _numpixels_plane2;
     std::vector< std::vector<float> > _outermost_endpt_v;
     std::vector< std::vector<float> > _innermost_endpt_v;
-    float _frac_wholeimg_cosmictag;
-    float _frac_wholeimg_notcosmictag;
-    float _frac_wholeimg_alltags;
 
-    float _frac_wholeimg_nu_cosmictag;
-    float _frac_wholeimg_nu_notcosmictag;
-    float _frac_wholeimg_vtx_cosmictag;
-    float _frac_wholeimg_vtx_notcosmictag;
+    // RECO EVENT VARS
+    std::vector<float> _frac_wholeimg_cosmictag;    //< fraction of image tagged as cosmic, per plane + total
+    std::vector<float> _frac_wholeimg_notcosmictag; //< fraction of image recod but tagged not-cosmic, per plane + total
+    std::vector<float> _frac_wholeimg_alltags;      //< fraction of image recod, per plane + total
+    std::vector<int> _num_input_mrcnnmasks; //< number of masks provided by Mask RCNN network per plane + total
+    std::vector<int> _num_used_mrcnnmasks;  //< number of masks used per plane + total
+    
+    std::vector<float> _frac_wholeimg_cosmic_cosmictag;
+    std::vector<float> _frac_wholeimg_cosmic_notcosmictag;
+    std::vector<float> _frac_wholeimg_nu_cosmictag;
+    std::vector<float> _frac_wholeimg_nu_notcosmictag;
+    std::vector<float> _frac_wholeimg_vtx_cosmictag;
+    std::vector<float> _frac_wholeimg_vtx_notcosmictag;
+
     
     TTree* _ana_tree;
     

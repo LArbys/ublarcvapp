@@ -88,7 +88,9 @@ namespace dltagger {
     const std::vector<CosmicSelectVars_t>& getSelectionVars() const { return m_select_vars_v; };
 
     void reset();
-      
+
+    void numMaskInfo( std::vector<int>& num_mask_per_plane,
+                      std::vector<int>& num_mask_used_per_plane );
     
   protected:
 

@@ -890,6 +890,30 @@ namespace dltagger {
                   << ntracks_passed
                   << std::endl;
   }
+
+  /**
+   * get statistics about MASK MRCNN
+   *
+   */
+  void DLTagger::numMaskInfo( std::vector<int>& num_mask_per_plane,
+                              std::vector<int>& num_mask_used_per_plane ) {
+
+    int nplanes = _mask_match_algo.m_matchdata_vv.size();
+    num_mask_per_plane.resize(nplanes+1,0);
+    num_mask_used_per_plane.resize(nplanes+1,0);
+    
+    for ( int p=0; p<nplanes; p++ ) {
+      auto const& matchdata_v = _mask_match_algo.m_matchdata_vv[p];
+      num_mask_per_plane[p] = (int)matchdata_v.size();
+      num_mask_per_plane[nplanes] +=  (int)matchdata_v.size();      
+      for ( auto const& matchdata : matchdata_v ) {
+        if ( matchdata.used ) {
+          num_mask_used_per_plane[p]++;
+          num_mask_used_per_plane[nplanes]++;
+        }
+      }
+    }
+  }
   
 }
 }

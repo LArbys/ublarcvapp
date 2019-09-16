@@ -44,7 +44,7 @@ namespace dltagger {
 
     // compile key match criteria for each mask
     LARCV_DEBUG() << "compile MaskMatchData" << std::endl;    
-    std::vector< std::vector<MaskMatchData> > matchdata_vv;
+    m_matchdata_vv.clear();
     for ( auto const& clustermask_v : clustermask_vv ) {
       std::vector<MaskMatchData> data_v;
       int idx=0;
@@ -60,7 +60,7 @@ namespace dltagger {
         for ( auto& data : data_v )
           LARCV_DEBUG() << "  " << data << std::endl;
       }
-      matchdata_vv.emplace_back( std::move(data_v) );
+      m_matchdata_vv.emplace_back( std::move(data_v) );
     }
 
     if ( use_gap_ch ) {
@@ -76,7 +76,7 @@ namespace dltagger {
     }
 
     // make 3-plane matches
-    run3PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    run3PlanePass( clustermask_vv, wholeview_v, badch_v, m_matchdata_vv );
     int npassed = 0;
     for ( auto& isgood : m_pass ) {
       if ( isgood==1 ) npassed++;
@@ -89,15 +89,15 @@ namespace dltagger {
     LARCV_INFO() << "Masked used in matches" << std::endl;
     std::vector<int> used_v( 3, 0 );
     for ( size_t p=0; p<3; p++ ) {
-      for ( auto const& matchdata : matchdata_vv[p] ) {
+      for ( auto const& matchdata : m_matchdata_vv[p] ) {
         if ( matchdata.used ) used_v[p]++;
       }
-      LARCV_INFO() << "  Plane[" << p<< "]: " << used_v[p] << " of " << matchdata_vv[p].size() << std::endl;
+      LARCV_INFO() << "  Plane[" << p<< "]: " << used_v[p] << " of " << m_matchdata_vv[p].size() << std::endl;
     }
     LARCV_INFO() << "------------------------------------------------" << std::endl;
     
     // make 2-plane matches
-    run2PlanePass( clustermask_vv, wholeview_v, badch_v, matchdata_vv );
+    run2PlanePass( clustermask_vv, wholeview_v, badch_v, m_matchdata_vv );
     npassed = 0;
     for ( auto& isgood : m_pass ) {
       if ( isgood==1 ) npassed++;
@@ -109,10 +109,10 @@ namespace dltagger {
 
     for ( size_t p=0; p<3; p++ ) {
       used_v[p] = 0;      
-      for ( auto const& matchdata : matchdata_vv[p] ) {
+      for ( auto const& matchdata : m_matchdata_vv[p] ) {
         if ( matchdata.used ) used_v[p]++;
       }
-      LARCV_INFO() << "  Plane[" << p<< "]: " << used_v[p] << " of " << matchdata_vv[p].size() << std::endl;
+      LARCV_INFO() << "  Plane[" << p<< "]: " << used_v[p] << " of " << m_matchdata_vv[p].size() << std::endl;
     }
     LARCV_INFO() << "------------------------------------------------" << std::endl;
 
@@ -487,6 +487,7 @@ namespace dltagger {
    *
    */
   void MRCNNMatch::clear() {
+    m_matchdata_vv.clear();
     m_combo_3plane_v.clear();
     m_combo_crops_v.clear();
     m_combo_features_v.clear();
