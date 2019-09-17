@@ -387,6 +387,10 @@ namespace dltagger {
           break;
         }
       }
+      if (foundvertex) {
+	LARCV_INFO() << "truth vertex found. x=" << vertex_xyzt[0] << " y=" << vertex_xyzt[1] << " z=" << vertex_xyzt[2] << " t=" << tstart << std::endl;
+      }
+
       // vertex image coordinates
       bool inimage = true;
       if ( vertex_xyzt[0]<0 || vertex_xyzt[0]>larutil::Geometry::GetME()->DetHalfWidth()*2 )
@@ -396,10 +400,29 @@ namespace dltagger {
       if ( vertex_xyzt[2]<0 || vertex_xyzt[2]>larutil::Geometry::GetME()->DetLength() )
         inimage = false;
 
-      float tick = 3200 + vertex_xyzt[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
-      int true_row = ev_wholeview.Image2DArray().front().meta().row(tick);
+      if ( foundvertex ) {
+	if ( inimage )
+	  LARCV_INFO() << "within TPC." << std::endl;
+	else
+	  LARCV_INFO() << "outside TPC." << std::endl;
+      }
+      
+      float tick = -1;
+      int true_row = -1;
       std::vector<int> true_wire_v(3,0);
       std::vector<int> true_col_v(3,0);
+
+      if ( inimage ) {
+	tick = 3200 + (tstart*1.0e-3 + (4049.9687-4050.0))/0.5 + vertex_xyzt[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+	if ( tick>=ev_wholeview.Image2DArray().front().meta().min_y() && tick<ev_wholeview.Image2DArray().front().meta().max_y() ) {
+	  true_row = ev_wholeview.Image2DArray().front().meta().row(tick, __FILE__, __LINE__);
+	}
+	else {
+	  tick = -1;
+	  inimage = false;
+	}
+      }
+
       
       for ( size_t p=0; p<3; p++ ) {
         true_wire_v[p] = larutil::Geometry::GetME()->WireCoordinate( vertex_xyzt, p );
