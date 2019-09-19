@@ -89,9 +89,11 @@ namespace dltagger {
           float min_wire = endpointdata.endpt_wid_v[startidx][p];
           float max_wire = endpointdata.endpt_wid_v[endidx][p];
 
-          if ( min_wire<0 ) // happens when original end point is outside of the detector (oops)
+	  // check for output of bounds
+	  // happens when original end point is outside of the detector (oops)
+          if ( min_wire<0 || min_wire>=meta.max_x() || min_wire<meta.min_x() )
             min_wire = endpts_twid_v[startidx][p+1];
-          if ( max_wire<0 )
+          if ( max_wire<0 || max_wire>=meta.max_x() || min_wire<meta.min_x() )
             max_wire = endpts_twid_v[endidx][p+1];
           
           bounds_v[p].points[0][0] = meta.col( min_wire, __FILE__, __LINE__ ); // min wire
