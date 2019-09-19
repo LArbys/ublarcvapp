@@ -17,6 +17,7 @@ find_package( larcv REQUIRED )
 
 #---OPENCV (optional)
 if (USE_OPENCV)
+  set(OpenCV_DIR $ENV{OPENCV_LIBDIR}/../share/OpenCV)
   find_package(OpenCV REQUIRED)
   if (NOT OpenCV_FOUND)
     message("OpenCV NOT FOUND")
