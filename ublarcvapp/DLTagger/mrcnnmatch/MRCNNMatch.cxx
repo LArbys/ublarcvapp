@@ -252,7 +252,7 @@ namespace dltagger {
       }
       
       // scan for 3D points for later AStar graph
-      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kINFO );
+      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kNORMAL );
       LARCV_INFO() << "  max good pixel gap from graph reco: " << graphpoints.m_maxgapdist << std::endl;
 
       // run astar only if the 3d points are fairly consistent
@@ -439,7 +439,7 @@ namespace dltagger {
       features.extendMaskWithPCAregion(10.0);
 
       LARCV_INFO() << "  run graph-based track reco" << std::endl;
-      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kDEBUG );
+      GenGraphPoints    graphpoints( features, endpoints, larcv::msg::kNORMAL );
       LARCV_INFO() << "  max good pixel gap from graph reco: " << graphpoints.m_maxgapdist << std::endl;
       run = false;
       

@@ -186,10 +186,11 @@ namespace dltagger {
     m_tagger.getCosmicTracks( *evout_track_cosmic );
     m_tagger.getNotCosmicTracks( *evout_track_notcosmic );
     m_tagger.getAllGoodTracks( *evout_track_allreco );
+
       
     fillAnaVars( *ev_wire, ev_mcinstance, ev_mcpartroi, *evout_tagged, *evout_notcosmic  );
 
-    std::cout << "next" << std::endl;    
+    _larlite_io->set_id( _larlite_io->run_id(), _larlite_io->subrun_id(), _larlite_io->event_id() );
     _larlite_io->next_event(); // store data
     
     return true;
