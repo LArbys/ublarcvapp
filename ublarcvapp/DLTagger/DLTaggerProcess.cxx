@@ -12,7 +12,8 @@ namespace ublarcvapp {
 namespace dltagger {
 
   static DLTaggerProcessFactory __global_DLTaggerProcessFactory__;
-  
+
+
   void DLTaggerProcess::configure( const larcv::PSet& pset ) {
 
     // larcv inputs
@@ -95,6 +96,7 @@ namespace dltagger {
 
 
     // GET LARLITE INPUT
+    std::cout << "sync" << std::endl;
     _larlite_io->syncEntry( mgr );
     larlite::event_opflash* ev_opflash
       = (larlite::event_opflash*)_larlite_io->get_data(larlite::data::kOpFlash, _input_opflash_producer );
@@ -187,6 +189,7 @@ namespace dltagger {
       
     fillAnaVars( *ev_wire, ev_mcinstance, ev_mcpartroi, *evout_tagged, *evout_notcosmic  );
 
+    std::cout << "next" << std::endl;    
     _larlite_io->next_event(); // store data
     
     return true;
