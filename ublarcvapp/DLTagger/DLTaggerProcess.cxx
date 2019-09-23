@@ -281,24 +281,39 @@ namespace dltagger {
         }
       }
       // vertex image coordinates
-      bool inimage = true;
-      if ( vertex_xyzt[0]<0 || vertex_xyzt[0]>larutil::Geometry::GetME()->DetHalfWidth()*2 )
-        inimage = false;
-      if ( vertex_xyzt[1]<-larutil::Geometry::GetME()->DetHalfHeight() || vertex_xyzt[1]>larutil::Geometry::GetME()->DetHalfHeight() )
-        inimage = false;
-      if ( vertex_xyzt[2]<0 || vertex_xyzt[2]>larutil::Geometry::GetME()->DetLength() )
-        inimage = false;
+      bool inimage = false;
+      if ( foundvertex ) {
+	inimage = true;
+	if ( vertex_xyzt[0]<0 || vertex_xyzt[0]>larutil::Geometry::GetME()->DetHalfWidth()*2 )
+	  inimage = false;
+	if ( vertex_xyzt[1]<-larutil::Geometry::GetME()->DetHalfHeight() || vertex_xyzt[1]>larutil::Geometry::GetME()->DetHalfHeight() )
+	  inimage = false;
+	if ( vertex_xyzt[2]<0 || vertex_xyzt[2]>larutil::Geometry::GetME()->DetLength() )
+	  inimage = false;
+      }
 
       float tick = 3200 + vertex_xyzt[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
-      int true_row = ev_wholeview.Image2DArray().front().meta().row(tick);
+      if ( tick<=ev_wholeview.Image2DArray().front().meta().min_y() ) {
+	inimage = false;
+      }
+
+      int true_row = -1;
       std::vector<int> true_wire_v(3,0);
       std::vector<int> true_col_v(3,0);
       
-      for ( size_t p=0; p<3; p++ ) {
-        true_wire_v[p] = larutil::Geometry::GetME()->WireCoordinate( vertex_xyzt, p );
-        if ( true_wire_v[p]<0 ) true_wire_v[p] = 0;
-        if ( true_wire_v[p]>=larutil::Geometry::GetME()->Nwires(p) )
-          true_wire_v[p] = (int)larutil::Geometry::GetME()->Nwires(p)-1;
+      if ( inimage ) {
+	true_row = ev_wholeview.Image2DArray().front().meta().row(tick);
+	for ( size_t p=0; p<3; p++ ) {
+	  true_wire_v[p] = larutil::Geometry::GetME()->WireCoordinate( vertex_xyzt, p );
+	  if ( true_wire_v[p]<0 ) true_wire_v[p] = 0;
+	  if ( true_wire_v[p]>=larutil::Geometry::GetME()->Nwires(p) )
+	    true_wire_v[p] = (int)larutil::Geometry::GetME()->Nwires(p)-1;
+	}
+      }
+      else {
+	LARCV_WARNING() << "Vertex not in Image! (x,y,z,t) = " 
+			<< "(" << vertex_xyzt[0]  << ", " << vertex_xyzt[1] << ", " << vertex_xyzt[2] << ", " << vertex_xyzt[3] << ")"
+			<< std::endl;
       }
 
       
