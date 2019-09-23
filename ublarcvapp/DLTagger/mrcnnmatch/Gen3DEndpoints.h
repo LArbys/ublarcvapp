@@ -2,19 +2,23 @@
 #define __GEN_3D_ENDPOINTS_H__
 
 #include <vector>
+
+#include "larcv/core/Base/larcv_base.h"
+
 #include "FeaturesMaskCombo.h"
 
 namespace ublarcvapp {
 namespace dltagger {
 
-  class Gen3DEndpoints {
+  class Gen3DEndpoints : larcv::larcv_base {
 
   public:
 
     typedef std::vector<float> EndPoint_t;
     
     Gen3DEndpoints()
-      : pfeatures(nullptr)
+      : larcv::larcv_base("Gen3DEndpoints"),
+      pfeatures(nullptr)
     {}; ///< empty constructor. avoid using. only here for ROOT dictonary making
     virtual ~Gen3DEndpoints() {}; ///< destructor
 

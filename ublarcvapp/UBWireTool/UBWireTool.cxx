@@ -455,7 +455,7 @@ namespace ublarcvapp {
 	
 	// check if very close to boundary
 	if ( pintersections[i]->at(1)>-118.0 && pintersections[i]->at(1)<118.0
-	     && pintersections[i]->at(0)>0 && pintersections[i]->at(0)<1036.0 ) {
+	     && pintersections[i]->at(0)>0 && pintersections[i]->at(0)<1037.0 ) {
 	  combo_crosses[i] = 1;
 	  continue;
 	}

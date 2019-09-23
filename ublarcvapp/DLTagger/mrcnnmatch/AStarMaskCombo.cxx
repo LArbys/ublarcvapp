@@ -31,12 +31,13 @@ namespace dltagger {
     std::vector<larcv::Image2D> input_v;
     _prep_crop_image(input_v);
     _prep_badch_crop( badch_v, input_v );
-    if ( run ) {
-      LARCV_INFO() << "Run combo tests: starting with linear test" << std::endl;      
-      float max_disc_cm = 0;
-      _run_linear_test( input_v, badch_crop_v, max_disc_cm );
+
+    LARCV_INFO() << "Run combo tests: starting with linear test" << std::endl;      
+    float max_disc_cm = 0;
+    _run_linear_test( input_v, badch_crop_v, max_disc_cm );
+    if ( run ) {    
       LARCV_INFO() << "results of linear test: complete=" << astar_completed << " max_disc_cm=" << max_disc_cm << std::endl;      
-      if ( astar_completed==0 && max_disc_cm < 10000.0 ) {
+      if ( astar_completed==0 && max_disc_cm < 100.0 ) {
         astar_path.clear();
         LARCV_INFO() << "running astar" << std::endl;
         _run_astar( input_v );
@@ -66,10 +67,11 @@ namespace dltagger {
     std::vector<larcv::Image2D> input_v;
     _prep_crop_image(input_v);
     _prep_badch_crop( whole_badch_v, input_v );
-    if ( run ) {
-      LARCV_INFO() << "Run combo tests: starting with linear test" << std::endl;
-      float max_disc_cm = 0;
-      _run_linear_test( input_v, badch_crop_v, max_disc_cm );
+
+    LARCV_INFO() << "Run combo tests: starting with linear test" << std::endl;
+    float max_disc_cm = 0;
+    _run_linear_test( input_v, badch_crop_v, max_disc_cm );
+    if ( run ) {    
       LARCV_INFO() << "results of linear test: complete=" << astar_completed << " max_disc_cm=" << max_disc_cm << std::endl;            
       if ( astar_completed==0 && max_disc_cm < 10000.0 ) {
         astar_path.clear();
@@ -135,7 +137,7 @@ namespace dltagger {
     for ( size_t p=0; p<crop_v.size(); p++ ) {
       auto const& cropimg = crop_v[p];
 
-      std::cout << "make badch crop (for ASTAR): " << cropimg.meta().dump() << std::endl;
+      LARCV_DEBUG() << "make badch crop (for ASTAR): " << cropimg.meta().dump() << std::endl;
       larcv::Image2D badchcrop = whole_badch_v.at(p).crop( cropimg.meta() );
 
       // attempt to reduce badchannels using mask
@@ -336,8 +338,8 @@ namespace dltagger {
     steplen = pathlen/float(nsteps);
 
     double pos[3] = {0};
-    float start_x = pEndpoint->endpt_tyz_v[0][0]*0.5*larutil::LArProperties::GetME()->DriftVelocity();
-    float end_x   = pEndpoint->endpt_tyz_v[1][0]*0.5*larutil::LArProperties::GetME()->DriftVelocity();
+    float start_x = (pEndpoint->endpt_tyz_v[0][0]-3200)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
+    float end_x   = (pEndpoint->endpt_tyz_v[1][0]-3200)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
 
     // as we step through, we want to track if the segment is good (on charge) or bad (not on charge).
     // so we have to track the state and the distance. we do this with the following struct and function
@@ -349,20 +351,29 @@ namespace dltagger {
       std::vector<float> seg_v; // list of segs we've seen
       std::vector<int>   state_v; // list of states of the seg's we've seen
       SegmentState_t()
-        : state(1), // start in good state
+        : state(-1), // start in good state
           curr_seg_len(0.0),
           max_good_seg(0.0),
           max_bad_seg(0.0)
       {};
       void update( int currentstate, float steplen ) {
+        if ( state==-1 ) {
+          // first state: set and move on
+          curr_seg_len = 0;
+          state = currentstate;
+          return;
+        }
+        
         if ( currentstate==state ) {
           // continuation of state
           curr_seg_len += steplen;
           return;
         }
         else {
-          // change of state
+            
           if ( state==1 ) {
+            // good to bad
+            // -----------
             // transition in the middle
             curr_seg_len += 0.5*steplen;
             // was good
@@ -382,24 +393,37 @@ namespace dltagger {
           curr_seg_len = 0.5*steplen;
         };
       };
-      float max_bad_seg_notfirst() {
+      void finish() {
+        seg_v.push_back( curr_seg_len );
+        state_v.push_back( state );
+      }
+      float get_max_bad_seg_notfirst() {
+        float maxbad = 0.;
+        // skip the first, because the end point might not be very good at first
+        for ( size_t s=1; s<seg_v.size(); s++ ) {
+          if ( state_v[s]==0 && seg_v[s]>maxbad )
+            maxbad = seg_v[s];
+        }
+        return maxbad;
+      };
+      float get_max_bad_seg() {
         float maxbad = 0.;
         // skip the first, because the end point might not very good at first
-        for ( size_t s=1; s<seg_v.size(); s++ ) {
-          if ( seg_v[s]>maxbad )
+        for ( size_t s=0; s<seg_v.size(); s++ ) {
+          if ( state_v[s]==0 && seg_v[s]>maxbad )
             maxbad = seg_v[s];
         }
         return maxbad;
       };
     } segstate;
     
-    for (int istep=1; istep<nsteps-1; istep++ ) {
+    for (int istep=0; istep<nsteps; istep++ ) {
       pos[0] = start_x + steplen*istep*dir[0];
       pos[1] = pEndpoint->endpt_tyz_v[0][1] + steplen*istep*dir[1];
       pos[2] = pEndpoint->endpt_tyz_v[0][2] + steplen*istep*dir[2];
 
       // back to ticks
-      float tick = pos[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+      float tick = pos[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200;
       if ( tick<input_v[0].meta().min_y() || tick>=input_v[0].meta().max_y() ) {
         // not in the image. seems bad.
         segstate.update(0,steplen);
@@ -442,21 +466,22 @@ namespace dltagger {
       for ( size_t pl=0; pl<nplanes; pl++ ) {
 
         float maxpixval = 0.;
+        float maxbadval = 0.;
         for ( int dc=-pixel_search_width; dc<=pixel_search_width; dc++ ) {
           int c = rowcol_v[pl+1]+dc;
           if ( c<0 || c>=(int)input_v[pl].meta().cols() ) continue; // skip it
           float pixval = input_v[pl].pixel( rowcol_v[0], c );
+          float badval = badch_v[pl].pixel( rowcol_v[0], c );
           if ( pixval>maxpixval )
             maxpixval = pixval;
+          if ( badval>maxbadval )
+            maxbadval = badval;
         }
         
         if ( maxpixval>10.0 )
           nplanes_w_charge++;
-        else {
-          // check badch
-          if ( badch_v[pl].pixel( rowcol_v[0], rowcol_v[pl+1]) > 0.5 )
-            nplanes_w_badch++;
-        }
+        if ( maxbadval>0 ) 
+          nplanes_w_badch++;
       }
       
       if ( nplanes_w_charge==3 ) {
@@ -465,22 +490,21 @@ namespace dltagger {
         pixel_list.push_back( rowcol_v );
         pixel_tyz.push_back( step_tyz );
       }
-      else {
-        // not charge complete
-        if ( nplanes_w_badch==1 ) {
-          segstate.update(1,steplen);
-          pixel_map[rowcol_v] = 1;
-          pixel_list.push_back( rowcol_v );
-          pixel_tyz.push_back( step_tyz );          
-        }
+      else if ( (nplanes_w_charge + nplanes_w_badch) >= 3 && nplanes_w_badch<2 ) {
+        segstate.update(1,steplen);
+        pixel_map[rowcol_v] = 1;
+        pixel_list.push_back( rowcol_v );
+        pixel_tyz.push_back( step_tyz );          
       }
-
-      // everything else is bad
-      pixel_map[rowcol_v] = 0;
-      segstate.update(0,steplen);
-      pixel_list.push_back( rowcol_v );
-      pixel_tyz.push_back( step_tyz );
+      else {
+        // everything else is bad
+        pixel_map[rowcol_v] = 0;
+        segstate.update(0,steplen);
+        pixel_list.push_back( rowcol_v );
+        pixel_tyz.push_back( step_tyz );
+      }
     }//end of step loop
+    segstate.finish();
 
     // make astar node list
     astar_path.resize( pixel_list.size()+2 );
@@ -519,19 +543,35 @@ namespace dltagger {
       astar_path[ipt+1].tyz = pixel_tyz[ipt];
     }
 
-    max_discontinuity_cm = segstate.max_bad_seg_notfirst();
-    if ( max_discontinuity_cm>10.0  ) 
+    //max_discontinuity_cm = segstate.get_max_bad_seg_notfirst();
+    max_discontinuity_cm = segstate.get_max_bad_seg();
+    if ( max_discontinuity_cm>20.0  ) 
       astar_completed = 0;
     else
       astar_completed = 1;
     
     // return this
-    LARCV_DEBUG() << "-----------------------------------------" << std::endl;    
+    LARCV_INFO() << "-----------------------------------------" << std::endl;    
     LARCV_INFO() << "linear test. max_discontinuity_cm=" << max_discontinuity_cm << "  nsteps=" << astar_path.size() << " completed=" << astar_completed << std::endl;
-    if ( logger().debug() ) {
+    if ( logger().info() || logger().debug() ) {
       for ( auto const& node : astar_path )
         LARCV_DEBUG() << node.str() << std::endl;
-      LARCV_DEBUG() << "-----------------------------------------" << std::endl;
+
+      std::stringstream statestr;
+      statestr << "{ ";
+      for ( size_t is=0; is<segstate.state_v.size(); is++ ) {
+        auto& s = segstate.state_v[is];
+        auto& sd = segstate.seg_v[is];
+        statestr << s << "(" << sd << ") ";
+      }
+      statestr << "}";
+      LARCV_INFO() << "segment analyzed: max_bad=" << segstate.get_max_bad_seg() << " len=" << pathlen
+                   << " nsegs=" << segstate.state_v.size()
+                   << " " << statestr.str()
+                   << std::endl;
+      // std::cin.get();
+      
+      LARCV_INFO() << "-----------------------------------------" << std::endl;
     }
   }
   

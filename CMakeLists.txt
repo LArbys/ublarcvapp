@@ -17,6 +17,7 @@ find_package( larcv REQUIRED )
 
 #---OPENCV (optional)
 if (USE_OPENCV)
+  set(OpenCV_DIR $ENV{OPENCV_LIBDIR}/../share/OpenCV)
   find_package(OpenCV REQUIRED)
   if (NOT OpenCV_FOUND)
     message("OpenCV NOT FOUND")
@@ -63,6 +64,10 @@ file( GLOB LAROPENCV_LIBS "$ENV{LARLITE_LIBDIR}/libLArOpenCV_*.so" )
 #---Cilantro
 set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
 find_package( cilantro REQUIRED )
+
+#---Boost Graph library
+find_package( Boost 1.58 COMPONENTS graph REQUIRED )
+#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 
 ## Setup

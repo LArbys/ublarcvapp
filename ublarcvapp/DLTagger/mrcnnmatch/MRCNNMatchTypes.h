@@ -13,6 +13,7 @@ namespace dltagger {
   class MaskMatchData {
   public:
 
+    MaskMatchData() {};
     MaskMatchData( int plane, int index, const larcv::ClusterMask& mask );
     virtual ~MaskMatchData() {};
 
