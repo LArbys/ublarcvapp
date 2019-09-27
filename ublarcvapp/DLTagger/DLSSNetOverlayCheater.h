@@ -33,6 +33,13 @@ namespace dltagger {
     void initialize();
     bool process( larcv::IOManager& mgr );
     void finalize();    
+
+  protected:
+
+    std::string _input_ssnet_input_stem;
+    std::string _input_segment_name;
+    std::string _output_stem_treename;
+    bool        _mask_cosmic_pixels;
     
   };
 
