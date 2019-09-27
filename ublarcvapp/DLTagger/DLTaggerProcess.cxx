@@ -396,13 +396,22 @@ namespace dltagger {
       }
 
       // vertex image coordinates
-      bool inimage = true;
-      if ( vertex_xyzt[0]<0 || vertex_xyzt[0]>larutil::Geometry::GetME()->DetHalfWidth()*2 )
-        inimage = false;
-      if ( vertex_xyzt[1]<-larutil::Geometry::GetME()->DetHalfHeight() || vertex_xyzt[1]>larutil::Geometry::GetME()->DetHalfHeight() )
-        inimage = false;
-      if ( vertex_xyzt[2]<0 || vertex_xyzt[2]>larutil::Geometry::GetME()->DetLength() )
-        inimage = false;
+      bool inimage = false;
+      if ( foundvertex ) {
+	inimage = true;
+	if ( vertex_xyzt[0]<0 || vertex_xyzt[0]>larutil::Geometry::GetME()->DetHalfWidth()*2 )
+	  inimage = false;
+	if ( vertex_xyzt[1]<-larutil::Geometry::GetME()->DetHalfHeight() || vertex_xyzt[1]>larutil::Geometry::GetME()->DetHalfHeight() )
+	  inimage = false;
+	if ( vertex_xyzt[2]<0 || vertex_xyzt[2]>larutil::Geometry::GetME()->DetLength() )
+	  inimage = false;
+      }
+
+
+      float tick = 3200 + (tstart*1.0e-3 + (4049.9687-4050.0))/0.5 + vertex_xyzt[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+      if ( tick<ev_wholeview.Image2DArray().front().meta().min_y() || tick>=ev_wholeview.Image2DArray().front().meta().max_y() ) {
+	inimage = false;
+      }
 
       if ( foundvertex ) {
 	if ( inimage )
@@ -410,31 +419,31 @@ namespace dltagger {
 	else
 	  LARCV_INFO() << "outside TPC." << std::endl;
       }
-      
-      float tick = -1;
+      else  {
+	LARCV_INFO() << "vertex not found in mctruth" << std::endl;
+      }
+
       int true_row = -1;
       std::vector<int> true_wire_v(3,0);
       std::vector<int> true_col_v(3,0);
 
       if ( inimage ) {
-	tick = 3200 + (tstart*1.0e-3 + (4049.9687-4050.0))/0.5 + vertex_xyzt[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
-	if ( tick>=ev_wholeview.Image2DArray().front().meta().min_y() && tick<ev_wholeview.Image2DArray().front().meta().max_y() ) {
-	  true_row = ev_wholeview.Image2DArray().front().meta().row(tick, __FILE__, __LINE__);
-	}
-	else {
-	  tick = -1;
-	  inimage = false;
+	true_row = ev_wholeview.Image2DArray().front().meta().row(tick);
+	for ( size_t p=0; p<3; p++ ) {
+	  true_wire_v[p] = larutil::Geometry::GetME()->WireCoordinate( vertex_xyzt, p );
+	  if ( true_wire_v[p]<0 ) true_wire_v[p] = 0;
+	  if ( true_wire_v[p]>=larutil::Geometry::GetME()->Nwires(p) )
+	    true_wire_v[p] = (int)larutil::Geometry::GetME()->Nwires(p)-1;
 	}
       }
-
+      else {
+	tick = -1;
+	true_row = -1;
+	LARCV_WARNING() << "Vertex not in Image! (x,y,z,t) = " 
+			<< "(" << vertex_xyzt[0]  << ", " << vertex_xyzt[1] << ", " << vertex_xyzt[2] << ", " << vertex_xyzt[3] << ")"
+			<< std::endl;
+      }
       
-      for ( size_t p=0; p<3; p++ ) {
-        true_wire_v[p] = larutil::Geometry::GetME()->WireCoordinate( vertex_xyzt, p );
-        if ( true_wire_v[p]<0 ) true_wire_v[p] = 0;
-        if ( true_wire_v[p]>=larutil::Geometry::GetME()->Nwires(p) )
-          true_wire_v[p] = (int)larutil::Geometry::GetME()->Nwires(p)-1;
-      }
-
 
       float total_cosmicpix = 0;
       float total_nupix = 0;
