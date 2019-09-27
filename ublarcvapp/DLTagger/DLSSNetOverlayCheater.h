@@ -36,10 +36,13 @@ namespace dltagger {
 
   protected:
 
+    std::string _input_adc_name;
     std::string _input_ssnet_input_stem;
     std::string _input_segment_name;
     std::string _output_stem_treename;
     bool        _mask_cosmic_pixels;
+    bool        _apply_threshold;
+    std::vector<float> _adc_threshold_v;
     
   };
 
