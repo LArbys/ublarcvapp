@@ -5,6 +5,9 @@
 namespace ublarcvapp {
 namespace dltagger {
 
+  // create a global instance of the factory class, so that it gets registered upon loading of library
+  static DLCheaterTaggerFactory __global_DLCheaterTaggerFactory__;
+  
   void DLCheaterTagger::configure( const larcv::PSet& pset ) {
     // run on MC input
     _input_adc_producer      = "wiremc";
@@ -48,7 +51,7 @@ namespace dltagger {
 
       for ( size_t c=0; c<img.meta().cols(); c++ ) {
         for ( size_t r=0; r<img.meta().rows(); r++ ) {
-          if ( instance.pixel(r,c)>0 ) {
+          if ( instance.pixel(r,c)<=0 ) {
             out.set_pixel(r,c, img.pixel(r,c));
           }
         }

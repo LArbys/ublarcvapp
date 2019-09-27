@@ -3,6 +3,7 @@
 
 #include <string>
 #include "larcv/core/Processor/ProcessBase.h"
+#include "larcv/core/Processor/ProcessFactory.h"
 
 namespace ublarcvapp {
 namespace dltagger {
@@ -10,7 +11,8 @@ namespace dltagger {
   class DLCheaterTagger : public larcv::ProcessBase {
   public:
 
-    DLCheaterTagger() {};
+    DLCheaterTagger( std::string instance_name )
+      : larcv::ProcessBase(instance_name) {};
     virtual ~DLCheaterTagger() {};
 
     // required functions
@@ -28,6 +30,14 @@ namespace dltagger {
     std::string _output_tagger_pixcluster_producer;
     
   };
+
+  class DLCheaterTaggerFactory : public larcv::ProcessFactoryBase {
+  public:
+    DLCheaterTaggerFactory() { larcv::ProcessFactory::get().add_factory("DLCheaterTagger",this); };
+    ~DLCheaterTaggerFactory() {};
+    larcv::ProcessBase* create(const std::string instance_name) { return new ublarcvapp::dltagger::DLCheaterTagger(instance_name); };
+  };
+  
   
 }
 }
