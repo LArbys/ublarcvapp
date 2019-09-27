@@ -3,11 +3,12 @@ set(MODULE_NAME DLTagger)
 # DEFINE THE TARGET
 set( LIBNAME LArCVApp_${MODULE_NAME} )
 
-set( HEADERS DLTagger.h DLTaggerProcess.h )
+set( HEADERS DLTagger.h DLTaggerProcess.h DLCheaterTagger.h )
 
 add_library( ${LIBNAME} SHARED
   DLTagger.cxx
-  DLTaggerProcess.cxx )
+  DLTaggerProcess.cxx
+  DLCheaterTagger.cxx )
 
 # create a property to hold our headers
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
