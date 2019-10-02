@@ -17,6 +17,7 @@
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/Processor/ProcessFactory.h"
 #include "larcv/core/DataFormat/EventROI.h"
+#include "larcv/core/DataFormat/EventChStatus.h"
 #include "larcv/core/DataFormat/IOManager.h"
 
 #include "LArUtil/SpaceChargeMicroBooNE.h"
@@ -56,10 +57,10 @@ namespace ubdllee {
     std::string _mctrack_producer;
     std::string _mcshower_producer;
     std::string _chstatus_producer;
-    std::string _larlite_inputfilename;
 
     // larlite iomanager
     ublarcvapp::LArliteManager* _ll;
+    std::vector<std::string>    _larlite_file_v;
 
     // output ana tree
     TTree* _event_tree;
@@ -129,7 +130,7 @@ namespace ubdllee {
     void fillInteractionVariables( const larlite::event_mctruth&  ev_mctruth,
                                    const larlite::event_mctrack&  ev_mctrack,
                                    const larlite::event_mcshower& ev_mcshower,
-                                   const larlite::event_chstatus& ev_chstatus );
+                                   const larcv::EventChStatus& ev_chstatus );
 
   };
 

@@ -5,13 +5,15 @@
 
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/EventROI.h"
+#include "larcv/core/DataFormat/EventChStatus.h"
 
 #include "LArUtil/LArProperties.h"
 #include "LArUtil/Geometry.h"
+#include "LArUtil/DetectorProperties.h"
+#include "LArUtil/TimeService.h"
 #include "DataFormat/mctruth.h"
 #include "DataFormat/mctrack.h"
 #include "DataFormat/mcshower.h"
-#include "DataFormat/chstatus.h"
 
 #include "ublarcvapp/ubdllee/dwall.h"
 
@@ -36,9 +38,16 @@ namespace ubdllee {
     // only create own tree if not defined yet.
     // this means user can override tree, by calling addBranchestoTree before configure.
     if ( !_event_tree ) {
-      _event_tree = new TTree("NuAnaMCTree","");
+      _event_tree = new TTree("NuAnaMCTree","Neutrino Truth Analysis");
       addBranchesToTree( _event_tree );
     }
+
+    _mctruth_producer  = cfg.get< std::string >( "MCTruthProducer",  "generator" );
+    _mctrack_producer  = cfg.get< std::string >( "MCTrackProducer",  "mcreco" );
+    _mcshower_producer = cfg.get< std::string >( "MCShowerProducer", "mcreco" );
+    _chstatus_producer = cfg.get< std::string >( "ChStatusProducer", "wire" );
+    _larlite_file_v    = cfg.get< std::vector<std::string> >( "LArliteInputFiles" );
+    
   }
 
   void NuAnaMC::addBranchesToTree( TTree* tree ) {
@@ -100,9 +109,9 @@ namespace ubdllee {
   }
 
   void NuAnaMC::fillInteractionVariables( const larlite::event_mctruth&  ev_mctruth,
-                                               const larlite::event_mctrack&  ev_mctrack,
-                                               const larlite::event_mcshower& ev_mcshower,
-                                               const larlite::event_chstatus& ev_chstatus ) {
+                                          const larlite::event_mctrack&  ev_mctrack,
+                                          const larlite::event_mcshower& ev_mcshower,
+                                          const larcv::EventChStatus& ev_chstatus ) {
 
     // loop over interactions
     for ( auto const& mctruth : ev_mctruth) {
@@ -127,16 +136,32 @@ namespace ubdllee {
 	  _t      =  mcpart.Trajectory().front().T();
           std::vector<double> vtx_v = { (double)_vtx[0], (double)_vtx[1], (double)_vtx[2] };
 
+          //double g4Ticks = detClocks->TPCG4Time2Tick( _t ) + detProperties->GetXTicksOffset(0,0,0) - detProperties->TriggerOffset();
+          //double xtimeoffset = detProperties->ConvertTicksToX(g4Ticks,0,0,0);
+          double g4ticks = larutil::TimeService::GetME()->TPCG4Time2Tick(_t);
+          double xticksoffset = larutil::DetectorProperties::GetME()->GetXTicksOffset(0);
+          double trigoffset   =  larutil::DetectorProperties::GetME()->TriggerOffset();
+          std::cout << "g4ticks=" << g4ticks << " xticksoffset=" << xticksoffset << " trigoffset=" << trigoffset << std::endl;
+          double tick_offset = g4ticks;
+          double x_offset = larutil::DetectorProperties::GetME()->ConvertTicksToX( tick_offset, 0 );
+          std::cout << "tick_offset=" << tick_offset << " x_offset=" << x_offset << std::endl;
+          
           std::vector<double> offsets = _sce->GetPosOffsets( vtx_v[0], vtx_v[1], vtx_v[2] );
           _vtx_sce[0] = _vtx[0] - offsets[0] + 0.6;
           _vtx_sce[1] = _vtx[1] + offsets[1];
           _vtx_sce[2] = _vtx[2] + offsets[2];
 
-          _tick = 3200.0 + _vtx_sce[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+          _tick = 3200 + _vtx_sce[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+
+          // ---------------------------------------
+          // hack: 
+          _tick += _sce->tickoffset_forward_hack( _tick );
+          // ---------------------------------------
+          
           for ( size_t p=0; p<3; p++ ) {
             _wid[p] = larutil::Geometry::GetME()->WireCoordinate( _vtx_sce, p );
-            const larlite::chstatus& chs       = ev_chstatus.at(p);
-            const std::vector<short>& status_v = chs.status();
+            auto const& chs = ev_chstatus.Status( (larcv::PlaneID_t)p );
+            const std::vector<short>& status_v = chs.as_vector();
             if ( (int)_wid[p]>=0 && (int)_wid[p]<status_v.size() ) {
               if ( status_v[ (int)_wid[p] ]>=4 )
                 _inbadch[p] = 0;
@@ -144,7 +169,7 @@ namespace ubdllee {
                 _inbadch[p] = 1;
             }
           }
-
+          
           int boundary_type;
           _dwall = ublarcvapp::dwall( vtx_v, boundary_type );
           
@@ -389,11 +414,22 @@ namespace ubdllee {
   
   void NuAnaMC::initialize()
   {
+    _ll = new ublarcvapp::LArliteManager( larlite::storage_manager::kREAD, "NuAnaMCLarlite" );
+    for ( auto const& input_larlite : _larlite_file_v ) {
+      _ll->add_in_filename( input_larlite );
+    }
+    _ll->open();
+
+    _sce = new larutil::SpaceChargeMicroBooNE( larutil::SpaceChargeMicroBooNE::kMCC9_Forward, "" );
   }
 
   bool NuAnaMC::process( larcv::IOManager& mgr )
   {
     LARCV_DEBUG() << "start" << std::endl;
+
+    auto chstatus_v = (larcv::EventChStatus*)   mgr.get_data( larcv::kProductChStatus,  _chstatus_producer );    
+    _ll->syncEntry(mgr);
+    
     const int kINVALID_INT=-1;
     _run      = kINVALID_INT;
     _subrun   = kINVALID_INT;
@@ -403,7 +439,6 @@ namespace ubdllee {
     auto mctruth_v  = (larlite::event_mctruth*) _ll->get_data(larlite::data::kMCTruth,  _mctruth_producer );
     auto mctrack_v  = (larlite::event_mctrack*) _ll->get_data(larlite::data::kMCTrack,  _mctrack_producer );
     auto mcshower_v = (larlite::event_mcshower*)_ll->get_data(larlite::data::kMCShower, _mcshower_producer );
-    auto chstatus_v = (larlite::event_chstatus*)_ll->get_data(larlite::data::kChStatus, _chstatus_producer );
 
     _run    = _ll->run_id();
     _subrun = _ll->subrun_id();
@@ -419,6 +454,7 @@ namespace ubdllee {
   
   void NuAnaMC::finalize()
   {
+    _ll->close();
     _event_tree->Write();
   }
 
