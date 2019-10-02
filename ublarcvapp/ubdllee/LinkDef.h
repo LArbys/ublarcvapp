@@ -8,7 +8,7 @@
 #pragma link C++ namespace ublarcvapp::ubdllee+;
 #pragma link C++ class ublarcvapp::ubdllee::FixedCROIFromFlashConfig+;
 #pragma link C++ class ublarcvapp::ubdllee::FixedCROIFromFlashAlgo+;
-
+#pragma link C++ class ublarcvapp::ubdllee::NuAnaMC+;
 #endif
 
 

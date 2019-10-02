@@ -1,19 +1,23 @@
 set(MODULE_NAME ubdllee)
 
-# Collect the headers
-file(GLOB HEADERS "*.h")
-
-# Remove LinkDef.h
-list(FILTER HEADERS EXCLUDE REGEX ".*LinkDef.h$")
- 
-# However, the file(GLOB...) allows for wildcard additions:
-file(GLOB SOURCES "*.cxx")
-
 # library name
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
+# Collect the headers
+set( HEADERS FixedCROIFromFlashAlgo.h
+  FixedCROIFromFlashConfig.h
+  dwall.h
+  NuAnaMC.h )
+
+# Add sources
+add_library( ${LIBNAME} SHARED
+	     dwall.cxx
+	     FixedCROIFromFlashAlgo.cxx
+	     FixedCROIFromFlashConfig.cxx
+             NuAnaMC.cxx )
+
 # includes
-include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS})
+include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${PROJECT_SOURCE_DIR})
 
 if (HAS_LARLITE)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")
@@ -24,9 +28,9 @@ endif()
 
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
+target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 
 # Generate the shared library from the sources
-add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS})
 target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor)
