@@ -1,9 +1,5 @@
 
 
-
-add_subdirectory(dbscan)
-add_subdirectory(Reco3D)
-
 if (HAS_LARLITE)
   add_subdirectory(LArliteHandler)
   add_subdirectory(UBImageMod)
@@ -13,12 +9,11 @@ if (HAS_LARLITE)
 endif()
 
 
-if (LARCV_USE_GEO2D)
-  add_subdirectory(LArOpenCVHandle)
-  add_subdirectory(ContourTools)
-  add_subdirectory(Tagger)
-endif()  
+#if (LARCV_USE_GEO2D)
+  #add_subdirectory(LArOpenCVHandle)
+  #add_subdirectory(ContourTools)
+  #add_subdirectory(Tagger)
+#endif()
 
 add_subdirectory(Stitchers)
-
-
+#add_subdirectory(dbscan)

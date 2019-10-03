@@ -31,7 +31,7 @@ endif()
 # use it if env variables defined
 if (DEFINED ENV{GEO2D_BASEDIR})
   set(LARCV_USE_GEO2D 1)
-  
+
   # unless explicitly told no
   if (DEFINED ENV{USE_GEO2D} AND NOT $USE_GEO2D)
     set(LARCV_USE_GEO2D 0)
@@ -43,7 +43,7 @@ if (DEFINED ENV{GEO2D_BASEDIR})
   endif()
 else()
   set(LARCV_USE_GEO2D 0)
-  message("DISABLING modules needing Geo2D")  
+  message("DISABLING modules needing Geo2D")
 endif()
 
 
@@ -59,8 +59,8 @@ set( LAROPENCV_LIB_DIR "$ENV{LARLITE_LIBDIR}" )
 file( GLOB LAROPENCV_LIBS "$ENV{LARLITE_LIBDIR}/libLArOpenCV_*.so" )
 
 #---Cilantro
-set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
-find_package( cilantro REQUIRED )
+#set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
+#find_package( cilantro REQUIRED )
 
 
 ## Setup
@@ -99,10 +99,3 @@ install(EXPORT ublarcvapp
 install(FILES "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfig.cmake"
   "${CMAKE_BINARY_DIR}/cmake/ublarcvappConfigVersion.cmake"
   DESTINATION "${CMAKE_INSTALL_PREFIX}/lib/cmake/ublarcvapp")
-
-
-
-
-
-
-
