@@ -7,14 +7,16 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 set( HEADERS FixedCROIFromFlashAlgo.h
   FixedCROIFromFlashConfig.h
   dwall.h
-  NuAnaMC.h )
+  NuAnaMC.h
+  DLInteraction.h )
 
 # Add sources
 add_library( ${LIBNAME} SHARED
 	     dwall.cxx
 	     FixedCROIFromFlashAlgo.cxx
 	     FixedCROIFromFlashConfig.cxx
-             NuAnaMC.cxx )
+             NuAnaMC.cxx
+             DLInteraction.cxx )
 
 # includes
 include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${PROJECT_SOURCE_DIR})
