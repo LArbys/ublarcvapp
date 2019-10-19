@@ -14,6 +14,8 @@ find_package(ROOT CONFIG REQUIRED)
 #---LArCV (required)
 set( larcv_DIR "$ENV{LARCV_LIBDIR}/cmake/larcv")
 find_package( larcv REQUIRED )
+#   -- json header included in larcv
+set(LARCV_JSON_INCLUDE_DIR "$ENV{LARCV_BASEDIR}/extern/json/single_include")
 
 #---OPENCV (optional)
 if (USE_OPENCV)
