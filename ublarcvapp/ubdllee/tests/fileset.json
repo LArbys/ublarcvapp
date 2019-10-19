@@ -1,0 +1,34 @@
+{
+    "filesets": [
+        {
+            "runindex":"4953",
+            "subrunindex":"50",
+            "sample":"mcc9_v13_nueintrinsics_overlay_run1",
+            "supera":"supera-Run004953-SubRun000050.root",
+            "opreco":"opreco-Run004953-SubRun000050.root",
+            "reco2d":"reco2d-Run004953-SubRun000050.root",
+            "tagger-larcv":"dltagger-larcv-mcc9_v13_nueintrinsics_overlay_run1-Run004953-SubRun000050.root",
+            "tagger-larlite":"dltagger-larlite-mcc9_v13_nueintrinsics_overlay_run1-Run004953-SubRun000050.root",
+            "tagger-ana":"dltagger-ana-mcc9_v13_nueintrinsics_overlay_run1-Run004953-SubRun000050.root",
+            "ssnet":"sparsessnet-larcv-mcc9_v13_nueintrinsics_overlay_run1-Run004953-SubRun000050.root",
+            "vertex-larcv":"vertex-larcv-vertexsparsessnet_mcc9_v13_nueintrinsics_overlay_run1-Run004953-SubRun000050.root",
+            "vertex-ana":"vertex-ana-vertexsparsessnet_mcc9_v13_nueintrinsics_overlay_run1-Run004953-SubRun000050.root",
+            "tracker-larlite":"tracker-larlite-mcc9_v13_nueintrinsics_overlay_run1_trackersparsessnet-Run004953-SubRun000050.root",
+            "tracker-ana":"tracker-ana-mcc9_v13_nueintrinsics_overlay_run1_trackersparsessnet-Run004953-SubRun000050.root",
+            "shower-reco":"shower-reco-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "shower-qual":"shower-qual-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "michelid-larcv":"michelid-larcv-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "michelid-larlite":"michelid-larlite-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "michelid-ana":"michelid-ana-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "nueid-larcv":"nueid-larcv-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "nueid-larlite":"nueid-larlite-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "nueid-ana":"nueid-ana-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "multiplicity":"multiplicity-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "multipid":"multipid-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "flash-ana":"flash-ana-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
+            "larcvtruth":"larcvtruth-Run004953-SubRun000050.root",        
+            "shower-truthmatch":"shower-truthmatch-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root"
+        }
+    ]
+                 
+}
