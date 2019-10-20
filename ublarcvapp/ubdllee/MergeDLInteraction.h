@@ -7,6 +7,7 @@
 #include "larcv/core/Processor/ProcessFactory.h"
 
 #include "DLInteraction.h"
+#include "ublarcvapp/LArliteHandler/LArliteManager.h"
 
 namespace ublarcvapp {
 namespace ubdllee {
@@ -19,7 +20,8 @@ namespace ubdllee {
       : larcv::ProcessBase( instance_name ),
       _treename(""),
       _tree(nullptr),
-      _event_interaction_v(nullptr)
+      _event_interaction_v(nullptr),
+      _larliteio(nullptr)      
       {
       };
 
@@ -31,11 +33,14 @@ namespace ubdllee {
     virtual bool process(larcv::IOManager& mgr);
     virtual void finalize();
 
+    void setup_larlite_io( const std::vector<std::string>& larlite_input_files );
+    
   protected:
 
     std::string _treename;
     TTree* _tree;
     std::vector< DLInteraction >* _event_interaction_v;
+    ublarcvapp::LArliteManager* _larliteio;
     
   };
 

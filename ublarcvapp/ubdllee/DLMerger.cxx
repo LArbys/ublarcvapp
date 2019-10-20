@@ -6,6 +6,8 @@
 
 #include "nlohmann/json.hpp"
 
+#include "MergeDLInteraction.h"
+
 using json = nlohmann::json;
 
 namespace ublarcvapp {
@@ -97,10 +99,34 @@ namespace ubdllee {
       }
     }
 
+
+    std::vector< std::string > input_larlite_files;
+    std::vector< std::string > larlite_required_files = { "tracker-larlite",
+                                                          "shower-reco" };
+    for ( auto const& fname : larlite_required_files ) {
+      if ( _filelist_map.find(fname)==_filelist_map.end() ) {
+        LARCV_CRITICAL() << " missing filetype=" << fname << " that is required." << std::endl;
+        throw std::runtime_error("missing required larlite filetype");
+      }
+      for ( auto const& f : _filelist_map[fname] ) {
+        if ( _file_dir!="" )
+          input_larlite_files.push_back(_file_dir + "/" + f);
+        else
+          input_larlite_files.push_back(f);
+      }
+    }
+    
     LARCV_NORMAL() << "Number of LArCV input files: " << input_files.size() << std::endl;
+    LARCV_NORMAL() << "Number of larlite input files: " << input_larlite_files.size() << std::endl;    
     larcv::ProcessDriver::override_input_file( input_files );
     
     larcv::ProcessDriver::initialize();
+
+    // load up the larlite manager in the MergerDLInteraction Process
+
+    MergeDLInteraction* merger = (MergeDLInteraction*)larcv::ProcessDriver::process_ptr( larcv::ProcessDriver::process_id( "MergeDLInteraction" ) );
+    merger->setup_larlite_io( input_larlite_files );
+    
   }
   
 }

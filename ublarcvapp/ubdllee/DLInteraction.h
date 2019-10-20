@@ -18,8 +18,13 @@ namespace ubdllee {
 
   public:
     
-    DLInteraction() {};
+    DLInteraction() { clear(); };
     virtual ~DLInteraction() {};
+
+    // RUN, SUBRUN, EVENT
+    int run;
+    int subrun;
+    int event;
     
     // CROI
     int croi_filled;
@@ -33,11 +38,13 @@ namespace ubdllee {
     
     // vertex
     int vertex_filled;
+    int vertex_index;
     std::vector<float> vertex_pos;
     std::vector<int>   vertex_wires;
     int                vertex_tick;
     int                vertex_nprongs;
     std::vector< std::vector<larcv::Pixel2DCluster> > vertex_prong_contour_v;
+    std::vector< std::vector<larcv::ImageMeta> >      vertex_prong_meta_v;
 
     // Track Reco
     int tracker_filled;
@@ -53,6 +60,8 @@ namespace ubdllee {
     std::vector< larlite::shower > shower_v;
     // -- shower variables --
 
+    void clear();
+    
   };
 
 }

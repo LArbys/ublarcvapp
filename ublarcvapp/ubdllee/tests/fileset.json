@@ -17,7 +17,6 @@
             "tracker-ana":"tracker-ana-mcc9_v13_nueintrinsics_overlay_run1_trackersparsessnet-Run004953-SubRun000050.root",
             "shower-reco":"shower-reco-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
             "shower-qual":"shower-qual-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
-            "michelid-larcv":"michelid-larcv-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
             "michelid-larlite":"michelid-larlite-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
             "michelid-ana":"michelid-ana-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
             "nueid-larcv":"nueid-larcv-mcc9_v13_nueintrinsics_overlay_run1_nueidsparsessnet-Run004953-SubRun000050.root",
