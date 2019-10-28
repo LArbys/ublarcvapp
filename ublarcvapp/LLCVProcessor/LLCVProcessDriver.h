@@ -29,7 +29,7 @@ namespace llcv {
     void configure( const std::string config_file ); 
     void configure( const larcv::PSet& pset );
                    
-    //void intialize(); ///< call parent initialize, but also setup larlite
+    void initialize(); ///< call parent initialize, but also setup larlite::storage_manager (through LArliteManager)
 
     /* void override_larlite_input_files( const std::vector<std::string>& flist ); */
     /* void override_larcv_input_files( const std::vector<std::string>& flist ); */

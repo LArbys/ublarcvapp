@@ -13,6 +13,8 @@
 #pragma link C++ namespace ublarcvapp::dltagger;
 
 #pragma link C++ class ublarcvapp::llcv::LLCVProcessDriver+;
+#pragma link C++ class ublarcvapp::llcv::LLCVProcessTest+;
+//#pragma link C++ class ublarcvapp::llcv::LLCVProcessTestFactory+;
 
 //ADD_NEW_CLASS ... do not change this line
 #endif

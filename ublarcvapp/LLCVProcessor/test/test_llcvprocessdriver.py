@@ -6,6 +6,5 @@ import ROOT
 from ublarcvapp import ublarcvapp
 
 llcvdriver = ublarcvapp.llcv.LLCVProcessDriver("LLCVProcessDriver")
-
-print(llcvdriver)
 llcvdriver.configure( "llcvdriver.cfg" )
+llcvdriver.initialize()

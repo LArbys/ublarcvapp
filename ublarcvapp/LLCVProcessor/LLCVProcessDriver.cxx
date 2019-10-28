@@ -36,7 +36,7 @@ namespace llcv {
     LARCV_INFO() << "configure larlite" << std::endl;
     
     // get storage manager for larlite
-    larcv::PSet cfg_storage_man = pset.get<std::string>("storage_manager");
+    larcv::PSet cfg_storage_man = pset.get<larcv::PSet>("storage_manager");
 
     _do_larlite_config( _io_larlite, cfg_storage_man );
     
@@ -50,6 +50,10 @@ namespace llcv {
     int iomode = pset.get<int>("IOMode");
     ioman.set_io_mode( (larlite::storage_manager::IOMode_t)iomode );
 
+    std::vector<std::string> input_files = pset.get< std::vector<std::string> >( "InputFiles", std::vector<std::string>() );
+    for ( auto const& input_file : input_files )
+      ioman.add_in_filename( input_file );
+    
     std::string outfilename = pset.get<std::string>( "OutFileName", "" );
     if ( iomode==1 || iomode==2 ) {
       if ( ioman.output_filename().empty()) {
@@ -90,6 +94,10 @@ namespace llcv {
       if ( datat!=larlite::data::kUndefined ) ioman.set_data_to_write( datat, writeonlyname.at(i) );
     }
 
+    int verbosity = pset.get<int>("Verbosity",2);
+    LARCV_INFO() << "set larlite::storage_manager verbosity: " << verbosity << std::endl;
+    ioman.set_verbosity( (larlite::msg::Level)verbosity );
+
   }
   
   larlite::data::DataType_t LLCVProcessDriver::_get_enum_fromstring( std::string name ) {
@@ -100,7 +108,16 @@ namespace llcv {
     return larlite::data::kUndefined;
   }
 
-  
+  void LLCVProcessDriver::initialize() {
+    // initialize parent class
+    LARCV_INFO() << "initialize parent class" << std::endl;    
+    larcv::ProcessDriver::initialize();
+
+    // initialize io manager
+    LARCV_INFO() << "initialize larlite::storage_manager" << std::endl;
+    _io_larlite.open();
+    
+  }
   
 }
 }
