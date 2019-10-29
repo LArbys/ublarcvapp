@@ -37,8 +37,9 @@ namespace llcv {
     /* void override_larlite_output_file( const std::string fname ); */
     /* void override_larcv_output_file( const std::string fname ); */
 
-    /* void process_entry( bool autosave_entry ); ///< replaces parent process_entry, includes larlite modules */
-
+    bool process_entry( bool autosave_entry ); ///< replaces parent process_entry, includes larlite modules
+    bool process_entry(size_t entry, bool force_reload=false, bool autosave_entry=true);
+    
     larlite::storage_manager& io_larlite() { return _io_larlite; };
 
   protected:
@@ -47,6 +48,8 @@ namespace llcv {
 
     void _do_larlite_config( larlite::storage_manager& ioman, larcv::PSet& pset );
     larlite::data::DataType_t _get_enum_fromstring( std::string name );
+
+    bool _process_entry_( bool autosave_entry=true );
     
   };
   

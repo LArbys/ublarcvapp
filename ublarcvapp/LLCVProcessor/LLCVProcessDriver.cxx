@@ -1,6 +1,8 @@
 #include "LLCVProcessDriver.h"
 #include "larcv/core/Base/LArCVBaseUtilFunc.h"
 
+#include "LLCVProcessBase.h"
+
 namespace ublarcvapp {
 namespace llcv {
 
@@ -116,6 +118,106 @@ namespace llcv {
     // initialize io manager
     LARCV_INFO() << "initialize larlite::storage_manager" << std::endl;
     _io_larlite.open();
+    
+  }
+
+  bool LLCVProcessDriver::process_entry(size_t entry, bool force_reload, bool autosave_entry)
+  {
+    LARCV_DEBUG() << "Called" << std::endl;
+    // Public method to process "specified" entry
+
+    // Check state
+    if(!_processing) {
+      LARCV_CRITICAL() << "Must call initialize() before start processing!" << std::endl;
+      throw larcv::larbys();
+    }
+
+    // Check if input entry exists in case of read/both io mode
+    if(_io.io_mode() != larcv::IOManager::kWRITE) {
+
+      if(_access_entry_v.size() <= entry) {
+	LARCV_ERROR() << "Entry " << entry << " exceeds available events in a file!" << std::endl;
+	return false;
+      }
+      // if exist then move read pointer      
+      _io.read_entry(_access_entry_v[entry],force_reload);
+      _current_entry = entry;
+    }
+    // Execute processes
+    return _process_entry_(autosave_entry);
+  }
+  
+  bool LLCVProcessDriver::process_entry( bool autosave_entry ) {
+    
+    LARCV_INFO() << "start processing of entry. autosave=" << autosave_entry << std::endl;
+
+    // Check state
+    if(!_processing) {
+      LARCV_CRITICAL() << "Must call initialize() before start processing!" << std::endl;
+      throw larcv::larbys();
+    }
+
+    // Check if input entry exists in case of read/both io mode
+    if(_io.io_mode() != larcv::IOManager::kWRITE) {
+
+      if(_access_entry_v.size() <= _current_entry) {
+	LARCV_NORMAL() << "Entry " << _current_entry << " exceeds available events in a file!" << std::endl;
+	return false;
+      }
+      // if exist then move read pointer
+      _io.read_entry(_access_entry_v[_current_entry]);
+      _io_larlite.syncEntry( _io );
+    }
+
+    return _process_entry_(autosave_entry);
+  }
+
+  bool LLCVProcessDriver::_process_entry_(bool autosave_entry ) {
+    
+    // Execute processes: we copy the code in ProcessDriver::_process_entry_
+    // with the exception that we now call process(iomanager,storage_manager)
+
+    // Execute
+    _process_good_status=true;
+    _process_cleared=false;
+    for(auto& p : _proc_v) {
+
+      // this is bad design, but this is what happesn when tacking on an undesigned extension
+      // we resolve the class to try and check if the process is a LLCVProcessBase or just a larcv::ProcessBase
+
+      LLCVProcessBase* llcvbase = dynamic_cast<LLCVProcessBase*>(p);
+      if ( llcvbase==nullptr ) {
+        // then just a larcv::ProcessBase
+        _process_good_status = _process_good_status && _run_process_( p );
+      }
+      else {
+        _process_good_status = _process_good_status && llcvbase->process(_io, _io_larlite);
+      }
+      if(!_process_good_status && _enable_filter) break;
+    }
+    // No event-write to be done if _has_event_creator is set. 
+    // Also, user can prevent automatically saving the entry as well.
+    // Otherwise go ahead
+    if(!_has_event_creator && autosave_entry ) {
+      // If not read mode save entry
+      if(_io.io_mode() != larcv::IOManager::kREAD && (!_enable_filter || _process_good_status)) {
+	_process_cleared = true;
+	_io.save_entry();
+        _io_larlite.next_event( true  ); // go to next event -- for larlite, this triggers a write of the current event
+      }
+      if(!_process_cleared) {
+	_io.clear_entry();
+      }
+      _process_cleared=true;
+    }
+    if(!_process_cleared && _io.io_mode() == larcv::IOManager::kREAD)  {
+      _io.clear_entry();
+    }
+
+    // Bump up entry record
+    ++_current_entry;
+    return _process_good_status;    
+    
     
   }
   

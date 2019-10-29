@@ -5,12 +5,14 @@ set( LIBNAME LArCVApp_${MODULE_NAME} )
 
 set( HEADERS LLCVProcessDriver.h
   LLCVProcessBase.h
-  LLCVProcessTest.h )
+  LLCVProcessTest.h
+  LArCVProcessTest.h )
 
 add_library( ${LIBNAME} SHARED
   LLCVProcessDriver.cxx
   LLCVProcessBase.cxx
-  LLCVProcessTest.cxx )
+  LLCVProcessTest.cxx
+  LArCVProcessTest.cxx )
 
 # create a property to hold our headers
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
