@@ -19,24 +19,46 @@ void SaveCutVariables::configure( const larcv::PSet& pset ) {
     _input_mcshower_producer     = pset.get<std::string>("InputMCShowerProducer");
     _input_flux_producer         = pset.get<std::string>("InputFluxProducer");
     _input_mctruth_producer      = pset.get<std::string>("InputMCTruthProducer");
+    _input_pot_producer          = pset.get<std::string>("InputPotProducer");
     //larlite (tracker) inputs
     _input_recotrack_producer    = pset.get<std::string>("InputRecoTrackProducer");
     _input_vtxtracker_producer   = pset.get<std::string>("InputVtxTrackerProducer");
+    //larlite (shower) inputs
+    _input_recoshower_producer   = pset.get<std::string>("InputRecoShowerProducer");
+    _input_pfpartshower_producer = pset.get<std::string>("InputPfPartShowerProducer");
+    _input_hitsshower_producer   = pset.get<std::string>("InputHitsShowerProducer");
+    _input_clustershower_producer= pset.get<std::string>("InputClusterShowerProducer");
+    _input_assshower_producer    = pset.get<std::string>("InputAssShowerProducer");
+    _input_assdlshower_producer  = pset.get<std::string>("InputAssDLShowerProducer");
+    _input_vtxshower_producer  = pset.get<std::string>("InputVtxShowerProducer");
 
   }
 
-  void SaveCutVariables::initialize() {
+  void SaveCutVariables::initialize(std::string showerrecoananame) {
     OutFile = new TFile("NCPi0CutVariables.root","RECREATE");
     setupAnaTree();
     fin = new TFile("/cluster/tufts/wongjiradlab/kmason03/testdir/ubdl/ublarcvapp/ublarcvapp/NCPi0/test/hadd_NCPi0Probabilities.root","read");
     LoadProbHists();
+    std::cout<<"loaded histogram"<<std::endl;
+    //hard code in CalibrationFile
+    CalibrationFile = new TFile("/cluster/tufts/wongjiradlab/kmason03/testdir/ubdl/ublarcvapp/ublarcvapp/NCPi0/test/CalibrationMaps_MCC9.root","read");
+    hImageCalibrationMap_00 = (TH3D*)CalibrationFile->Get("hImageCalibrationMap_00");
+    hImageCalibrationMap_01 = (TH3D*)CalibrationFile->Get("hImageCalibrationMap_01");
+    hImageCalibrationMap_02 = (TH3D*)CalibrationFile->Get("hImageCalibrationMap_02");
+    ShowerRecoFile = new TFile(showerrecoananame.c_str(),"read");
+    SaveProbabilities Probs;
+    // GetShowerRecoVals();
   }
 
-bool SaveCutVariables::process( larcv::IOManager& io,larlite::storage_manager& ioll,larcv::IOManager& ioforward ){
+bool SaveCutVariables::process( larcv::IOManager& io,larlite::storage_manager& ioll,larcv::IOManager& ioforward,int ientry){
   //set utils object
   Utils Utils;
   SaveProbabilities Probs;
+  // showerrecotree->GetEntry(ientry);
+  // SaveShowerRecoVariables();
   // inputs
+  std::cout << "process"<<std::endl;
+  OutFile->cd();
   const auto ev_img            = (larcv::EventImage2D*)io.get_data( larcv::kProductImage2D, _input_adc_producer );
   const auto ev_instance       = (larcv::EventImage2D*)io.get_data( larcv::kProductImage2D, _input_instance_producer );
   const auto ev_segment        = (larcv::EventImage2D*)io.get_data( larcv::kProductImage2D, _input_segment_producer );
@@ -50,9 +72,23 @@ bool SaveCutVariables::process( larcv::IOManager& io,larlite::storage_manager& i
   const auto ssnet_uplane      = (larcv::EventImage2D*)ioforward.get_data( larcv::kProductImage2D, _input_ssnet_uplane_producer );
   const auto ssnet_vplane      = (larcv::EventImage2D*)ioforward.get_data( larcv::kProductImage2D, _input_ssnet_vplane_producer );
   const auto ssnet_yplane      = (larcv::EventImage2D*)ioforward.get_data( larcv::kProductImage2D, _input_ssnet_yplane_producer );
+  const auto ev_pot            = (larlite::potsummary*)ioll.get_subrundata(larlite::data::kPOTSummary, _input_pot_producer);
+  const auto ev_recoshower     = (larlite::event_shower*)ioll.get_data(larlite::data::kShower,  _input_recoshower_producer );
+  const auto ev_pfpartshower   = (larlite::event_pfpart*)ioll.get_data(larlite::data::kPFParticle,  _input_pfpartshower_producer );
+  const auto ev_hitsshower     = (larlite::event_hit*)ioll.get_data(larlite::data::kHit, _input_hitsshower_producer);
+  const auto ev_assshower      = (larlite::event_ass*)ioll.get_data(larlite::data::kAssociation, _input_assshower_producer);
+  const auto ev_assdlshower    = (larlite::event_ass*)ioll.get_data(larlite::data::kAssociation, _input_assdlshower_producer);
+  const auto ev_clustershower  = (larlite::event_cluster*)ioll.get_data(larlite::data::kCluster, _input_clustershower_producer);
+  const auto ev_vtxshower      = (larlite::event_vertex*)ioll.get_data(larlite::data::kVertex,  _input_vtxtracker_producer );
+
   run    = ioll.run_id();
   subrun = ioll.subrun_id();
   event  = ioll.event_id();
+  pot = ev_pot->totpot;
+
+  ev_assshower->list_association();
+  ev_assdlshower->list_association();
+
   //grab array wire image
   auto const& wire_img = ev_img->Image2DArray();
   auto const& wireu_meta = wire_img.at(0).meta();
@@ -63,12 +99,15 @@ bool SaveCutVariables::process( larcv::IOManager& io,larlite::storage_manager& i
   auto const& ssnetu_img = ssnet_uplane->Image2DArray();
   auto const& ssnetv_img = ssnet_vplane->Image2DArray();
   auto const& ssnety_img = ssnet_yplane->Image2DArray();
+
   // MCC9 SCE correction
   TFile* newSCEFile = new TFile("/cluster/tufts/wongjiradlab/rshara01/ubdl/SCEoffsets_dataDriven_combined_fwd_Jan18.root");
   TH3F* sceDx = (TH3F*) newSCEFile->Get("hDx");
   TH3F* sceDy = (TH3F*) newSCEFile->Get("hDy");
   TH3F* sceDz = (TH3F*) newSCEFile->Get("hDz");
 
+  //--------Vertex Variables---------------
+  std::cout<<"Starting Vertex functions"<<std::endl;
   //get sce-corrected true Vertex
   //first get 3d version
   true_vtx_location_3D = GetTrueVtxLoc(ev_partroi, sceDx, sceDy, sceDz);
@@ -84,11 +123,13 @@ bool SaveCutVariables::process( larcv::IOManager& io,larlite::storage_manager& i
   for (int ii = 0; ii < reco_vtx_location_3D_v.size(); ii++){
     reco_vtx_location_2D_v.push_back(Utils.getProjectedPixel(reco_vtx_location_3D_v[ii], wirey_meta, 3));
   }
-
   // mark each vtx as good or bad
   vtx_status_v = IsVtxGood(reco_vtx_location_3D_v,true_vtx_location_3D);
   //is each vtx in fiducial volume
   vtx_reco_fid_v = IsVtxInFid(reco_vtx_location_3D_v);
+
+  //-------Track Variables----------------------------
+  std::cout<<"Starting Track functions"<<std::endl;
   //truth match each track to particle type
   //format: top vector = vertex level, for each vtx there is a vector of track id
   //see function for id definitions
@@ -105,32 +146,71 @@ bool SaveCutVariables::process( larcv::IOManager& io,larlite::storage_manager& i
   CalculateR_Proton(reco_vtx_location_3D_v,ev_recotrack);
   CalculateR_Gamma(reco_vtx_location_3D_v,ev_recotrack);
 
-  for (int ii = 0; ii< tracklength_v.size(); ii++){
-    std::cout<< "\n For vertex ("<<ii<<")"<<std::endl;
-    for (int tracknum = 0; tracknum<true_track_id_v[ii].size(); tracknum++){
-      std::cout<<" Track ID: "<<true_track_id_v[ii][tracknum];
-      // std::cout<<" Track Length: "<<tracklength_v[ii][tracknum];
-      // std::cout<<" Is contained? "<<vtx_cont_v[ii][tracknum];
-      // std::cout<<" MaxDQDX: "<<max_dqdx_v[ii][tracknum];
-      // std::cout<<" AvgDQDX: "<<avg_dqdx_v[ii][tracknum]<<std::endl;
-      // std::cout<<"  SSNetShowerU: "<<SSNet_shower_frac_u_v[ii][tracknum];
-      // std::cout<<" SSNetTrackU: "<<SSNet_track_frac_u_v[ii][tracknum];
-      // std::cout<<" SSNetShowerV: "<<SSNet_shower_frac_v_v[ii][tracknum];
-      // std::cout<<" SSNetTrackV: "<<SSNet_track_frac_v_v[ii][tracknum];
-      // std::cout<<" SSNetShowerY: "<<SSNet_shower_frac_y_v[ii][tracknum];
-      // std::cout<<" SSNetTrackY: "<<SSNet_track_frac_y_v[ii][tracknum]<<std::endl;
-      std::cout<<" R(proton): "<<R_proton_v[ii][tracknum];
-      // std::cout<<" R(gamma): "<<R_gamma_v[ii][tracknum]<<std::endl;
-      std::cout<<std::endl;
+  //-----Shower Variables-----
+  std::cout<<"Starting Shower functions"<<std::endl;
+  std::vector<std::vector<int>> hitsid = Probs.HitsVtxAssociation(ev_hitsshower,ev_clustershower,ev_assdlshower);
+  //also get the opposite (vtx to hits)
+  std::vector<std::vector<int>> vtxhits_v = Probs.VtxHitsAssociation( hitsid, ev_vtxshower->size());
+  std::vector<std::vector<int>> showerid = Probs.ShowerVtxAssociation(ev_hitsshower,
+    ev_recoshower,hitsid,wireu_meta,wirev_meta,wirey_meta);
+  // make one large association object: vertex[shower][hit]
+  ShowerAssociation_vvv = Probs.TotalShowerAssociation(ev_recoshower,
+    ev_hitsshower,vtxhits_v,showerid,ev_vtxshower->size(),wireu_meta,wirev_meta,wirey_meta);
+  showerid_v = Probs.TruthMatchShowers(ShowerAssociation_vvv,
+        ev_hitsshower,instance_img, segment_img, wireu_meta,wirev_meta,wirey_meta);
+  ShowerLength(ev_recoshower,ShowerAssociation_vvv);
+  ShowerTotalE(ev_recoshower,ShowerAssociation_vvv);
+  ShowerOpeningAngle(ev_recoshower,ShowerAssociation_vvv);
+  ShowerSSNetFraction(ShowerAssociation_vvv, ssnetu_img, ssnetv_img, ssnety_img,
+     wireu_meta, wirev_meta, wirey_meta, ev_hitsshower);
+  ShowerDEDX(ev_recoshower,ShowerAssociation_vvv);
 
+  std::cout<<"Number of Vertices: "<< ShowerAssociation_vvv.size()<<std::endl;
+  for (int ii =0;ii< ShowerAssociation_vvv.size();ii++){
+    std::cout<< "-- Vertex: "<<ii<<" has "<< ShowerAssociation_vvv.at(ii).size()<<" associated showers"<<std::endl;
+    for (int iii = 0;iii< ShowerAssociation_vvv.at(ii).size();iii++){
+      std::cout<<"----Shower: "<<iii<< " has "<< ShowerAssociation_vvv.at(ii).at(iii).size()<<" associated hits"<<std::endl;
+      std::cout<<"--------It's shower number is: "<< ShowerAssociation_vvv.at(ii).at(iii).at(0)<<std::endl;
+      std::cout<<"--------It's truth ID is: " << showerid_v.at(ii).at(iii)<<std::endl;
+      std::cout<<"--------It's length is: " << shower_reco_length_v.at(ii).at(iii)<<std::endl;
+      std::cout<<"--------It's Energy is: " << shower_reco_totalE_v.at(ii).at(iii)<<std::endl;
+      std::cout<<"--------It's openingangle is: " << shower_reco_openingangle_v.at(ii).at(iii)<<std::endl;
+      std::cout<<"--------It's ShowerFrac is: " << shower_reco_ssnetshower_v.at(ii).at(iii)<<std::endl;
     }
   }
+
+  // for (int ii = 0; ii< tracklength_v.size(); ii++){
+  //   std::cout<< "\n For vertex ("<<ii<<")"<<std::endl;
+  //   for (int tracknum = 0; tracknum<true_track_id_v[ii].size(); tracknum++){
+  //     std::cout<<" Track ID: "<<true_track_id_v[ii][tracknum];
+  //     // std::cout<<" Track Length: "<<tracklength_v[ii][tracknum];
+  //     // std::cout<<" Is contained? "<<vtx_cont_v[ii][tracknum];
+  //     // std::cout<<" MaxDQDX: "<<max_dqdx_v[ii][tracknum];
+  //     // std::cout<<" AvgDQDX: "<<avg_dqdx_v[ii][tracknum]<<std::endl;
+  //     // std::cout<<"  SSNetShowerU: "<<SSNet_shower_frac_u_v[ii][tracknum];
+  //     // std::cout<<" SSNetTrackU: "<<SSNet_track_frac_u_v[ii][tracknum];
+  //     // std::cout<<" SSNetShowerV: "<<SSNet_shower_frac_v_v[ii][tracknum];
+  //     // std::cout<<" SSNetTrackV: "<<SSNet_track_frac_v_v[ii][tracknum];
+  //     // std::cout<<" SSNetShowerY: "<<SSNet_shower_frac_y_v[ii][tracknum];
+  //     // std::cout<<" SSNetTrackY: "<<SSNet_track_frac_y_v[ii][tracknum]<<std::endl;
+  //     std::cout<<" R(proton): "<<R_proton_v[ii][tracknum];
+  //     // std::cout<<" R(gamma): "<<R_gamma_v[ii][tracknum]<<std::endl;
+  //     std::cout<<std::endl;
+  //
+  //   }
+  // }
 
   _ana_tree->Fill();
   ClearBranches();
   return true;
 }
 // -----------------------------------------------------------------------------
+void SaveCutVariables::GetShowerRecoVals(){
+  // ShowerRecoFile->cd();
+  // showerrecotree = (TTree*)ShowerRecoFile->Get("ShowerQuality_DL");
+  // showerrecotree->SetBranchAddress("nshowers",&nshowers);
+}//end of function
+//------------------------------------------------------------------------------
 void SaveCutVariables::setupAnaTree() {
 
   std::cout << "Setup analysis tree" << std::endl;
@@ -163,8 +243,25 @@ void SaveCutVariables::setupAnaTree() {
   _ana_tree->Branch("true_vtx_location_2D",&true_vtx_location_2D);
   _ana_tree->Branch("reco_vtx_location_3D_v",&reco_vtx_location_3D_v);
   _ana_tree->Branch("reco_vtx_location_2D_v",&reco_vtx_location_2D_v);
+  _ana_tree->Branch("showerreco_nshowers",&showerreco_nshowers);
+  _ana_tree->Branch("pot",&pot);
+  _ana_tree->Branch("ShowerAssociation_vvv",&ShowerAssociation_vvv);
+  _ana_tree->Branch("showerid_v",&showerid_v);
+  _ana_tree->Branch("shower_reco_totalE_v",&shower_reco_totalE_v);
+  _ana_tree->Branch("shower_reco_length_v",&shower_reco_length_v);
+  _ana_tree->Branch("shower_reco_openingangle_v",&shower_reco_openingangle_v);
+  _ana_tree->Branch("shower_reco_ssnetshower_v",&shower_reco_ssnetshower_v);
+  _ana_tree->Branch("shower_reco_dedx_vv",&shower_reco_dedx_vv);
 
 }
+//------------------------------------------------------------------------------
+// void SaveCutVariables::TruthMatchSHowers(){
+//
+// }//end of function
+//------------------------------------------------------------------------------
+void SaveCutVariables::SaveShowerRecoVariables(){
+  // showerreco_nshowers = nshowers;
+}//end of function
 //------------------------------------------------------------------------------
 void SaveCutVariables::LoadProbHists(){
   fin->cd();
@@ -252,7 +349,10 @@ std::vector<bool> SaveCutVariables::IsVtxGood(
       double recoz = reco_vtx_v[iii][2];
       double distance;
       distance = std::sqrt(std::pow(recox-truex,2)+std::pow(recoy-truey,2)+std::pow(recoz-truez,2));
-      if (distance < 5) vtxstatus.push_back(true);
+      if (distance < 5) {
+        vtxstatus.push_back(true);
+        std::cout<<"has good vtx"<<std::endl;
+      }
       else vtxstatus.push_back(false);
     }//end of vtx loop
     return vtxstatus;
@@ -341,9 +441,14 @@ void SaveCutVariables::AvgMaxDQDX(
         float totalcharge = 0;
         float max = 0;
         for (int pt = 0; pt<ev_recotrack->at(ii).NumberdQdx(larlite::geo::View_t::kW);pt++){
-          totalcharge += ev_recotrack->at(ii).DQdxAtPoint(pt,larlite::geo::View_t::kW);
-          if (ev_recotrack->at(ii).DQdxAtPoint(pt,larlite::geo::View_t::kW)>max){
-            max = ev_recotrack->at(ii).DQdxAtPoint(pt,larlite::geo::View_t::kW);
+          TVector3 trackpt = ev_recotrack->at(ii).LocationAtPoint(pt);
+          double bin = hImageCalibrationMap_00->FindBin(trackpt.X(),trackpt.Y(),trackpt.Z());
+          double calib_y = hImageCalibrationMap_02->GetBinContent(bin);
+          double calibrated_dqdx = ev_recotrack->at(ii).DQdxAtPoint(pt,larlite::geo::View_t::kW)*calib_y;
+
+          totalcharge += calibrated_dqdx;
+          if (calibrated_dqdx>max){
+            max = calibrated_dqdx;
           }
         }
         float avg = totalcharge/(float)ev_recotrack->at(ii).NumberdQdx(larlite::geo::View_t::kW);
@@ -464,12 +569,20 @@ void SaveCutVariables::CalculateR_Proton(std::vector<std::vector<double>> reco_v
         for (int iii = 0; iii<ev_recotrack->at(ii).NumberTrajectoryPoints();iii++){
           float dqdx_val = -1;
           dqdx_val = ev_recotrack->at(ii).DQdxAtPoint(iii,larlite::geo::View_t::kW);
+          TVector3 trackpt = ev_recotrack->at(ii).LocationAtPoint(iii);
+          //get calibration factors..
+          double bin = hImageCalibrationMap_00->FindBin(trackpt.X(),trackpt.Y(),trackpt.Z());
+          double calib_u = hImageCalibrationMap_00->GetBinContent(bin);
+          double calib_v = hImageCalibrationMap_01->GetBinContent(bin);
+          double calib_y = hImageCalibrationMap_02->GetBinContent(bin);
+          //use y plane, if dead, average the others.
           if (dqdx_val == 0){
-            float uval = ev_recotrack->at(ii).DQdxAtPoint(iii,larlite::geo::View_t::kU);
-            float vval = ev_recotrack->at(ii).DQdxAtPoint(iii,larlite::geo::View_t::kV);
+            float uval = ev_recotrack->at(ii).DQdxAtPoint(iii,larlite::geo::View_t::kU)*calib_u;
+            float vval = ev_recotrack->at(ii).DQdxAtPoint(iii,larlite::geo::View_t::kV)*calib_v;
             dqdx_val = (uval+vval)/2.0;
           }
-          TVector3 trackpt = ev_recotrack->at(ii).LocationAtPoint(iii);
+          else dqdx_val = dqdx_val*calib_y;
+
           float trackpt_x = trackpt.X();
           float trackpt_y = trackpt.Y();
           float trackpt_z = trackpt.Z();
@@ -598,8 +711,157 @@ void SaveCutVariables::ClearBranches(){
   true_vtx_location_2D.clear();
   reco_vtx_location_3D_v.clear();
   reco_vtx_location_2D_v.clear();
+  ShowerAssociation_vvv.clear();
+  showerid_v.clear();
+  shower_reco_totalE_v.clear();
+  shower_reco_length_v.clear();
+  shower_reco_openingangle_v.clear();
+  shower_reco_ssnetshower_v.clear();
+  shower_reco_dedx_vv.clear();
+
 }//end of function
 
+//------------------------------------------------------------------------------
+void SaveCutVariables::ShowerLength(larlite::event_shower* ev_recoshower,
+      std::vector<std::vector<std::vector<int>>> ShowerAssociation_vvv){
+  //function to save shower length
+  //loop through vertices in association
+  for(int vtx = 0;vtx<ShowerAssociation_vvv.size();vtx++){
+    std::vector<double> lengths;
+    //loop through showers in association
+    for(int shower = 0; shower<ShowerAssociation_vvv.at(vtx).size();shower++){
+      //first index in hits is actually shower id!!
+      int showerid = ShowerAssociation_vvv.at(vtx).at(shower).at(0);
+      //loop through reco showers to find match
+      for(int ii = 0;ii<ev_recoshower->size();ii++){
+        int recoid = ev_recoshower->at(ii).ID();
+        //if match, save length
+        if(recoid == showerid){;
+          lengths.push_back(ev_recoshower->at(ii).Length());
+        }//end of if
+      }//end of loop though reco object
+    }//end of shower loop
+    shower_reco_length_v.push_back(lengths);
+  }//end of vtx loop
+  return;
+}//end of function
+//------------------------------------------------------------------------------
+void SaveCutVariables::ShowerTotalE(larlite::event_shower* ev_recoshower,
+      std::vector<std::vector<std::vector<int>>> ShowerAssociation_vvv){
+  //function to save shower length
+  //loop through vertices in association
+  for(int vtx = 0;vtx<ShowerAssociation_vvv.size();vtx++){
+    std::vector<double> energy;
+    //loop through showers in association
+    for(int shower = 0; shower<ShowerAssociation_vvv.at(vtx).size();shower++){
+      //first index in hits is actually shower id!!
+      int showerid = ShowerAssociation_vvv.at(vtx).at(shower).at(0);
+      //loop through reco showers to find match
+      for(int ii = 0;ii<ev_recoshower->size();ii++){
+        int recoid = ev_recoshower->at(ii).ID();
+        //if match, save length
+        if(recoid == showerid){;
+          energy.push_back(ev_recoshower->at(ii).Energy());
+        }//end of if
+      }//end of loop though reco object
+    }//end of shower loop
+    shower_reco_totalE_v.push_back(energy);
+  }//end of vtx loop
+  return;
+}//end of function
+
+//------------------------------------------------------------------------------
+void SaveCutVariables::ShowerOpeningAngle(larlite::event_shower* ev_recoshower,
+      std::vector<std::vector<std::vector<int>>> ShowerAssociation_vvv){
+  //function to save shower length
+  //loop through vertices in association
+  for(int vtx = 0;vtx<ShowerAssociation_vvv.size();vtx++){
+    std::vector<double> angles;
+    //loop through showers in association
+    for(int shower = 0; shower<ShowerAssociation_vvv.at(vtx).size();shower++){
+      //first index in hits is actually shower id!!
+      int showerid = ShowerAssociation_vvv.at(vtx).at(shower).at(0);
+      //loop through reco showers to find match
+      for(int ii = 0;ii<ev_recoshower->size();ii++){
+        int recoid = ev_recoshower->at(ii).ID();
+        //if match, save length
+        if(recoid == showerid){;
+          angles.push_back(ev_recoshower->at(ii).OpeningAngle());
+        }//end of if
+      }//end of loop though reco object
+    }//end of shower loop
+    shower_reco_openingangle_v.push_back(angles);
+  }//end of vtx loop
+  return;
+}//end of function
+//------------------------------------------------------------------------------
+void SaveCutVariables::ShowerDEDX(larlite::event_shower* ev_recoshower,
+      std::vector<std::vector<std::vector<int>>> ShowerAssociation_vvv){
+  //function to save shower length
+  //loop through vertices in association
+  for(int vtx = 0;vtx<ShowerAssociation_vvv.size();vtx++){
+    std::vector<std::vector<double>> showerdqdx (ShowerAssociation_vvv.at(vtx).size());
+    //loop through showers in association
+    for(int shower = 0; shower<ShowerAssociation_vvv.at(vtx).size();shower++){
+      //first index in hits is actually shower id!!
+      int showerid = ShowerAssociation_vvv.at(vtx).at(shower).at(0);
+      //loop through reco showers to find match
+      showerdqdx.at(shower) = ev_recoshower->at(showerid).dEdx_v();
+    }//end of shower loop
+    shower_reco_dedx_vv.push_back(showerdqdx);
+  }//end of vtx loop
+  return;
+}//end of function
+//------------------------------------------------------------------------------
+void SaveCutVariables::ShowerSSNetFraction(std::vector<std::vector<std::vector<int>>> ShowerAssociation_vvv,
+  std::vector<larcv::Image2D> ssnetu_img,std::vector<larcv::Image2D> ssnetv_img,
+  std::vector<larcv::Image2D> ssnety_img,larcv::ImageMeta wireu_meta,larcv::ImageMeta wirev_meta,
+  larcv::ImageMeta wirey_meta,larlite::event_hit* ev_hitsshower){
+  //function to save ssnet shower fraction
+  //loop through vertices in association
+  for(int vtx = 0;vtx<ShowerAssociation_vvv.size();vtx++){
+    std::vector<double> showerfracs (ShowerAssociation_vvv.at(vtx).size(),-1);
+    //loop through showers in association
+    for(int shower = 0; shower<ShowerAssociation_vvv.at(vtx).size();shower++){
+      //first index in hits is actually shower id!! - loop though hits
+      float totalshowerscore = 0;
+      if (ShowerAssociation_vvv.at(vtx).at(shower).size()>1){
+        for(int hit = 1;hit<ShowerAssociation_vvv.at(vtx).at(shower).size();hit++){
+          int hitID = ShowerAssociation_vvv.at(vtx).at(shower).at(hit);
+          //get location of hit object:
+          int row;
+          int col;
+          int plane;
+          float showerscore;
+          if(ev_hitsshower->at(hitID).View()==2){
+            plane = 2;
+            row = wirey_meta.row(ev_hitsshower->at(hitID).PeakTime()+2400);
+            col = wirey_meta.col(ev_hitsshower->at(hitID).Channel()-2*2400);
+          }
+          else if (ev_hitsshower->at(hitID).View()==0){
+            row = wireu_meta.row(ev_hitsshower->at(hitID).PeakTime()+2400);
+            col = wireu_meta.col(ev_hitsshower->at(hitID).Channel());
+            plane = 0;
+          }
+          else if (ev_hitsshower->at(hitID).View()==1){
+            row = wirev_meta.row(ev_hitsshower->at(hitID).PeakTime()+2400);
+            col = wirev_meta.col(ev_hitsshower->at(hitID).Channel()-2400);
+            plane = 1;
+          }
+          //get ssnet shower score:
+          if(plane == 0) showerscore = ssnetu_img.at(0).pixel(row,col);
+          else if(plane == 1) showerscore = ssnetv_img.at(0).pixel(row,col);
+          else if(plane == 2) showerscore = ssnety_img.at(0).pixel(row,col);
+          totalshowerscore+=showerscore;
+        }//end of hit loop
+        float showerfrac = totalshowerscore/(float)(ShowerAssociation_vvv.at(vtx).at(shower).size()-1);
+        showerfracs.at(shower) = showerfrac;
+      }
+    }//end of shower loop
+    shower_reco_ssnetshower_v.push_back(showerfracs);
+  }//end of vtx loop
+  return;
+}//end of function
 //------------------------------------------------------------------------------
 
 void SaveCutVariables::finalize() {

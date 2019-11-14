@@ -17,6 +17,8 @@ def parse_args():
     parser.add_argument('--ssnet')
     parser.add_argument('--mcinfo')
     parser.add_argument('--tracker')
+    parser.add_argument('--showerreco_ana')
+    parser.add_argument('--showerreco_larlite')
     return parser.parse_args();
 
 def main():
@@ -29,7 +31,7 @@ def main():
 
     larcvinputfiles = [args.larcvtruth] # backward example
     larcvforwardinputfiles = [args.ssnet]
-    larliteinputfiles = [args.mcinfo,args.tracker]
+    larliteinputfiles = [args.mcinfo,args.tracker,args.showerreco_larlite]
 
     # #larcv io manager
     # io_cfg = """
@@ -79,6 +81,13 @@ def main():
     InputMCTruthProducer: \"generator\"
     InputRecoTrackProducer: \"trackReco\"
     InputVtxTrackerProducer: \"trackReco\"
+    InputRecoShowerProducer: \"showerreco\"
+    InputPfPartShowerProducer: \"dl\"
+    InputHitsShowerProducer: \"dl\"
+    InputClusterShowerProducer: \"dl\"
+    InputAssShowerProducer: \"showerreco\"
+    InputAssDLShowerProducer: \"dl\"
+    InputVtxShowerProducer: \"dl\"
     """
     lfcfg = open("saveprobabilities.cfg",'w')
     print(saveprobabilities_cfg, file=lfcfg)
@@ -87,7 +96,7 @@ def main():
 
     # ----Algos-----
     saveprobabilities.configure(lfpset)
-    saveprobabilities.initialize()
+    saveprobabilities.initialize(args.showerreco_ana)
 
     nentries = io.get_n_entries()
     print("Num Entries: ",nentries)
@@ -98,7 +107,7 @@ def main():
         ioforward.read_entry(ientry)
         ioll.go_to(ientry)
         print("ON ENTRY: ",ientry)
-        saveprobabilities.process(io,ioll,ioforward)
+        saveprobabilities.process(io,ioll,ioforward,ientry)
         print(" ")
 
     # io.read_entry(8)

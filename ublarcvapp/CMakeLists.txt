@@ -19,3 +19,4 @@ if (LARCV_USE_GEO2D)
 endif()
 
 add_subdirectory(DLTagger)
+add_subdirectory(NCPi0)

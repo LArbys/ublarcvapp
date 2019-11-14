@@ -5,7 +5,7 @@ set( LIBNAME LArCVApp_${MODULE_NAME} )
 
 set( HEADERS Utils.h
   SaveProbabilities.h
-  SaveCutVariables.h )
+  SaveCutVariables.h)
 
 add_library( ${LIBNAME} SHARED
   Utils.cxx
@@ -32,6 +32,7 @@ set(UBLARCVAPP_LIBS_USED LArCVApp_ContourTools LArCVApp_UBImageMod LArCVApp_Reco
 message("headers: ${HEADERS}")
 message("project source dir: ${PROJECT_SOURCE_DIR}")
 message("eigen3: ${EIGEN3_INCLUDE_DIRS}")
+message("larcv include dir: ${LARCV_INCLUDE_DIR}")
 
 get_target_property(ALL_HEADERS ${LIBNAME} PUBLIC_HEADER)
 

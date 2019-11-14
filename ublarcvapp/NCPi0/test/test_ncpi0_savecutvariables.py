@@ -17,6 +17,8 @@ def parse_args():
     parser.add_argument('--ssnet')
     parser.add_argument('--mcinfo')
     parser.add_argument('--tracker')
+    parser.add_argument('--showerreco_ana')
+    parser.add_argument('--showerreco_larlite')
 
     return parser.parse_args();
 
@@ -28,7 +30,8 @@ def main():
 
     larcvinputfiles = [args.larcvtruth] # backward example
     larcvforwardinputfiles = [args.ssnet]
-    larliteinputfiles = [args.mcinfo,args.tracker]
+    larliteinputfiles = [args.mcinfo,args.tracker,args.showerreco_larlite]
+
 
     # #larcv io manager
     # io_cfg = """
@@ -63,6 +66,9 @@ def main():
         ioll.add_in_filename( l )
     ioll.open()
 
+    # # input anafiles
+    # showerrecoanafile = new TFile(args.showerreco_ana,"read")
+
     # ----make config file----
     savevariables_cfg = """
     InputADCProducer: \"wiremc\"
@@ -78,6 +84,14 @@ def main():
     InputMCTruthProducer: \"generator\"
     InputRecoTrackProducer: \"trackReco\"
     InputVtxTrackerProducer: \"trackReco\"
+    InputRecoShowerProducer: \"showerreco\"
+    InputPotProducer: \"generator\"
+    InputPfPartShowerProducer: \"dl\"
+    InputHitsShowerProducer: \"dl\"
+    InputClusterShowerProducer: \"dl\"
+    InputAssShowerProducer: \"showerreco\"
+    InputAssDLShowerProducer: \"dl\"
+    InputVtxShowerProducer: \"dl\"
     """
     lfcfg = open("savecropvariables.cfg",'w')
     print(savevariables_cfg, file=lfcfg)
@@ -86,7 +100,7 @@ def main():
 
     # ----Algos-----
     savecutvariables.configure(lfpset)
-    savecutvariables.initialize()
+    savecutvariables.initialize(args.showerreco_ana)
 
     nentries = io.get_n_entries()
     print("Num Entries: ",nentries)
@@ -97,8 +111,15 @@ def main():
         ioll.go_to(ientry)
         ioforward.read_entry(ientry)
         print("ON ENTRY: ",ientry)
-        savecutvariables.process(io,ioll,ioforward)
+        savecutvariables.process(io,ioll,ioforward,ientry)
         print(" ")
+    # ientry = 16
+    # io.read_entry(ientry)
+    # ioll.go_to(ientry)
+    # ioforward.read_entry(ientry)
+    # print("ON ENTRY: ",ientry)
+    # savecutvariables.process(io,ioll,ioforward,ientry)
+    # print(" ")
 
     savecutvariables.finalize()
     io.finalize()
