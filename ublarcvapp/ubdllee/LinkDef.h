@@ -9,6 +9,9 @@
 #pragma link C++ class ublarcvapp::ubdllee::FixedCROIFromFlashConfig+;
 #pragma link C++ class ublarcvapp::ubdllee::FixedCROIFromFlashAlgo+;
 #pragma link C++ class ublarcvapp::ubdllee::NuAnaMC+;
+#pragma link C++ class ublarcvapp::ubdllee::DLInteraction+;
+#pragma link C++ class ublarcvapp::ubdllee::MergeDLInteraction+;
+#pragma link C++ class ublarcvapp::ubdllee::DLMerger+;
 #endif
 
 
