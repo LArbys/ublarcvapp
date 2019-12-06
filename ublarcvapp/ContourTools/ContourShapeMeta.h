@@ -39,6 +39,7 @@ namespace ublarcvapp {
 
    bool hasValidPCA() const { return m_valid_pca; };
    std::vector<float> getPCAdir( int axis=0 ) const;
+   double getPCAeigenvalue( int axis ) const { return eigen_val[axis]; };
    std::vector<float> getPCAStartdir() const;
    std::vector<float> getPCAEnddir() const;
    std::vector<float> getPCAStartPos() const { return m_pca_startpt; };
