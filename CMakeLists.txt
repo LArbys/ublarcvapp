@@ -6,6 +6,10 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set (CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}" CACHE PATH "${CMAKE_BUILD_DIR}" FORCE )
 endif()
 
+# CFLAGS
+SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
+SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fPIC -pedantic -fopenmp -mtune=native")
+
 ## Dependencies
 
 #---CERN ROOT (required)
@@ -53,7 +57,7 @@ endif()
 find_package(Eigen3 REQUIRED)
 
 #---LArLite
-set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" )
+set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" "$ENV{LARLITE_BASEDIR}/../" )
 set( LARLITE_LIB_DIR  "$ENV{LARLITE_LIBDIR}" )
 set( HAS_LARLITE 1 )
 file( GLOB LARLITE_LIBS "$ENV{LARLITE_LIBDIR}/libLArLite*.so" )
@@ -67,9 +71,24 @@ file( GLOB LAROPENCV_LIBS "$ENV{LARLITE_LIBDIR}/libLArOpenCV_*.so" )
 set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
 find_package( cilantro REQUIRED )
 
-#---Boost Graph library
-find_package( Boost 1.58 COMPONENTS graph REQUIRED )
+#---Boost
+find_package( Boost 1.65 COMPONENTS graph program_options python REQUIRED )
+set(Boost_USE_STATIC_LIBS OFF)
+set(Boost_USE_MULTITHREADED ON) 
+set(Boost_USE_STATIC_RUNTIME OFF)
+if (Boost_FOUND)
+    include_directories(SYSTEM ${Boost_INCLUDE_DIRS})
+    message(STATUS "Using boost include dirs: ${Boost_INCLUDE_DIRS}")
+    message(STATUS "Using boost library dirs: ${Boost_LIBRARY_DIRS}")
+    message(STATUS "Using boost libraries: ${Boost_LIBRARIES}")
+    message(STATUS "Using boost thread library: ${Boost_THREAD_LIBRARY}")
+    link_directories(${Boost_LIBRARY_DIRS})
+endif (Boost_FOUND)
+
 #INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+
+#--- glog
+#find_package(glog REQUIRED)
 
 
 ## Setup
