@@ -3,11 +3,16 @@ set(MODULE_NAME DLTagger)
 # DEFINE THE TARGET
 set( LIBNAME LArCVApp_${MODULE_NAME} )
 
-set( HEADERS DLTagger.h DLTaggerProcess.h )
+set( HEADERS DLTagger.h
+  DLTaggerProcess.h
+  DLCheaterTagger.h
+  DLSSNetOverlayCheater.h )
 
 add_library( ${LIBNAME} SHARED
   DLTagger.cxx
-  DLTaggerProcess.cxx )
+  DLTaggerProcess.cxx
+  DLCheaterTagger.cxx
+  DLSSNetOverlayCheater.cxx )
 
 # create a property to hold our headers
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
@@ -52,7 +57,7 @@ target_include_directories(${LIBNAME}
   )
 target_link_libraries(${LIBNAME} ${LARLITE_LIBS_USED} ${LARCV_LIBS_USED} ${UBLARCVAPP_LIBS_USED} ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
 
-include_directories( ${PROJECT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/mrcnnmatch ${LARCV_INCLUDE_DIR} ${LARLITE_INCLUDES} $ENV{CILANTRO_INC_DIR} ${EIGEN3_INCLUDE_DIRS} ${Boost_INCLUDE_DIR})
+include_directories( ${PROJECT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/mrcnnmatch ${LARCV_INCLUDE_DIR} ${LARLITE_INCLUDES} $ENV{CILANTRO_INC_DIR} ${EIGEN3_INCLUDE_DIRS} ${Boost_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS})
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${ALL_HEADERS} LINKDEF LinkDef.h)
 target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 

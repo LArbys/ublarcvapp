@@ -31,6 +31,28 @@ namespace ublarcvapp {
     return emptyimg;
   }
 
+  std::vector<int> EmptyChannelAlgo::findEmptyChannels( float threshold, const larcv::Image2D& tpcimg, const float max_value ) {
+
+    // for data I imagine this will need to be more elaborate
+    
+    const larcv::ImageMeta& meta = tpcimg.meta();
+    std::vector<int> empty_v( meta.cols(), 0 );    
+
+    for (size_t col=0; col<meta.cols(); col++) {
+      bool isempty = true;
+      for ( size_t row=0; row<meta.rows(); row++) {
+        float val = tpcimg.pixel(row,col);
+        if ( val>threshold && (max_value<0 || val<max_value) ) {
+          isempty = false;
+          empty_v[col] = 1;
+          break;
+        }
+      }
+    }
+    
+    return empty_v;
+  }
+  
   std::vector<larcv::Image2D> EmptyChannelAlgo::makeBadChImage( int minstatus, int nplanes, int start_tick, int nticks, int nchannels, 
                                                                 int time_downsample_factor, int wire_downsample_factor,
                                                                 const larlite::event_chstatus& ev_status ) {
@@ -103,17 +125,20 @@ namespace ublarcvapp {
     return badchs;
   }
 
-  std::vector<larcv::Image2D> EmptyChannelAlgo::findMissingBadChs( const std::vector<larcv::Image2D>& img_v, const std::vector<larcv::Image2D>& badchimgs_v,
-    const float empty_ch_threshold, const int max_empty_gap, const float empty_ch_max ) {
+  std::vector<larcv::Image2D> EmptyChannelAlgo::findMissingBadChs( const std::vector<larcv::Image2D>& img_v,
+                                                                   const std::vector<larcv::Image2D>& badchimgs_v,
+                                                                   const float empty_ch_threshold,
+                                                                   const int max_empty_gap,
+                                                                   const float empty_ch_max ) {
 
-    std::cout << "EmptyChannelAlgo::findMissingBadChs" << std::endl;
+    //std::cout << "EmptyChannelAlgo::findMissingBadChs" << std::endl;
 
     std::vector<larcv::Image2D> output;
 
     for (size_t p=0; p<img_v.size(); p++) {
       const larcv::Image2D& img     = img_v.at(p);
       const larcv::Image2D& badch   = badchimgs_v.at(p);
-      const larcv::Image2D& emptych = labelEmptyChannels( empty_ch_threshold, img, empty_ch_max );
+      std::vector<int> emptych = findEmptyChannels( empty_ch_threshold, img, empty_ch_max );
       int cols = img.meta().cols(); 
       bool ingap = false;
       int gapsize = 0;
@@ -123,7 +148,7 @@ namespace ublarcvapp {
 
         if ( !ingap ) {
           // not in a gap
-          if ( emptych.pixel(0,c)>0 && badch.pixel(0,c)==0 ) { // we don't want to capture the same info. as the bad channels
+          if ( emptych[c]==1 && badch.pixel(0,c)!=0 ) { // we don't want to capture the same info. as the bad channels
             // start a gap
             gapstart = c;
             //if ( gapstart<0 ) gapstart = 0;
@@ -135,12 +160,12 @@ namespace ublarcvapp {
         }
         else {
           // in a gap
-          if ( emptych.pixel(0,c)==0 ) {
+          if ( emptych[c]==0 ) {
             // end a gap
             int start = gapstart;
             int end   = c-1;
-            //std::cout << "found gap [" << start << "," << end << "]" << std::endl;
-            gaplist.push_back( std::make_pair<int,int>(std::move(start),std::move(end)) );
+            //std::cout << "[EmptyChannelAlgo::findMissingBadChs] found gap [" << start << "," << end << "]" << std::endl;
+            gaplist.push_back( std::pair<int,int>(start,end) );
             gapsize = 0;
             ingap = false;
           }
@@ -153,7 +178,7 @@ namespace ublarcvapp {
 
       // ideally we should do something smart, determining gaps based on if we can tell a track is crossing it.
       // for now, we set a gap limit
-      larcv::Image2D gapimg(img_v.at(p).meta());
+      larcv::Image2D gapimg(badchimgs_v.at(p).meta());
       gapimg.paint(0);
 
       for ( auto& gap : gaplist ) {
@@ -170,5 +195,35 @@ namespace ublarcvapp {
     return output;
 
   }
+
+  std::vector<larcv::Image2D> EmptyChannelAlgo::makeGapChannelImage( const std::vector<larcv::Image2D>& img_v,
+                                                                     const larcv::EventChStatus& ev_status, int minstatus,
+                                                                     int nplanes, int start_tick, int nticks, int nchannels, 
+                                                                     int time_downsample_factor, int wire_downsample_factor,                                                
+                                                                     const float empty_ch_threshold,
+                                                                     const int max_empty_gap,
+                                                                     const float empty_ch_max ) {
+    
+    std::vector<larcv::Image2D> badch_v = makeBadChImage( minstatus, nplanes, start_tick,
+                                                        nticks, nchannels,
+                                                        time_downsample_factor, wire_downsample_factor,
+                                                        ev_status );
+    
+    std::vector<larcv::Image2D> gapch_v = findMissingBadChs( img_v, badch_v,
+                                                             empty_ch_threshold,
+                                                             max_empty_gap,
+                                                             empty_ch_max );
+
+    for (size_t p=0; p<badch_v.size(); p++ ) {
+      auto& bchv = badch_v[p].as_mod_vector();
+      auto const& gv = gapch_v[p].as_vector();
+      for ( size_t i=0; i<bchv.size(); i++ ) {
+        bchv[i] += gv[i];
+      }
+    }
+      
+    return badch_v;
+  }
+  
   
 }

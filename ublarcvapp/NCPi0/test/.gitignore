@@ -1,0 +1,10 @@
+testdata/
+output_saveprobs/
+output_savecuts/
+log_saverpobs/
+log_savecuts/
+tmp_saveprobs/
+tmp_savecuts/
+
+*.root
+*.cfg

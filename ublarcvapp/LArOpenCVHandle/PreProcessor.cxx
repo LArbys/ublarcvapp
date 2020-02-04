@@ -1,6 +1,9 @@
 #ifndef PREPROCESSOR_CXX
 #define PREPROCESSOR_CXX
 
+#include "opencv2/imgproc.hpp"
+#include "opencv2/imgcodecs.hpp"
+
 #include "PreProcessor.h"
 #include "LArOpenCV/ImageCluster/AlgoFunction/Contour2DAnalysis.h"
 #include "LArOpenCV/ImageCluster/AlgoFunction/ImagePatchAnalysis.h"

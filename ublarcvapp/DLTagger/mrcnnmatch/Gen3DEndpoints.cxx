@@ -14,7 +14,8 @@ namespace dltagger {
    *
    */
   Gen3DEndpoints::Gen3DEndpoints( const FeaturesMaskCombo& features )
-    : pfeatures(&features)
+    : larcv::larcv_base("Gen3DEndpoints"),
+    pfeatures(&features)
   {
     _gather_plane_endpoints(features);
     _gen_3dendpoints();
@@ -30,11 +31,7 @@ namespace dltagger {
     
     for ( size_t p=0; p<nplanes; p++ ) {
 
-      if ( features.pcropdata->crops_v[p].meta().cols()==0 ||
-           features.pcropdata->crops_v[p].meta().rows()==0 ) {
-        // empty image
-        // fill empty
-
+      if ( features.pcropdata->istwoplane() && features.pcropdata->badPlane()==(int)p ) {
         mask_endpoints_vv.push_back( std::vector<EndPoint_t>() );
         mask_projdist_vv.push_back(  std::vector<float>() );
         continue;
@@ -102,9 +99,9 @@ namespace dltagger {
       maxpt[0] = endpoints[1][0];
       maxpt[1] = endpoints[1][1];
 
-      std::cout << "plane[" << p << "] pca1_dir: (" << pca1_dir[0]*meta.pixel_width() << ", " << pca1_dir[1]*meta.pixel_height() << ")" << std::endl;
-      std::cout << "plane[" << p << "] min contour pt: (" << meta.pos_x((int)minpt[0]) << "," << meta.pos_y((int)minpt[1]) << ") proj=" << pca_proj[0] << std::endl;
-      std::cout << "plane[" << p << "] max contour pt: (" << meta.pos_x((int)maxpt[0]) << "," << meta.pos_y((int)maxpt[1]) << ") proj=" << pca_proj[1] << std::endl;      
+      LARCV_DEBUG() << "plane[" << p << "] pca1_dir: (" << pca1_dir[0]*meta.pixel_width() << ", " << pca1_dir[1]*meta.pixel_height() << ")" << std::endl;
+      LARCV_DEBUG() << "plane[" << p << "] min contour pt: (" << meta.pos_x((int)minpt[0]) << "," << meta.pos_y((int)minpt[1]) << ") proj=" << pca_proj[0] << std::endl;
+      LARCV_DEBUG() << "plane[" << p << "] max contour pt: (" << meta.pos_x((int)maxpt[0]) << "," << meta.pos_y((int)maxpt[1]) << ") proj=" << pca_proj[1] << std::endl;      
 
       // these are in local pixel coordinates
       std::vector< std::vector<float> > endpoints_v;
@@ -143,7 +140,7 @@ namespace dltagger {
 
       // get crop mask
       const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
-      if ( meta.cols()==0 || meta.rows()==0 ) {
+      if ( pfeatures->pcropdata->istwoplane() && pfeatures->pcropdata->badPlane()==(int)p ) { 
         // empty image. skip
         continue;
       }
@@ -164,10 +161,11 @@ namespace dltagger {
       }
       
     }//end of plane
-    std::cout << "target max point: plane=" << max_pt_plane
-              << " tick=" << pfeatures->pcropdata->mask_v.at(max_pt_plane).meta().pos_y((int)max_row) << std::endl;
-    std::cout << "target min point: plane=" << min_pt_plane 
-              << " tick=" << pfeatures->pcropdata->mask_v.at(min_pt_plane).meta().pos_y((int)min_row) << std::endl;
+    
+    LARCV_DEBUG() << "target max point: plane=" << max_pt_plane
+                  << " tick=" << pfeatures->pcropdata->mask_v.at(max_pt_plane).meta().pos_y((int)max_row) << std::endl;
+    LARCV_DEBUG() << "target min point: plane=" << min_pt_plane 
+                  << " tick=" << pfeatures->pcropdata->mask_v.at(min_pt_plane).meta().pos_y((int)min_row) << std::endl;
     
     // now, create point in other planes by extending along pca lines
     std::vector< float > extension_pts[3][2]; // [plane][min or max]
@@ -180,11 +178,11 @@ namespace dltagger {
       ext_pt_max.resize(2,0.0);
       
       const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
-      if ( meta.cols()==0 || meta.rows()==0 ) {
+      if ( pfeatures->pcropdata->istwoplane() && pfeatures->pcropdata->badPlane()==(int)p ) {      
         // empty image. skip.
         continue;
       }
-
+      
       // do extension in (col,row) pixel coordinates
       std::vector<float> pca1_dir = pfeatures->pca1_dir_vv.at(p);
       auto const& pca_mean = pfeatures->pca_mean_vv.at(p);
@@ -208,9 +206,9 @@ namespace dltagger {
         ext_pt_min[1] = min_row;        
       }
 
-      std::cout << "within image " << meta.dump() << ":" << std::endl;
-      std::cout << " ext max pt: (" << ext_pt_max[0] << "," << ext_pt_max[1] << ")" << std::endl;
-      std::cout << " ext min pt: (" << ext_pt_min[0] << "," << ext_pt_min[1] << ")" << std::endl;      
+      LARCV_DEBUG() << "within image " << meta.dump() << ":" << std::endl;
+      LARCV_DEBUG() << " ext max pt: (" << ext_pt_max[0] << "," << ext_pt_max[1] << ")" << std::endl;
+      LARCV_DEBUG() << " ext min pt: (" << ext_pt_min[0] << "," << ext_pt_min[1] << ")" << std::endl;      
       
       // convert from (col,row) to (wire,tick)
       ext_pt_min[0] = meta.pos_x( (int)ext_pt_min[0] );
@@ -242,7 +240,7 @@ namespace dltagger {
       for ( size_t p=0; p<3; p++ ) {
 
         const larcv::ImageMeta& meta = pfeatures->pcropdata->mask_v.at(p).meta();
-        if ( meta.cols()==0 || meta.rows()==0 ) {
+        if ( pfeatures->pcropdata->istwoplane() && pfeatures->pcropdata->badPlane()==(int)p ) {
           // empty image. skip
           continue;
         }
@@ -266,11 +264,11 @@ namespace dltagger {
         endpt_tri_v.push_back( triarea );
         endpt_tpc_v.push_back( crosses );
         
-        std::cout << "3D Point (3 plane): "
-                  << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
-                  << " triarea=" << triarea
-                  << " crosses=" << crosses
-                  << std::endl;
+        LARCV_INFO() << "3D Point (3 plane): "
+                     << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
+                     << " triarea=" << triarea
+                     << " crosses=" << crosses
+                     << std::endl;
       }
       else if ( num_good_planes==2 ) {
         std::vector<int> goodwid;
@@ -284,10 +282,10 @@ namespace dltagger {
           else
             missingplane = (int)p;
         }
-        std::cout << "we have a missing plane: " << missingplane << std::endl;
-        std::cout << " wids={" << wireids[0] << "," << wireids[1] << "," << wireids[2] << "}" << std::endl;
-        std::cout << " goodplanes={" << goodplane[0] << "," << goodplane[1] << "}" << std::endl;
-        std::cout << " wires on good planes={" << goodwid[0] << "," << goodwid[1] << "}" << std::endl;
+        LARCV_DEBUG() << "we have a missing plane: " << missingplane << std::endl;
+        LARCV_DEBUG() << " wids={" << wireids[0] << "," << wireids[1] << "," << wireids[2] << "}" << std::endl;
+        LARCV_DEBUG() << " goodplanes={" << goodplane[0] << "," << goodplane[1] << "}" << std::endl;
+        LARCV_DEBUG() << " wires on good planes={" << goodwid[0] << "," << goodwid[1] << "}" << std::endl;
         
         // get intersection and infer missing plane wire
         triarea = 0.;
@@ -309,12 +307,12 @@ namespace dltagger {
         endpt_tri_v.push_back( triarea );
         endpt_tpc_v.push_back( crosses );
                 
-        std::cout << "3D Point (2 plane): "
-                  << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
-                  << " triarea=" << triarea
-                  << " crosses=" << crosses
-                  << " otherwire=" << otherwire
-                  << std::endl;        
+        LARCV_INFO() << "3D Point (2 plane): "
+                     << " (" << point_tyz[0] << "," << point_tyz[1] << "," << point_tyz[2] << ")"
+                     << " triarea=" << triarea
+                     << " crosses=" << crosses
+                     << " otherwire=" << otherwire
+                     << std::endl;        
       }
       else {
         std::stringstream errmsg;

@@ -2,10 +2,14 @@ set(MODULE_NAME dbscan)
 
 # Collect the headers
 file(GLOB HEADERS "*.h")
+file(GLOB LINKDEF_HEADERS "*.h")
 
 # Remove LinkDef.h
 list(FILTER HEADERS EXCLUDE REGEX ".*LinkDef.h$")
- 
+
+list(FILTER LINKDEF_HEADERS EXCLUDE REGEX ".*LinkDef.h$")
+#list(FILTER LINKDEF_HEADERS EXCLUDE REGEX "DBScan_vp.h" )
+
 # However, the file(GLOB...) allows for wildcard additions:
 file(GLOB SOURCES "*.cxx")
 
@@ -16,7 +20,7 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 include_directories(${LARCV_INCLUDE_DIR} ${cilantro_INCLUDE_DIRS})
 
 # Generate the dictionary
-ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
+ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${LINKDEF_HEADERS} LINKDEF LinkDef.h)
 
 # Generate the shared library from the sources
 add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)

@@ -19,81 +19,161 @@
 namespace ublarcvapp {
 namespace dltagger {
 
-  GenGraphPoints::GenGraphPoints( const FeaturesMaskCombo& featuredata, larcv::msg::Level_t msglevel )
+  GenGraphPoints::GenGraphPoints( const FeaturesMaskCombo& featuredata,
+                                  const Gen3DEndpoints& endpointdata,
+                                  larcv::msg::Level_t msglevel )
     : larcv::larcv_base("GenGraphPoints"),
     pfeatures(&featuredata)
   {
-    
     set_verbosity(msglevel);
-    
+
     // upstream data
     auto const& mask_v = pfeatures->pcropdata->mask_v;
     auto const& crop_v = pfeatures->pcropdata->crops_v;
-    auto const& miss_v = pfeatures->pcropdata->missing_v;    
+    auto const& miss_v = pfeatures->pcropdata->missing_v; // [deprecated]
+
     
-    // get the bounds
-    LARCV_DEBUG() << "[ define bounds ]" << std::endl;    
-    std::vector<MaskExtrema_t> bounds_v;
-    DefineBoundPoints( *pfeatures, bounds_v);
+    // set the bounds.
+    // we do this in one or another way depending on
+    //  (1) the quality of the end points (the triarea)
+    //  (2) if the track is isochronous (i.e. vertical, within narrow time range)
+    LARCV_DEBUG() << "[ define bounds ]" << std::endl;
 
+    bool goodendpts = true;
+    for ( auto const& triarea : endpointdata.endpt_tri_v ) {
+      if ( triarea > 100.0 )
+        goodendpts = false;
+    }
 
-    LARCV_DEBUG() << "[Gen (wire,tick) plane pairs for min-x end point]" << std::endl;
+    // containers for endpoints derived from 3D PCA line
+    std::vector< std::vector<float> > endpts_twid_v;
+    std::vector< std::vector<float> > endpts_tyz_v;      
+    std::vector< int > isgood_v;
 
-    // test the bounds from the y-plane, min-x, max-x
-    std::vector< std::vector<float> > min_wiretickpos_p0_v; // store 3d points from matching to U-plane
-    std::vector< std::vector<float> > min_wiretickpos_p1_v; // store 3d points from matching to V-plane
-    // min wire coordinate bounds: U-plane
-    makePointsFixedZ( *pfeatures,
-                      crop_v[2].meta().pos_x( bounds_v[2].points[0][0] )*0.3,  0,
-                      crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
-                      min_wiretickpos_p0_v );
-    // min wire coordinate bounds: V-plane    
-    makePointsFixedZ( *pfeatures,
-                      crop_v[2].meta().pos_x( bounds_v[2].points[0][0] )*0.3,  1,
-                      crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
-                      min_wiretickpos_p1_v );
-
-    // make 3D points
-    LARCV_DEBUG() << "make 3d point for min-x extremum" << std::endl;
-    //std::vector< std::vector<float> > points3d_v;
-    //std::vector< std::vector<float> > twid_v;
+    // containers for endpoints derived from Y-plane contourshape meta
     std::vector< std::vector<float> > minx_pts_v;
     std::vector< std::vector<float> > minx_twid_v;
-    make3Dpoints( crop_v[2].meta().pos_x( bounds_v[2].points[0][0] ),
-                  crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
-                  min_wiretickpos_p0_v, min_wiretickpos_p1_v, minx_pts_v, minx_twid_v,
-                  true );
-
-    
-    LARCV_DEBUG() << "[Gen (wire,tick) plane pairs for max-x end point]" << std::endl;    
+    std::vector< std::vector<float> > maxx_pts_v;
+    std::vector< std::vector<float> > maxx_twid_v;        
+    std::vector<MaskExtrema_t> bounds_v;
+    std::vector< std::vector<float> > min_wiretickpos_p0_v; // store 3d points from matching to U-plane
+    std::vector< std::vector<float> > min_wiretickpos_p1_v; // store 3d points from matching to V-plane
     std::vector< std::vector<float> > max_wiretickpos_p0_v; // store 3d points from matching to U-plane
     std::vector< std::vector<float> > max_wiretickpos_p1_v; // store 3d points from matching to V-plane    
-    
-    // max wire coodinate bounds: U-plane
-    makePointsFixedZ( *pfeatures,
-                      crop_v[2].meta().pos_x( bounds_v[2].points[1][0] )*0.3,  0,
-                      crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
-                      max_wiretickpos_p0_v );
-    // max wire coordiante boudns: V-plane
-    makePointsFixedZ( *pfeatures,
-                      crop_v[2].meta().pos_x( bounds_v[2].points[1][0] )*0.3,  1,
-                      crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
-                      max_wiretickpos_p1_v );
 
-    LARCV_DEBUG() << "make 3d point for max-x extremum" << std::endl;
-    std::vector< std::vector<float> > maxx_pts_v;
-    std::vector< std::vector<float> > maxx_twid_v;
-    make3Dpoints( crop_v[2].meta().pos_x( bounds_v[2].points[1][0] ),
-                  crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
-                  max_wiretickpos_p0_v, max_wiretickpos_p1_v, maxx_pts_v, maxx_twid_v,
-                  true );
+    DefineBoundPointsWithContourMeta( *pfeatures, bounds_v);
+    
+    if ( goodendpts ) {
+      LARCV_DEBUG() << "[Generate endpoints using PCALine]" << std::endl;
+      DefineBoundPointsWithPCAEndpoints( endpointdata, 0.15, 5, endpts_twid_v, endpts_tyz_v, isgood_v );
+      LARCV_DEBUG() << "Result of endpoint gen: isgood_v[0]=" << isgood_v[0] << " isgood_v[1]" << isgood_v[1] << std::endl;
+      LARCV_DEBUG() << "  point[0]: xyz=(" << endpts_tyz_v[0][0] << "," << endpts_tyz_v[0][1] << "," << endpts_tyz_v[0][2] << ")"
+                    << " twid=(" << endpts_twid_v[0][0] << "," << endpts_twid_v[0][1] << "," << endpts_twid_v[0][2] << "," << endpts_twid_v[0][3] << ")"
+                    << std::endl;
+      LARCV_DEBUG() << "  point[1]: xyz=(" << endpts_tyz_v[1][0] << "," << endpts_tyz_v[1][1] << "," << endpts_tyz_v[1][2] << ")"
+                    << " twid=(" << endpts_twid_v[1][0] << "," << endpts_twid_v[1][1] << "," << endpts_twid_v[1][2] << "," << endpts_twid_v[1][3] << ")"
+                    << std::endl;
+      
+
+      if ( isgood_v[0]==1 && isgood_v[1]==1 ) {
+        // we can modify the bounds
+        int startidx = 0;
+        int endidx = 1;
+        if ( endpointdata.endpt_tyz_v[0][2] > endpointdata.endpt_tyz_v[1][2] ) {
+          startidx = 1;
+          endidx = 0;
+        }
+        
+        for ( size_t p=0; p<3; p++ ) {
+          auto const& meta = crop_v[p].meta();
+          float min_wire = endpointdata.endpt_wid_v[startidx][p];
+          float max_wire = endpointdata.endpt_wid_v[endidx][p];
+
+	  // check for output of bounds
+	  // happens when original end point is outside of the detector (oops)
+          if ( min_wire<0 || min_wire>=meta.max_x() || min_wire<meta.min_x() )
+            min_wire = endpts_twid_v[startidx][p+1];
+          if ( max_wire<0 || max_wire>=meta.max_x() || min_wire<meta.min_x() )
+            max_wire = endpts_twid_v[endidx][p+1];
+          
+          bounds_v[p].points[0][0] = meta.col( min_wire, __FILE__, __LINE__ ); // min wire
+          bounds_v[p].points[0][1] = meta.row( endpointdata.endpt_tyz_v[startidx][0], __FILE__, __LINE__ );
+          bounds_v[p].points[1][0] = meta.col( max_wire, __FILE__, __LINE__ ); // max wire
+          bounds_v[p].points[1][1] = meta.row( endpointdata.endpt_tyz_v[endidx][0], __FILE__, __LINE__  );
+        }
+
+        minx_pts_v.push_back( endpointdata.endpt_tyz_v[startidx] );
+        minx_twid_v.push_back( std::vector<float>{ (float)endpointdata.endpt_tyz_v[startidx][0],
+              (float)endpointdata.endpt_wid_v[startidx][0],
+              (float)endpointdata.endpt_wid_v[startidx][1],
+              (float)endpointdata.endpt_wid_v[startidx][2] } );
+        maxx_pts_v.push_back( endpointdata.endpt_tyz_v[endidx] );
+        maxx_twid_v.push_back( std::vector<float>{ (float)endpointdata.endpt_tyz_v[endidx][0],
+              (float)endpointdata.endpt_wid_v[endidx][0],
+              (float)endpointdata.endpt_wid_v[endidx][1],
+              (float)endpointdata.endpt_wid_v[endidx][2] } );
+      }
+      else {
+        goodendpts = false;
+      }
+    }
+    
+    if ( !goodendpts ) {
+      // Use bounds of contour meta on Y-plane to propose additional 3D endpoints     
+      LARCV_DEBUG() << "[Gen (wire,tick) plane pairs for min-x end point]" << std::endl;
+      
+      // test the bounds from the y-plane, min-x, max-x
+      // min wire coordinate bounds: U-plane
+      LARCV_DEBUG() << "scan along MIN-Z bound in U and V plane to look for consistent charge" << std::endl;      
+      makePointsFixedZ( *pfeatures,
+                        crop_v[2].meta().pos_x( bounds_v[2].points[0][0] )*0.3,  0,
+                        crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
+                        min_wiretickpos_p0_v );
+      // min wire coordinate bounds: V-plane    
+      makePointsFixedZ( *pfeatures,
+                        crop_v[2].meta().pos_x( bounds_v[2].points[0][0] )*0.3,  1,
+                        crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
+                        min_wiretickpos_p1_v );
+
+      // make 3D points
+      LARCV_DEBUG() << "make 3d point for MIN-Z scan" << std::endl;
+      //std::vector< std::vector<float> > points3d_v;
+      //std::vector< std::vector<float> > twid_v;
+      make3Dpoints( crop_v[2].meta().pos_x( bounds_v[2].points[0][0] ),
+                    crop_v[2].meta().pos_y( bounds_v[2].points[0][1] ),
+                    min_wiretickpos_p0_v, min_wiretickpos_p1_v, minx_pts_v, minx_twid_v,
+                    true );
+      
+      LARCV_DEBUG() << "scan along MAX-Z bound in U and V plane to look for 3D consistent charge" << std::endl;            
+      // max wire coodinate bounds: U-plane
+      makePointsFixedZ( *pfeatures,
+                        crop_v[2].meta().pos_x( bounds_v[2].points[1][0] )*0.3,  0,
+                        crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
+                        max_wiretickpos_p0_v );
+      // max wire coordiante boudns: V-plane
+      makePointsFixedZ( *pfeatures,
+                        crop_v[2].meta().pos_x( bounds_v[2].points[1][0] )*0.3,  1,
+                        crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
+                        max_wiretickpos_p1_v );
+      
+      LARCV_DEBUG() << "make 3d-consistent point for MAX-Z scans" << std::endl;
+      make3Dpoints( crop_v[2].meta().pos_x( bounds_v[2].points[1][0] ),
+                    crop_v[2].meta().pos_y( bounds_v[2].points[1][1] ),
+                    max_wiretickpos_p0_v, max_wiretickpos_p1_v, maxx_pts_v, maxx_twid_v,
+                    true );
+    }
     
     // scan across x: making body points of graph
+    LARCV_DEBUG() << "Create 3D endpoints along the Z-direction "
+                  << "within the wire bounds "
+                  << "[" << crop_v[2].meta().pos_x(bounds_v[2].points[0][0]) << "," << crop_v[2].meta().pos_x(bounds_v[2].points[1][0]) << "]"
+                  << std::endl;
+    
     std::vector< std::vector<float> > mid_points3d_v;
     std::vector< std::vector<float> > mid_twid_v;
     
     std::vector< std::vector<float> > ywire_points_v;
-    for ( int icol=bounds_v[2].points[0][0]+1; icol<(int)bounds_v[2].points[1][0]-1; icol+=2 ) {
+    for ( int icol=bounds_v[2].points[0][0]; icol<=(int)bounds_v[2].points[1][0]; icol+=2 ) {
       std::vector< std::vector<float> > yscan_points_v;
       scanTickDim( *pfeatures, crop_v[2].meta().pos_x(icol), 2, yscan_points_v );
       if ( yscan_points_v.size()>0 ) {
@@ -115,22 +195,30 @@ namespace dltagger {
         make3Dpoints( yscan_points_v.front()[0],
                       yscan_points_v.front()[1],
                       wtpos_p0_v, wtpos_p1_v, mid_points3d_v, mid_twid_v,
-                      false );
+                      true );
       }//if yscan
     }// column loop
     LARCV_DEBUG() << "number of 3d points defined in det-z scan: " << mid_points3d_v.size() << " twid_v=" << mid_twid_v.size() << std::endl;
     //std::sort( mid_points3d_v.begin(), mid_points3d_v.end() );
 
-
+    if ( mid_points3d_v.size()==0 ) {
+      LARCV_DEBUG() << "No points generated from det-Z scan. Quitting." << std::endl;
+      m_maxgapdist = 1e9;
+      return;
+    }
     
     // assemble points
     // ---------------
+    m_points3d_v.clear();
+    m_twid_v.clear();
 
+    // ADD START PT
+    // use info from ContourMeta bounds
     // add start points
-    // for (size_t i=0; i<minx_pts_v.size(); i++) {
-    //   m_points3d_v.push_back( minx_pts_v[i] );
-    //   m_twid_v.push_back( minx_twid_v[i] );
-    // }
+    for (size_t i=0; i<minx_pts_v.size(); i++) {
+      m_points3d_v.push_back( minx_pts_v[i] );
+      m_twid_v.push_back( minx_twid_v[i] );
+    }
 
     // add mid points
     for ( size_t i=0; i<mid_points3d_v.size(); i++ ) {
@@ -138,11 +226,11 @@ namespace dltagger {
       m_twid_v.push_back( mid_twid_v[i] );
     }
     
-    // add end points
-    // for (size_t i=0; i<maxx_pts_v.size(); i++) {
-    //   m_points3d_v.push_back( maxx_pts_v[i] );
-    //   m_twid_v.push_back( maxx_twid_v[i] );
-    // }
+    // ADD ENDS
+    for (size_t i=0; i<maxx_pts_v.size(); i++) {
+      m_points3d_v.push_back( maxx_pts_v[i] );
+      m_twid_v.push_back( maxx_twid_v[i] );
+    }
     
     if ( logger().debug() ) {
       std::stringstream ptlist;
@@ -157,23 +245,24 @@ namespace dltagger {
     
     // make graph components
     makeGraph( m_points3d_v, m_graph_nodes, m_distmap, m_pixgapmap );
-
+    
     shortestpath( m_graph_nodes, m_distmap, m_pixgapmap, m_maxgapdist, m_path_xyz );
 
     // conversion path to image coordinates
     m_path_twid_v.clear();
     m_path_twid_v.reserve(m_path_xyz.size());
     for ( auto& xyz : m_path_xyz ) {
-      std::vector<float> twid = { xyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200,
-                                  larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{xyz[0],xyz[1],xyz[2]}, 0 ),
-                                  larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{xyz[0],xyz[1],xyz[2]}, 1 ),
-                                  larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{xyz[0],xyz[1],xyz[2]}, 2 ) };
+      std::vector<double> dxyz = {(double)xyz[0],(double)xyz[1],(double)xyz[2]};
+      std::vector<float> twid = { (float)(xyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200.0),
+                                  (float)larutil::Geometry::GetME()->WireCoordinate( dxyz, 0 ),
+                                  (float)larutil::Geometry::GetME()->WireCoordinate( dxyz, 1 ),
+                                  (float)larutil::Geometry::GetME()->WireCoordinate( dxyz, 2 ) };
       m_path_twid_v.push_back( twid );
     }
     
     
   }
-
+  
   /**
    * find the min and max points in the wire and tick directions on each plane
    *
@@ -181,8 +270,9 @@ namespace dltagger {
    * @param[inout] maskbounds_v for each plane, struct that saves the wire and tick bounds
    *
    */
-  void GenGraphPoints::DefineBoundPoints( const FeaturesMaskCombo& features,
-                                          std::vector< MaskExtrema_t >& maskbounds_v ) {
+  void GenGraphPoints::DefineBoundPointsWithContourMeta( const FeaturesMaskCombo& features,
+                                                         std::vector< MaskExtrema_t >& maskbounds_v )
+  {
 
     // for each plane, for each contour,
     //   loop to find wire and tick bounds
@@ -261,6 +351,154 @@ namespace dltagger {
     
   }
 
+  /**
+   * we define the 3D start and end points of the potential curve using the first goodpoint from each end.
+   *
+   * @param[in]    endpointdata Data product containing end point information.
+   * @param[inout] maskbounds_v For each plane, struct that saves the wire and tick bounds.
+   *
+   */
+  void GenGraphPoints::DefineBoundPointsWithPCAEndpoints( const Gen3DEndpoints& endpointdata,
+                                                          const float maxstepsize,
+                                                          const int pixradius,
+                                                          std::vector< std::vector<float> >& good_twid_v,
+                                                          std::vector< std::vector<float> >& good_tyz_v,
+                                                          std::vector< int >& is_good_pt_v )
+  {
+
+    auto const& crops_v = pfeatures->pcropdata->crops_v;
+    auto const& mask_v  = pfeatures->pcropdata->mask_v;
+    auto const& badch_v = pfeatures->pcropdata->badch_v;
+
+    good_twid_v.resize(2);
+    good_tyz_v.resize(2);
+    is_good_pt_v.resize(2,0);
+    
+    for ( int iend=0; iend<2; iend++ ) {
+
+      good_twid_v[iend].resize(4,0);
+      good_tyz_v[iend].resize(3,0);      
+      
+      // dir one
+      int idxstart = 0;
+      int idxend   = 1;
+      if ( iend==1 ) {
+        idxstart = 1;
+        idxend   = 0;
+      }
+
+      LARCV_DEBUG() << "step between "
+                    << "(" << endpointdata.endpt_tyz_v[idxstart][0] << "," << endpointdata.endpt_tyz_v[idxstart][1] << "," << endpointdata.endpt_tyz_v[idxstart][2] << ") -> "
+                    << "(" << endpointdata.endpt_tyz_v[idxend][0] << "," << endpointdata.endpt_tyz_v[idxend][1] << "," << endpointdata.endpt_tyz_v[idxend][2] << ")"
+                    << std::endl;
+      
+      float dir[3];
+      float dirlen = 0;
+      for ( int i=0; i<3; i++ ) {
+        dir[i] = endpointdata.endpt_tyz_v[idxend][i]-endpointdata.endpt_tyz_v[idxstart][i];
+
+        if ( i==0 ) {
+          // convert tick to x
+          dir[i] = dir[i]*0.5*larutil::LArProperties::GetME()->DriftVelocity(); // [tick]*[usec/tick]*[cm/usec] = [cm]
+        }
+          
+        dirlen += dir[i]*dir[i];
+      }
+      dirlen = sqrt(dirlen);
+      for ( int i=0; i<3; i++ )
+        dir[i] /= dirlen;
+    
+      int nsteps = dirlen/maxstepsize;
+      if ( fabs(dirlen - maxstepsize*nsteps)<1.0e-6 ) {
+        nsteps++;
+      }
+      
+      if (nsteps==0 )
+        return;
+      
+      float stepsize = dirlen/(float)nsteps;
+      bool foundgoodpt = false;
+      float startx = (endpointdata.endpt_tyz_v[idxstart][0]-3200)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
+      for ( int istep=0; istep<nsteps; istep++ ) {
+        float tyz[3];
+        tyz[0] = startx + istep*stepsize*dir[0];
+        for ( int i=1; i<3; i++ ) tyz[i] = endpointdata.endpt_tyz_v[idxstart][i] + istep*stepsize*dir[i];
+        
+        // x back into tick
+        tyz[0] = tyz[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5 + 3200; // [cm]/[cm/usec]/[usec/tick] + trigger offset
+        
+        //std::cout << "step[" << istep << "] tyz=(" << tyz[0] << "," << tyz[1] << "," << tyz[2] << ")" << std::endl;
+        
+        if ( tyz[0]<crops_v.front().meta().min_y() || tyz[0]>=crops_v.front().meta().max_y() )
+          continue;
+
+        int row = crops_v.front().meta().row( tyz[0], __FILE__, __LINE__ );
+        good_twid_v[idxstart][0] = tyz[0];
+        
+        int ngoodplanes = 0;
+        for ( size_t p=0; p<crops_v.size(); p++ ) {
+          
+          // position in image
+          float wireco = larutil::Geometry::GetME()->WireCoordinate( std::vector<double>{ (double)tyz[0], (double)tyz[1], (double)tyz[2] }, p );
+          if ( wireco < crops_v[p].meta().min_x() || wireco >= crops_v[p].meta().max_x() )  {
+            break;
+          }
+          
+          int col = crops_v[p].meta().col( wireco, __FILE__, __LINE__ );
+          good_twid_v[idxstart][p+1] = wireco;          
+
+          float maxpixval = 0;
+          float maxbadval = 0;
+          int maxcol = 0;
+          int maxrow = 0;
+          for ( int dr=-pixradius; dr<=pixradius; dr++ ) {
+            //for ( int dr=0; dr<=0; dr++ ) {
+            int r = row+dr;
+            if ( r<0 || r >=(int)crops_v[p].meta().rows() ) continue;
+            for (int dc=-pixradius; dc<pixradius; dc++ ) {
+              int c = col+dc;
+              if ( c<0 || c>=(int)crops_v[p].meta().cols() ) continue;
+              
+              float pixval = crops_v[p].pixel(r,c);
+              float badval = badch_v[p].pixel(r,c);
+              if ( pixval>pfeatures->pcropdata->getThreshold() || badval>0 ) {
+                if ( pixval>maxpixval || (maxpixval==0 && badval>0) ) {
+                  maxcol = c;
+                  maxrow = r;
+                  maxpixval = pixval;
+                  maxbadval = badval;
+                }
+              }
+            }
+          }
+
+          if ( maxpixval>0 || maxbadval>0 ) {
+            ngoodplanes++;
+          }
+        }//end of loop over planes
+        
+        // found good point
+        if ( ngoodplanes==crops_v.size() ) {
+          
+          good_tyz_v[idxstart][0] = tyz[0];
+          good_tyz_v[idxstart][1] = tyz[1];
+          good_tyz_v[idxstart][2] = tyz[2];
+          
+          foundgoodpt = true;
+          break;
+        }
+        
+      }
+      
+      if ( foundgoodpt ) {
+        is_good_pt_v[idxstart] = 1;
+      }
+      
+    }//end of endpt loop
+    
+    return;
+  }
+
   /** 
    *
    * Scan along fixed detector-z coordinate and find charge in mask cluster
@@ -301,8 +539,8 @@ namespace dltagger {
       return;
 
     // initial pixel coordinate
-    int col = maskimg.meta().col(wireco);
-    int row = maskimg.meta().row(tick);
+    int col = maskimg.meta().col(wireco, __FILE__, __LINE__ );
+    int row = maskimg.meta().row(tick, __FILE__, __LINE__ );
 
     // scan along ypos @ tick for charge.
     // to avoid duplicate points in same neighborhood, we find the maximum of a region with charge
@@ -331,7 +569,7 @@ namespace dltagger {
       }
 
       // get pixel coordinate of wire
-      col = maskimg.meta().col(wireco);
+      col = maskimg.meta().col(wireco, __FILE__, __LINE__ );
 
       // get pixel value
       pixval = maskimg.pixel(row,col);
@@ -403,7 +641,7 @@ namespace dltagger {
     }
     
     // initial pixel coordinate
-    int col = maskimg.meta().col(wireco);
+    int col = maskimg.meta().col(wireco, __FILE__, __LINE__ );
 
     // scan along ypos @ tick for charge.
     // to avoid duplicate points in same neighborhood, we find the maximum of a region with charge
@@ -472,10 +710,14 @@ namespace dltagger {
       return; // not handling this case yet
 
 
-    std::set< std::vector<int> > pairs_formed;
+    auto const& crops_v = pfeatures->pcropdata->crops_v;
+    auto const& badch_v = pfeatures->pcropdata->badch_v;
     
+    std::set< std::vector<int> > pairs_formed;
+
+    // ------------------------------------------------------
     // u-wire
-    // -------
+    // ------------------------------------------------------    
     // we make at most 2 points, one from the top and one from the bottom
     std::vector<int> uwire_tests;
     if ( wiretick_p0_v.size()>0 ) {
@@ -483,6 +725,7 @@ namespace dltagger {
       if ( wiretick_p0_v.size()>1 )
         uwire_tests.push_back( (int)wiretick_p0_v.back()[0] );
     }
+
 
     std::vector< std::vector<float> > uwire_intersections;
     std::vector< float > uwire_triarea;
@@ -500,7 +743,32 @@ namespace dltagger {
         int missingwire = 0;
         //ublarcvapp::UBWireTool::wireIntersection( 2, (int)ywire, 0, (int)uwire, intersection, crosses );
         ublarcvapp::UBWireTool::getMissingWireAndPlane( 2, (int)ywire, 0, (int)uwire, missingplane, missingwire, intersection, crosses );
-        if ( crosses==1 ) {
+
+        // look for charge or bad ch
+        bool hascharge = false;
+        if ( missingwire>=crops_v[missingplane].meta().min_x() && missingwire<crops_v[missingplane].meta().max_x() ) {
+          int col = crops_v[missingplane].meta().col(missingwire, __FILE__, __LINE__ );
+          int row = crops_v[missingplane].meta().row(tick, __FILE__, __LINE__ );
+          float maxpixval = 0;
+          float maxbadval = 0;
+          for ( int dr=-2; dr<=2; dr++ ) {
+            int r = row+dr;
+            if ( r<0 || r>=(int)crops_v[missingplane].meta().rows() ) continue;
+            for ( int dc=-2; dc<=2; dc++) {
+              int c=col+dc;
+              if ( c<0 || c>=(int)crops_v[missingplane].meta().cols() ) continue;
+              float pixval = crops_v[missingplane].pixel(r,c);
+              float badval = badch_v[missingplane].pixel(r,c);
+              if ( pixval>maxpixval || (badval>0 && maxpixval==0) ) {
+                maxpixval = pixval;
+                maxbadval = badval;
+              }
+            }
+          }
+          if ( maxpixval>0 || maxbadval>0 ) hascharge = true;
+        }
+        
+        if ( crosses==1 && hascharge ) {
           uwire_intersections.push_back( intersection );
           uwire_triarea.push_back(0.0);
           uwire_vindex.push_back(0);
@@ -580,8 +848,33 @@ namespace dltagger {
         //ublarcvapp::UBWireTool::wireIntersection( 2, (int)ywire, 1, (int)vwire, intersection, crosses );
         int missingplane = 0;
         int missingwire = 0;
-        ublarcvapp::UBWireTool::getMissingWireAndPlane( 2, (int)ywire, 1, (int)vwire, missingplane, missingwire, intersection, crosses );        
-        if ( crosses==1 ) {
+        ublarcvapp::UBWireTool::getMissingWireAndPlane( 2, (int)ywire, 1, (int)vwire, missingplane, missingwire, intersection, crosses );
+
+        // look for charge or bad ch
+        bool hascharge = false;
+        if ( missingwire>=crops_v[missingplane].meta().min_x() && missingwire<crops_v[missingplane].meta().max_x() ) {
+          int col = crops_v[missingplane].meta().col(missingwire, __FILE__, __LINE__ );
+          int row = crops_v[missingplane].meta().row(tick, __FILE__, __LINE__ );
+          float maxpixval = 0;
+          float maxbadval = 0;
+          for ( int dr=-2; dr<=2; dr++ ) {
+            int r = row+dr;
+            if ( r<0 || r>=(int)crops_v[missingplane].meta().rows() ) continue;
+            for ( int dc=-2; dc<=2; dc++) {
+              int c=col+dc;
+              if ( c<0 || c>=(int)crops_v[missingplane].meta().cols() ) continue;
+              float pixval = crops_v[missingplane].pixel(r,c);
+              float badval = badch_v[missingplane].pixel(r,c);
+              if ( pixval>maxpixval || (badval>0 && maxpixval==0) ) {
+                maxpixval = pixval;
+                maxbadval = badval;
+              }
+            }
+          }
+          if ( maxpixval>0 || maxbadval>0 ) hascharge = true;
+        }
+        
+        if ( crosses==1 && hascharge ) {
           vwire_intersections.push_back( intersection );
           vwire_triarea.push_back(0.0);
           vwire_vindex.push_back(0);
@@ -738,7 +1031,7 @@ namespace dltagger {
         
         auto& neighbornode = points[ neighbor.index ];
         numneighbors++;
-        float pixgap = get_max_pixelgap( crop_v, badch_v, vertex, neighbornode, 0.3, 3 );
+        float pixgap = get_max_pixelgap( crop_v, badch_v, vertex, neighbornode, 0.3, 3, false );
 
         if ( pixgap>5.0 )
           continue; // not a neighbor
@@ -895,13 +1188,13 @@ namespace dltagger {
       // get wires
       std::vector<int> rowcol_v; // 4 coordinates (row,col on each plane...)
       rowcol_v.reserve(4);
-      rowcol_v.push_back( input_v[0].meta().row(tick) );
+      rowcol_v.push_back( input_v[0].meta().row(tick, __FILE__, __LINE__ ) );
       for ( size_t pl=0; pl<nplanes; pl++ ) {
         float wirecoord = larutil::Geometry::GetME()->WireCoordinate( pos, pl );
         if ( wirecoord<input_v[pl].meta().min_x() || wirecoord>=input_v[pl].meta().max_x() ) {
           break;
         }
-        rowcol_v.push_back( (int)input_v[pl].meta().col( wirecoord ) );
+        rowcol_v.push_back( (int)input_v[pl].meta().col( wirecoord, __FILE__, __LINE__ ) );
       }
       
       if ( rowcol_v.size()!=(1+nplanes) ) {
@@ -1063,8 +1356,11 @@ namespace dltagger {
       //auto edge = add_edge( key.first, key.second, { dist, realdist }, G ).first;
       auto edge = add_edge( key.first, key.second, { realdist, gapdist }, G ).first;
     }
-    
-    boost::print_graph(G, boost::get(&VertexData::index, G));
+
+    if (logger().debug()) {
+      LARCV_DEBUG() << "Dump graph" << std::endl;      
+      boost::print_graph(G, boost::get(&VertexData::index, G));
+    }
     
     dijkstra_shortest_paths(G, 0,
                             predecessor_map(get(&VertexData::pred, G))

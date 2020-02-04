@@ -26,6 +26,8 @@
 #pragma link C++ class ublarcvapp::dltagger::DLTagger+;
 #pragma link C++ class ublarcvapp::dltagger::DLTaggerProcess+;
 #pragma link C++ class ublarcvapp::dltagger::DLTaggerProcessFactory+;
+#pragma link C++ class ublarcvapp::dltagger::DLCheaterTagger+;
+#pragma link C++ class ublarcvapp::dltagger::DLSSNetOverlayCheater+;
 
 //ADD_NEW_CLASS ... do not change this line
 #endif

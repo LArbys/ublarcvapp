@@ -38,9 +38,9 @@ namespace ublarcvapp {
     std::map< rse_t, size_t > m_entry_map;
 
     rse_t  m_current_rse;
-    size_t m_current_entry;
+    long   m_current_entry;
     rse_t  m_last_rse;
-    size_t m_last_entry;
+    long   m_last_entry;
 
   };
 

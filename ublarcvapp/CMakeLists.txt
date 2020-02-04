@@ -1,8 +1,9 @@
 
 
-
+add_subdirectory(LLCVProcessor)
 add_subdirectory(dbscan)
 add_subdirectory(Reco3D)
+add_subdirectory(ContourTools)
 
 if (HAS_LARLITE)
   add_subdirectory(LArliteHandler)
@@ -16,3 +17,5 @@ endif()
 if (LARCV_USE_GEO2D)
   add_subdirectory(LArOpenCVHandle)
 endif()
+
+add_subdirectory(DLTagger)

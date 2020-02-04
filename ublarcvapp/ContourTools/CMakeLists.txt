@@ -13,6 +13,7 @@ file(GLOB SOURCES "*.cxx")
 set(LIBNAME LArCVApp_${MODULE_NAME})
 #message("opencv libs: ${OpenCV_LIBS}")
 #message("laropencv libs: ${LAROPENCV_LIBS}")
+#message("opencv inc: ${OpenCV_INCLUDE_DIRS}")
 
 # includes
 include_directories(${LARCV_INCLUDE_DIR} $ENV{LAROPENCV_BASEDIR} $ENV{UBLARCVAPP_BASEDIR} ${OpenCV_INCLUDE_DIRS} ${GEO2D_INC_DIR} $ENV{LARLITE_USERDEVDIR} )

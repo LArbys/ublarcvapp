@@ -29,13 +29,15 @@ namespace dltagger {
                                  const larcv::EventChStatus& ev_chstatus,
                                  bool use_gap_ch=false );
 
+    std::vector< std::vector<MaskMatchData> > m_matchdata_vv; ///< mask match data per plane
     std::vector< MaskCombo >         m_combo_3plane_v;   ///< matches across planes
     std::vector< CropMaskCombo >     m_combo_crops_v;    ///< cropped images from matches
     std::vector< FeaturesMaskCombo > m_combo_features_v; ///< features extracted from the crops images
     std::vector< GenGraphPoints >    m_combo_graphpts_v; ///< 3D points for graph astar
     std::vector< Gen3DEndpoints >    m_combo_endpt3d_v;  ///< 3D endpoints created for mask-combo
     std::vector< AStarMaskCombo >    m_combo_astar_v;    ///< AStar path
-
+    std::vector< int >               m_pass;             ///< if entry 1, above products represent a good reco.
+    
     void clear();
     size_t numMatches() const { return m_combo_3plane_v.size(); };
 

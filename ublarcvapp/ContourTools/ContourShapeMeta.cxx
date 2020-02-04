@@ -1,6 +1,8 @@
 #include "ContourShapeMeta.h"
 #include <sstream>
 
+#include <opencv2/imgproc.hpp>
+
 namespace ublarcvapp {
 
   ContourShapeMeta::ContourShapeMeta() 
