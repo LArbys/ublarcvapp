@@ -5,7 +5,7 @@ file(GLOB HEADERS "*.h")
 
 # Remove LinkDef.h
 list(FILTER HEADERS EXCLUDE REGEX ".*LinkDef.h$")
- 
+
 # However, the file(GLOB...) allows for wildcard additions:
 file(GLOB SOURCES "*.cxx")
 
@@ -13,7 +13,7 @@ file(GLOB SOURCES "*.cxx")
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # includes
-include_directories(${LARCV_INCLUDE_DIR} $ENV{UBLARCVAPP_BASEDIR} )
+include_directories(${LARCV_INCLUDE_DIR} $ENV{UBLARCVAPP_BASEDIR} ${LARLITE_INC_DIRS} )
 
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)

@@ -29,7 +29,7 @@ BBoxPixelWidth: 832
 CoveredZWidth: 310
 FillCroppedYImageCompletely: true
 DebugImage: false
-MaxImages: 10
+MaxImages: 1
 RandomizeCrops: true
 MaxRandomAttempts: 60
 MinFracPixelsInCrop: 0.0003
@@ -44,10 +44,10 @@ split_pset = larcv.CreatePSetFromFile( "ubsplit.cfg", "UBSplitDetector" )
 # UBMaskCropDetector
 
 maskcrop_cfg="""Verbosity:0
-InputBBoxProducer: \"detsplit\"
+InputBBoxProducer: \"full_image\"
 InputADCProducer: \"wire\"
 InputMasksProducer: \"clustermask\"
-InputCroppedADCProducer: \"detsplit\"
+InputCroppedADCProducer: \"wire\"
 OutputCroppedADCProducer: \"adc\"
 OutputMasksProducer: \"masks\"
 OutputWeightsProducer: \"weights\"

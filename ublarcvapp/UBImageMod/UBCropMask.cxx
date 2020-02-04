@@ -130,10 +130,22 @@ namespace ublarcvapp {
 
 
     // input BBox of crop
-    auto ev_in_bbox  = (larcv::EventROI*)(mgr.get_data(larcv::kProductROI, _input_bbox_producer));
-    if (!ev_in_bbox) {
+    larcv::EventROI* ev_in_bbox = (larcv::EventROI*)(mgr.get_data(larcv::kProductROI, _input_bbox_producer));
+    std::vector< larcv::ROI > outbbox_v;
+    if ((!ev_in_bbox) && (_input_bbox_producer != "full_image")) {
       LARCV_CRITICAL() << "No Input BBox2D found with a name: " << _input_bbox_producer << ". make using UBSplitDetector." << std::endl;
       throw larcv::larbys();
+    }
+    else if (_input_bbox_producer == "full_image"){
+      std::vector<larcv::ROI> roi_v;
+      larcv::ROI roi;
+      larcv::ImageMeta u_meta = meta_orig_v[0];
+      larcv::ImageMeta v_meta = meta_orig_v[1];
+      larcv::ImageMeta y_meta = meta_orig_v[2];
+
+      std::vector<larcv::ImageMeta> bb_v = {u_meta, v_meta, y_meta};
+      roi.SetBB(bb_v);
+      outbbox_v.push_back(roi);
     }
 
 
@@ -149,7 +161,7 @@ namespace ublarcvapp {
       LARCV_CRITICAL() << "Number of cropped ADC images is not a multiple of the number of planes" << std::endl;
       throw larcv::larbys();
     }
-    if ( cropped_v.size()/img_v.size()!=ev_in_bbox->ROIArray().size() ) {
+    if ( cropped_v.size()/img_v.size()!=ev_in_bbox->ROIArray().size() && (_input_bbox_producer != "full_image") ) {
       LARCV_CRITICAL() << "Number of cropped ADC image sets does not equal number of cropped ROIs" << std::endl;
       throw larcv::larbys();
     }
@@ -190,9 +202,10 @@ namespace ublarcvapp {
     }
 
     for (int icrop=0; icrop<ncrops; icrop++) {
-      const larcv::ROI& crop_roi = ev_in_bbox->ROIArray().at(icrop);
-
-
+      // larcv::ROI& crop_roi = ev_in_bbox->ROIArray().at(icrop);
+      // if (_input_bbox_producer == "full_image"){
+      larcv::ROI& crop_roi = outbbox_v[0];
+      // }
       // this is a copy. not great. could swap if needed ...
       std::vector<larcv::Image2D> crop_v;
       for (int i=0; i<3; i++) {
@@ -540,53 +553,53 @@ namespace ublarcvapp {
 
 
                   // Sneak in a neutrino vtx class
-                  if (masks_vv[plane][m].type == -1) {
-                    std::cout << "Trying a sneak " << std::endl;
-                    bool dont_add = false;
-                    double w = meta_orig_v[plane].pos_x(masks_vv[plane][m].ancestor_track_start.y );
-                    double t = meta_orig_v[plane].pos_y(masks_vv[plane][m].ancestor_track_start.x );
-                    double col_new_vtx = meta_crop_v[plane].col(w);
-                    double row_new_vtx = meta_crop_v[plane].row(t);
-                    int adjust_row = 0;
-                    if (row_new_vtx >= meta_crop_v[plane].rows() || col_new_vtx >= meta_crop_v[plane].cols()){
-                      dont_add = true;
-                    }
-                    while ((dont_add == false) && (crop_v[plane].pixel((int)row_new_vtx+adjust_row,(int)col_new_vtx) < 10) && (adjust_row < 40)){
-                      adjust_row++;
-                    }
-                    if (adjust_row >39){
-                      dont_add = true;
-                    }
-                    row_new_vtx = row_new_vtx + adjust_row;
-
-                    // get wire and tick box for new mask
-                    double min_x = meta_crop_v[plane].pos_x(col_new_vtx-15);
-                    double max_x = meta_crop_v[plane].pos_x(col_new_vtx+15);
-                    double min_y = meta_crop_v[plane].pos_y(row_new_vtx-15);
-                    double max_y = meta_crop_v[plane].pos_y(row_new_vtx+15);
-
-                    std::cout << min_x << " " << max_x << " " << min_y << " " << max_y <<std::endl;
-                    std::cout << bbox_crop.min_x() << " " << bbox_crop.max_x() << " " << bbox_crop.min_y() << " " << bbox_crop.max_y() <<std::endl;
-                    if (min_x >= bbox_crop.min_x() && max_x < bbox_crop.max_x() && min_y >= bbox_crop.min_y() && max_y < bbox_crop.max_y() && min_x < max_x && min_y < max_y) {
-                      //create 3x3 box mask around vertex
-                      std::vector<larcv::Point2D> points_v_vtx;
-                      for(int jj=-1;jj<1;jj++){
-                        for (int kk=-1;kk<1;kk++){
-                          double col_new = col_new_vtx + jj;
-                          double row_new = row_new_vtx + kk;
-                          larcv::Point2D this_point(col_new, row_new);
-                          points_v_vtx.push_back(this_point);
-                        }
-                      }
-
-
-                      larcv::BBox2D adjusted_box(min_x, min_y, max_x, max_y);
-                      std::cout << "sneaking in a neutrino vertex" << std::endl;
-                      if (dont_add == false){
-                        masks_v.push_back(larcv::ClusterMask(adjusted_box, meta_crop_v[plane], points_v_vtx, 7)); //Final type neutrino vtx is 7
-                      }
-                    }
-                  }
+                  // if (masks_vv[plane][m].type == -1) {
+                  //   std::cout << "Trying a sneak " << std::endl;
+                  //   bool dont_add = false;
+                  //   double w = meta_orig_v[plane].pos_x(masks_vv[plane][m].ancestor_track_start.y );
+                  //   double t = meta_orig_v[plane].pos_y(masks_vv[plane][m].ancestor_track_start.x );
+                  //   double col_new_vtx = meta_crop_v[plane].col(w);
+                  //   double row_new_vtx = meta_crop_v[plane].row(t);
+                  //   int adjust_row = 0;
+                  //   if (row_new_vtx >= meta_crop_v[plane].rows() || col_new_vtx >= meta_crop_v[plane].cols()){
+                  //     dont_add = true;
+                  //   }
+                  //   while ((dont_add == false) && (crop_v[plane].pixel((int)row_new_vtx+adjust_row,(int)col_new_vtx) < 10) && (adjust_row < 40)){
+                  //     adjust_row++;
+                  //   }
+                  //   if (adjust_row >39){
+                  //     dont_add = true;
+                  //   }
+                  //   row_new_vtx = row_new_vtx + adjust_row;
+                  //
+                  //   // get wire and tick box for new mask
+                  //   double min_x = meta_crop_v[plane].pos_x(col_new_vtx-15);
+                  //   double max_x = meta_crop_v[plane].pos_x(col_new_vtx+15);
+                  //   double min_y = meta_crop_v[plane].pos_y(row_new_vtx-15);
+                  //   double max_y = meta_crop_v[plane].pos_y(row_new_vtx+15);
+                  //
+                  //   std::cout << min_x << " " << max_x << " " << min_y << " " << max_y <<std::endl;
+                  //   std::cout << bbox_crop.min_x() << " " << bbox_crop.max_x() << " " << bbox_crop.min_y() << " " << bbox_crop.max_y() <<std::endl;
+                  //   if (min_x >= bbox_crop.min_x() && max_x < bbox_crop.max_x() && min_y >= bbox_crop.min_y() && max_y < bbox_crop.max_y() && min_x < max_x && min_y < max_y) {
+                  //     //create 3x3 box mask around vertex
+                  //     std::vector<larcv::Point2D> points_v_vtx;
+                  //     for(int jj=-1;jj<1;jj++){
+                  //       for (int kk=-1;kk<1;kk++){
+                  //         double col_new = col_new_vtx + jj;
+                  //         double row_new = row_new_vtx + kk;
+                  //         larcv::Point2D this_point(col_new, row_new);
+                  //         points_v_vtx.push_back(this_point);
+                  //       }
+                  //     }
+                  //
+                  //
+                  //     larcv::BBox2D adjusted_box(min_x, min_y, max_x, max_y);
+                  //     std::cout << "sneaking in a neutrino vertex" << std::endl;
+                  //     if (dont_add == false){
+                  //       masks_v.push_back(larcv::ClusterMask(adjusted_box, meta_crop_v[plane], points_v_vtx, 7)); //Final type neutrino vtx is 7
+                  //     }
+                  //   }
+                  // }
 
                }
 
