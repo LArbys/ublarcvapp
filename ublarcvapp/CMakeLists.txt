@@ -11,6 +11,7 @@ if (HAS_LARLITE)
   add_subdirectory(UBWireTool)
   add_subdirectory(ubdllee)
   add_subdirectory(Filter)
+  add_subdirectory(MCTools)
 endif()
 
 
