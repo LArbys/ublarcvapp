@@ -15,7 +15,7 @@ namespace mctools {
   void MCPixelPGraph::buildgraph( larcv::IOManager& iolcv,
                                   larlite::storage_manager& ioll ) {
     
-    larcv::EventImage2D* ev_adc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "wire" );
+    larcv::EventImage2D* ev_adc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, adc_tree );
     larcv::EventImage2D* ev_seg = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "segment" );
     larcv::EventImage2D* ev_ins = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "instance" );
     larcv::EventImage2D* ev_anc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "ancestor" );
@@ -77,22 +77,22 @@ namespace mctools {
 
       // toss out neutrons? (sigh...)
       
-      if ( mct.Origin()==1 ) {
-        // neutrino origin
-        Node_t tracknode( node_v.size(), 0, mct.TrackID(), vidx, mct.PdgCode() );
-        tracknode.E_MeV = mct.Start().E();
-        if ( mct.PdgCode()==2212 ) tracknode.E_MeV -= 938.0;
-        else if ( mct.PdgCode()==2112 ) tracknode.E_MeV -= 940.0;
-        else if ( abs(mct.PdgCode())==13 )   tracknode.E_MeV -= 105.;
-        else if ( abs(mct.PdgCode())==211 )  tracknode.E_MeV -= 135.;
+      //if ( mct.Origin()==1 ) {
+      // neutrino origin
 
-        tracknode.start.resize(3);
-        tracknode.start[0] = mct.Start().X();
-        tracknode.start[1] = mct.Start().Y();
-        tracknode.start[2] = mct.Start().Z();        
-        
-        node_v.emplace_back( std::move(tracknode) );
-      }
+      Node_t tracknode( node_v.size(), 0, mct.TrackID(), vidx, mct.PdgCode() );
+      tracknode.E_MeV = mct.Start().E();
+      if ( mct.PdgCode()==2212 ) tracknode.E_MeV -= 938.0;
+      else if ( mct.PdgCode()==2112 ) tracknode.E_MeV -= 940.0;
+      else if ( abs(mct.PdgCode())==13 )   tracknode.E_MeV -= 105.;
+      else if ( abs(mct.PdgCode())==211 )  tracknode.E_MeV -= 135.;
+      
+      tracknode.start.resize(3);
+      tracknode.start[0] = mct.Start().X();
+      tracknode.start[1] = mct.Start().Y();
+      tracknode.start[2] = mct.Start().Z();        
+      
+      node_v.emplace_back( std::move(tracknode) );
     }
 
     for (int vidx=0; vidx<(int)shower_v.size(); vidx++ ) {
@@ -105,17 +105,18 @@ namespace mctools {
                 << " pid=" << mcsh.PdgCode()
                 << std::endl;
       
-      if ( mcsh.Origin()==1 ) {
-        // neutrino origin
-        Node_t showernode( node_v.size(), 1, mcsh.TrackID(), vidx, mcsh.PdgCode() );
-        showernode.E_MeV = mcsh.Start().E();
-        showernode.start.resize(3);
-        showernode.start[0] = mcsh.Start().X();
-        showernode.start[1] = mcsh.Start().Y();
-        showernode.start[2] = mcsh.Start().Z();
-        
-        node_v.emplace_back( std::move(showernode) );
-      }
+      //if ( mcsh.Origin()==1 ) {
+      // neutrino origin
+
+      Node_t showernode( node_v.size(), 1, mcsh.TrackID(), vidx, mcsh.PdgCode() );
+      showernode.E_MeV = mcsh.Start().E();
+      showernode.start.resize(3);
+      showernode.start[0] = mcsh.Start().X();
+      showernode.start[1] = mcsh.Start().Y();
+      showernode.start[2] = mcsh.Start().Z();
+      
+      node_v.emplace_back( std::move(showernode) );
+      //}
     }
 
     // sort Node_t object by geant track ID, relabel node IDs
@@ -451,7 +452,7 @@ namespace mctools {
     for ( auto& node : node_v ) {
       if ( node.mother==rootnode ) {
         // primary
-        if ( !exclude_neutrons || node.pid!=2212 ) {
+        if ( !exclude_neutrons || node.pid!=2112 ) {
           nodelist.push_back( &node );
         }
       }

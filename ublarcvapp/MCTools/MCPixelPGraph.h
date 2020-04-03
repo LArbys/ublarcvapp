@@ -24,7 +24,9 @@ namespace mctools {
   class MCPixelPGraph {
   public:
 
-    MCPixelPGraph() {};
+    MCPixelPGraph()
+      : adc_tree("wire")
+      {};
     virtual ~MCPixelPGraph() {};
 
     void buildgraph( larcv::IOManager& iolcv, larlite::storage_manager& ioll );
@@ -116,6 +118,14 @@ namespace mctools {
                          const std::vector<larcv::Image2D>& instance_v,
                          const std::vector<larcv::Image2D>& ancestor_v,
                          const std::vector<float> threshold_v );
+
+
+  public:
+
+    // configuration parameters
+    // name of trees
+    std::string adc_tree; ///< default is wire
+    void set_adc_treename( std::string name ) { adc_tree = name; };
     
   };
   
