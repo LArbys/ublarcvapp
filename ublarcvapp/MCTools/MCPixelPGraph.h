@@ -53,6 +53,7 @@ namespace mctools {
       std::vector<Node_t*>  daughter_v;     // pointer to daughters 
       std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (row,col)
       std::vector<float> start;
+      int origin;
 
       Node_t()
       : nodeidx(-1),
@@ -63,7 +64,8 @@ namespace mctools {
         mother(nullptr),
         mid(-1),
         E_MeV(-1.0),
-        start({0,0,0})
+        start({0,0,0}),
+        origin(-1)
       {};
         
       Node_t(int _nodeidx, int _type, int _tid, int _vidx, int _pid, Node_t* _mother=nullptr, int _mid=-1, float _energy=-1.0 )
@@ -75,7 +77,8 @@ namespace mctools {
         mother(_mother),
         mid(_mid),
         E_MeV(_energy),
-        start({0,0,0})
+        start({0,0,0}),
+        origin(-1)
       {};
 
       bool operator<( const Node_t& rhs ) const {
@@ -98,7 +101,7 @@ namespace mctools {
     void printAllNodeInfo();
     void printNodeInfo( const Node_t& node );
     std::string strNodeInfo( const Node_t& node );
-    void printGraph( Node_t* start_node=nullptr );
+    void printGraph( Node_t* start_node=nullptr, bool visible_only=true );
 
     // get pixels
     std::vector< std::vector<int> > getPixelsFromParticleAndDaughters( int trackid );
@@ -109,10 +112,11 @@ namespace mctools {
 
     // get primary list
     std::vector<Node_t*> getPrimaryParticles( bool exclude_neutrons=true );
+    std::vector<Node_t*> getNeutrinoPrimaryParticles( bool exclude_neutrons=true );    
 
   protected:
     
-    void _recursivePrintGraph( Node_t* node, int& depth );
+    void _recursivePrintGraph( Node_t* node, int& depth, bool visible_only=true );
     void _scanPixelData( const std::vector<larcv::Image2D>& adc_v,
                          const std::vector<larcv::Image2D>& segment_v,
                          const std::vector<larcv::Image2D>& instance_v,

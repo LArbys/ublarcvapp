@@ -90,7 +90,8 @@ namespace mctools {
       tracknode.start.resize(3);
       tracknode.start[0] = mct.Start().X();
       tracknode.start[1] = mct.Start().Y();
-      tracknode.start[2] = mct.Start().Z();        
+      tracknode.start[2] = mct.Start().Z();
+      tracknode.origin = mct.Origin();
       
       node_v.emplace_back( std::move(tracknode) );
     }
@@ -98,12 +99,12 @@ namespace mctools {
     for (int vidx=0; vidx<(int)shower_v.size(); vidx++ ) {
       const larlite::mcshower& mcsh = shower_v[vidx];
 
-      std::cout << "shower[" << vidx << "] origin=" << mcsh.Origin()
-                << " tid=" << mcsh.TrackID()
-                << " mid=" << mcsh.MotherTrackID()
-                << " aid=" << mcsh.AncestorTrackID()
-                << " pid=" << mcsh.PdgCode()
-                << std::endl;
+      // std::cout << "shower[" << vidx << "] origin=" << mcsh.Origin()
+      //           << " tid=" << mcsh.TrackID()
+      //           << " mid=" << mcsh.MotherTrackID()
+      //           << " aid=" << mcsh.AncestorTrackID()
+      //           << " pid=" << mcsh.PdgCode()
+      //           << std::endl;
       
       //if ( mcsh.Origin()==1 ) {
       // neutrino origin
@@ -114,6 +115,7 @@ namespace mctools {
       showernode.start[0] = mcsh.Start().X();
       showernode.start[1] = mcsh.Start().Y();
       showernode.start[2] = mcsh.Start().Z();
+      showernode.origin = mcsh.Origin();
       
       node_v.emplace_back( std::move(showernode) );
       //}
@@ -221,6 +223,7 @@ namespace mctools {
     std::stringstream ss;
     ss << "node[" << node.nodeidx << "," << &node << "] "
        << " (type,vidx)=(" << node.type << "," << node.vidx << ") "
+       << " origin=" << node.origin
        << " trackid=" << node.tid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
@@ -251,7 +254,7 @@ namespace mctools {
    * dump graph to standard out
    *
    */
-  void MCPixelPGraph::printGraph( Node_t* rootnode ) {
+  void MCPixelPGraph::printGraph( Node_t* rootnode, bool visible_only ) {
     //  here we go!
     std::cout << "=======[ MCPixelPGraph::printGraph ]==============" << std::endl;
     int depth = 0;
@@ -264,7 +267,7 @@ namespace mctools {
    * internal recursive function that prints node info
    *
    */
-  void MCPixelPGraph::_recursivePrintGraph( Node_t* node, int& depth ) {
+  void MCPixelPGraph::_recursivePrintGraph( Node_t* node, int& depth, bool visible_only ) {
     if ( depth<0 ) return; // we're done (error?)
     
     // depth first printing of nodes   
@@ -274,12 +277,21 @@ namespace mctools {
       branch += " |";
     if ( depth>0 ) 
       branch += "-- ";
-    std::cout << branch << info << std::endl;
+    if ( visible_only ) {
+      int nvis = 0;
+      for ( auto const& pix_v : node->pix_vv )
+        nvis += pix_v.size();
+      if ( nvis>0 )
+        std::cout << branch << info << std::endl;
+    }
+    else {
+      std::cout << branch << info << std::endl;
+    }
 
     // we loop through our daughters
     for ( auto& daughter : node->daughter_v ) {
       ++depth;
-      _recursivePrintGraph( daughter, depth );
+      _recursivePrintGraph( daughter, depth, visible_only );
     }
     --depth;
     return;
@@ -451,6 +463,26 @@ namespace mctools {
     Node_t* rootnode = &node_v[0];
     for ( auto& node : node_v ) {
       if ( node.mother==rootnode ) {
+        // primary
+        if ( !exclude_neutrons || node.pid!=2112 ) {
+          nodelist.push_back( &node );
+        }
+      }
+    }
+    return nodelist;      
+  }
+
+  /**
+   * get list of neutrino-only primary particles
+   *
+   * by default, neutrons are excluded
+   *
+   */
+  std::vector<MCPixelPGraph::Node_t*> MCPixelPGraph::getNeutrinoPrimaryParticles( bool exclude_neutrons ) {
+    std::vector<Node_t*> nodelist;
+    Node_t* rootnode = &node_v[0];
+    for ( auto& node : node_v ) {
+      if ( node.mother==rootnode && node.origin==1 ) {
         // primary
         if ( !exclude_neutrons || node.pid!=2112 ) {
           nodelist.push_back( &node );
