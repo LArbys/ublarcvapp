@@ -16,6 +16,8 @@ from ublarcvapp import ublarcvapp
 test script that demos the MCPixelPGraph class.
 """
 
+rt.gStyle.SetOptStat(0)
+
 ioll = larlite.storage_manager( larlite.storage_manager.kREAD )
 ioll.add_in_filename(  args.input_larlite )
 ioll.open()
@@ -86,11 +88,16 @@ for ientry in xrange( nentries ):
                 g.SetMarkerStyle(20)
                 g.SetMarkerSize(0.5)                
                 if node.pid==11:
-                    g.SetMarkerColor(rt.kRed)
+                    if node.origin==1:
+                        g.SetMarkerColor(rt.kRed)
                 elif node.pid in [13,-13]:
-                    g.SetMarkerColor(rt.kGreen)
-                else:
-                    g.SetMarkerColor(rt.kBlue)
+                    if node.origin==2:
+                        g.SetMarkerColor(rt.kGreen)
+                    elif node.origin==1:
+                        g.SetMarkerColor(rt.kMagenta)
+                elif node.pid in [2212]:
+                    if node.origin==1:                    
+                        g.SetMarkerColor(rt.kBlue)
                 e_v.append(g)
             graph_v.append(e_v)
 
