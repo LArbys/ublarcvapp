@@ -18,24 +18,32 @@ namespace larutil {
 }
 
 namespace ublarcvapp {
+namespace mctools {
 
-  float getTick( const std::vector<float>& step, const float trig_time=4050.0,
-                 const larutil::SpaceChargeMicroBooNE* psce=NULL );
+  class CrossingPointsAnaMethods {
+
+  public:
+
+    CrossingPointsAnaMethods(){};
+    virtual ~CrossingPointsAnaMethods(){};    
+    
+    
+    static float getTick( const std::vector<float>& step, const float trig_time=4050.0,
+                          const larutil::SpaceChargeMicroBooNE* psce=nullptr );
   
-  float getTick( const larlite::mcstep& step, const float trig_time=4050.0,
-                 const larutil::SpaceChargeMicroBooNE* psce=NULL );
+    static float getTick( const larlite::mcstep& step, const float trig_time=4050.0,
+                          const larutil::SpaceChargeMicroBooNE* psce=nullptr );
 
-  int doesTrackCrossImageBoundary( const larlite::mctrack& track, const larcv::ImageMeta& meta,
-                                   const float trig_time, const larutil::SpaceChargeMicroBooNE* psce );
+    static int doesTrackCrossImageBoundary( const larlite::mctrack& track, const larcv::ImageMeta& meta,
+                                            const float trig_time, const larutil::SpaceChargeMicroBooNE* psce=nullptr );
 
-  std::vector<int> getImageBoundaryCrossingPoint( const larlite::mctrack& track, std::vector<float>& crossingpt, const larcv::ImageMeta& meta,
-						  const float boundary_tick_buffer, const float trig_time,
-                                                  const larutil::SpaceChargeMicroBooNE* psce );
+    static std::vector<int> getFirstStepPosInsideImage( const larlite::mctrack& track, const larcv::ImageMeta& meta, const float trig_time,
+                                                        const bool startAtstart, const float max_step_size, const float fv_border,
+                                                        const larutil::SpaceChargeMicroBooNE* psce );
 
-  std::vector<float> getFirstStepPosInsideImage( const larlite::mctrack& track, const larcv::ImageMeta& meta, const float trig_time,
-						 const bool startAtstart, const float max_step_size, const float fv_border,
-                                                 const larutil::SpaceChargeMicroBooNE* psce );
+  };
   
+}
 }
 
 #endif

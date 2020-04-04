@@ -16,4 +16,15 @@ Example labeling (1e1p + corsika cosmic image)
 
 And portions of the graph.
 
-The image above was made using the example script found in the `test` folder for this module.
+The image above was made using the example script found in the `test` folder for this module, `run_mcpixelpgraph.py`.
+
+## crossingPointsAnaMethods
+
+Static function, `getFirstStepPosInsideImage`, is used to get the starting (and stopping) point of particles.
+
+Example of end-point labels (corsiak cosmic image)
+
+![Example start and stop points](https://raw.githubusercontent.com/LArbys/ublarcvapp/master/ublarcvapp/MCTools/test/demo_crossingPointAnaMethods.png)
+
+Image above made using example script found in the `test` folder: `run_crossingpointsanamethods.py`
+

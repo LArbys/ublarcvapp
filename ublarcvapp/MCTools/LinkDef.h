@@ -7,6 +7,7 @@
 #pragma link C++ namespace ublarcvapp+;
 #pragma link C++ namespace ublarcvapp::mctools+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPGraph+;
+#pragma link C++ class ublarcvapp::mctools::CrossingPointsAnaMethods+;
 #endif
 
 
