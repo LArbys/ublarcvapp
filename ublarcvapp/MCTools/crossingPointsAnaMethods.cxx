@@ -94,11 +94,15 @@ namespace mctools {
   std::vector<int>
   CrossingPointsAnaMethods::getFirstStepPosInsideImage( const larlite::mctrack& track, const larcv::ImageMeta& meta,
                                                         const float trig_time,
-                                                        const bool startAtstart, const float max_step_size, const float fv_border,
+                                                        const bool startAtstart,
+                                                        const float max_step_size, const float fv_border,
+                                                        std::vector<float>& endpt3d,
                                                         const larutil::SpaceChargeMicroBooNE* psce ) {
+    
     // This function returns the (SCE-corrected) position where a MC track first is inside the image bounds
     const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;    
     int npts = (int)track.size();
+    endpt3d.clear();
 
     for ( int ipt=1; ipt<npts; ipt++ ) {
 
@@ -156,10 +160,10 @@ namespace mctools {
 	std::vector<int> imgcoords;
 	try {
 	  imgcoords = ublarcvapp::UBWireTool::getProjectedImagePixel( pos_sce, meta, 3 );
-          std::cout << " [step] dwall=" << fdwall << " tick=" << tick
-                    << " sce-offset=(" << offset[0] << "," <<  offset[1] << "," << offset[2] << ") "
-                    << " imgcoords=(row=" << imgcoords[0] << "," << imgcoords[1] << "," << imgcoords[2] << "," << imgcoords[3] << ")"
-                    << std::endl;
+          // std::cout << " [step] dwall=" << fdwall << " tick=" << tick
+          //           << " sce-offset=(" << offset[0] << "," <<  offset[1] << "," << offset[2] << ") "
+          //           << " imgcoords=(row=" << imgcoords[0] << "," << imgcoords[1] << "," << imgcoords[2] << "," << imgcoords[3] << ")"
+          //           << std::endl;
 	}
 	catch (...) {
 	  //std::cout << std::endl;
@@ -174,6 +178,7 @@ namespace mctools {
 	//   std::cout << " trackend=(" << track.back().X() << "," << track.back().Y() << "," << track.back().Z() << ")";	  
 	// std::cout << " truepos=(" << pos[0] << "," << pos[1] << "," << pos[2] << ") ";
 	// std::cout << " intime pos_sce=(" << pos_sce[0] << "," << pos_sce[1] << "," << pos_sce[2] << ") tick=" << tick << " ";
+        endpt3d = pos_sce;
 	
 	return imgcoords;
       }

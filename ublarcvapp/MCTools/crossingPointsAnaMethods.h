@@ -37,8 +37,13 @@ namespace mctools {
     static int doesTrackCrossImageBoundary( const larlite::mctrack& track, const larcv::ImageMeta& meta,
                                             const float trig_time, const larutil::SpaceChargeMicroBooNE* psce=nullptr );
 
-    static std::vector<int> getFirstStepPosInsideImage( const larlite::mctrack& track, const larcv::ImageMeta& meta, const float trig_time,
-                                                        const bool startAtstart, const float max_step_size, const float fv_border,
+    static std::vector<int> getFirstStepPosInsideImage( const larlite::mctrack& track,
+                                                        const larcv::ImageMeta& meta,
+                                                        const float trig_time,
+                                                        const bool startAtstart,
+                                                        const float max_step_size,
+                                                        const float fv_border,
+                                                        std::vector<float>& endpt,
                                                         const larutil::SpaceChargeMicroBooNE* psce );
 
   };
