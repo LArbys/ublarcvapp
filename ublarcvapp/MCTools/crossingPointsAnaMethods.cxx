@@ -97,7 +97,8 @@ namespace mctools {
                                                         const bool startAtstart,
                                                         const float max_step_size, const float fv_border,
                                                         std::vector<float>& endpt3d,
-                                                        const larutil::SpaceChargeMicroBooNE* psce ) {
+                                                        const larutil::SpaceChargeMicroBooNE* psce,
+                                                        bool verbose ) {
     
     // This function returns the (SCE-corrected) position where a MC track first is inside the image bounds
     const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;    
@@ -147,30 +148,32 @@ namespace mctools {
 	pos_sce[0] = pos[0]-(float)offset[0]+0.7;
 	pos_sce[1] = pos[1]+(float)offset[1];
 	pos_sce[2] = pos[2]+(float)offset[2];
-
+	float tick = getTick( pos4v, trig_time, psce );
+        
+        if ( verbose ) {
+          std::cout << " [step] dwall=" << fdwall << " tick=" << tick
+                    << " pos-nosce=(" << pos[0] << "," << pos[1] << "," << pos[2] << ") "
+                    << " sce-offset=(" << offset[0] << "," <<  offset[1] << "," << offset[2] << ") "            
+            //<< " imgcoords=(row=" << imgcoords[0] << "," << imgcoords[1] << "," << imgcoords[2] << "," << imgcoords[3] << ")"
+                    << std::endl;
+        }
+        
         if (fdwall<0.1 || (offset[0]==0.0 && offset[1]==0.0 && offset[2]==0.0 ))
           continue;        
 
-	float tick = getTick( pos4v, trig_time, psce );
-
-	if ( tick<meta.min_y()+1.0 || tick>meta.max_y()-10.0 )
+	pos_sce[0] = (tick-3200.0)*cm_per_tick;
+	if ( tick<meta.min_y()+1.0 || tick>meta.max_y()-1.0 )
 	  continue;
         
-	pos_sce[0] = (tick-3200.0)*cm_per_tick; 
 	std::vector<int> imgcoords;
 	try {
 	  imgcoords = ublarcvapp::UBWireTool::getProjectedImagePixel( pos_sce, meta, 3 );
-          // std::cout << " [step] dwall=" << fdwall << " tick=" << tick
-          //           << " sce-offset=(" << offset[0] << "," <<  offset[1] << "," << offset[2] << ") "
-          //           << " imgcoords=(row=" << imgcoords[0] << "," << imgcoords[1] << "," << imgcoords[2] << "," << imgcoords[3] << ")"
-          //           << std::endl;
 	}
 	catch (...) {
 	  //std::cout << std::endl;
 	  continue;
 	}
         
-
 	// std::cout << " [" << thispt << "/" << npts << ":" << istep << "/" << nsteps << "] tick=" << tick;
 	// if ( startAtstart )
 	//   std::cout << " trackstart=(" << track.front().X() << "," << track.front().Y() << "," << track.front().Z() << ")";
@@ -179,13 +182,18 @@ namespace mctools {
 	// std::cout << " truepos=(" << pos[0] << "," << pos[1] << "," << pos[2] << ") ";
 	// std::cout << " intime pos_sce=(" << pos_sce[0] << "," << pos_sce[1] << "," << pos_sce[2] << ") tick=" << tick << " ";
         endpt3d = pos_sce;
-	
+        if ( verbose )
+          std::cout << "[return endpoint]" << std::endl;
+        
 	return imgcoords;
       }
       
     }//end of track loop
 
     // didn't find the crossing boundary
+    if ( verbose )
+      std::cout << "[return empty]" << std::endl;
+    
     std::vector<int> empty;
     return empty;
   }

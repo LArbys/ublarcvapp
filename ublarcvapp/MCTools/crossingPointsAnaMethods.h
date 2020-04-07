@@ -44,7 +44,8 @@ namespace mctools {
                                                         const float max_step_size,
                                                         const float fv_border,
                                                         std::vector<float>& endpt,
-                                                        const larutil::SpaceChargeMicroBooNE* psce );
+                                                        const larutil::SpaceChargeMicroBooNE* psce,
+                                                        bool verbose );
 
   };
   
