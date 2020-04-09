@@ -4,10 +4,10 @@ set(MODULE_NAME MCTools)
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # Collect the headers
-set( HEADERS MCPixelPGraph.h crossingPointsAnaMethods.h )
+set( HEADERS MCPixelPGraph.h crossingPointsAnaMethods.h NeutrinoVertex.h )
 
 # Add sources
-add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx crossingPointsAnaMethods.cxx )
+add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx crossingPointsAnaMethods.cxx NeutrinoVertex.cxx )
 
 # larlite libraries
 set(LARLITE_LIBS_USED ${LARLITE_LIBS} )
