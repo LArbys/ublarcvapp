@@ -72,7 +72,7 @@ set( cilantro_DIR $ENV{CILANTRO_LIB_DIR} )
 find_package( cilantro REQUIRED )
 
 #---Boost
-find_package( Boost 1.65 COMPONENTS graph program_options python REQUIRED )
+find_package( Boost 1.65 COMPONENTS graph program_options REQUIRED )
 set(Boost_USE_STATIC_LIBS OFF)
 set(Boost_USE_MULTITHREADED ON) 
 set(Boost_USE_STATIC_RUNTIME OFF)
