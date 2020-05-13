@@ -491,6 +491,26 @@ namespace mctools {
     }
     return nodelist;      
   }
+
+  /**
+   * get list of neutrino-only primary particles
+   *
+   * by default, neutrons are excluded
+   *
+   */
+  std::vector<MCPixelPGraph::Node_t*> MCPixelPGraph::getNeutrinoParticles( bool exclude_neutrons ) {
+    std::vector<Node_t*> nodelist;
+    Node_t* rootnode = &node_v[0];
+    for ( auto& node : node_v ) {
+      if ( node.origin==1 ) {
+        // neutrino particle
+        if ( !exclude_neutrons || node.pid!=2112 ) {
+          nodelist.push_back( &node );
+        }
+      }
+    }
+    return nodelist;      
+  }
   
 
 }

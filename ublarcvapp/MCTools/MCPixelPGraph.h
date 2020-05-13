@@ -113,7 +113,8 @@ namespace mctools {
     // get primary list
     std::vector<Node_t*> getPrimaryParticles( bool exclude_neutrons=true );
     std::vector<Node_t*> getNeutrinoPrimaryParticles( bool exclude_neutrons=true );    
-
+    std::vector<Node_t*> getNeutrinoParticles( bool exclude_neutrons=true );
+    
   protected:
     
     void _recursivePrintGraph( Node_t* node, int& depth, bool visible_only=true );
