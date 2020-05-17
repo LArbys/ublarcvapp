@@ -51,6 +51,8 @@ namespace mctools {
 
     larutil::SpaceChargeMicroBooNE* _psce;
 
+  public:
+    
     /// Event ID
     int _run;
     int _subrun;
