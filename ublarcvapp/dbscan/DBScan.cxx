@@ -17,10 +17,10 @@ namespace dbscan {
     std::map<int,int> indexmap; // 
     for ( int iorig=0; iorig<(int)points_xyz.size(); iorig++) {
       const std::vector<T>& hit = points_xyz[iorig];
-      if (hit.size()!=3 ) {
+      if (hit.size()<3 ) {
         std::stringstream msg;
         msg << __FILE__  << "::" << __FUNCTION__ << ".cxx:" << __LINE__ << "::"
-            << " all hit dimensions must be 3. Given dim=" << hit.size()
+            << " all hit dimensions must be at least 3. Given dim=" << hit.size()
             << std::endl;
         throw std::runtime_error(msg.str());
       }
