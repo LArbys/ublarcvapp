@@ -8,6 +8,11 @@
 #include "DataFormat/mctrack.h"
 #include "DataFormat/mcshower.h"
 #include "DataFormat/mctruth.h"
+#include "LArUtil/LArProperties.h"
+#include "LArUtil/Geometry.h"
+#include "LArUtil/SpaceChargeMicroBooNE.h"
+
+#include "crossingPointsAnaMethods.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -40,7 +45,7 @@ namespace mctools {
                                   const larlite::event_mctruth&  mctruth_v ) {
 
     // how do we build this graph?
-    // we want to order N
+    // we want to order N    
 
     // (0) create root node
     // (1) loop through track and shower, creating node objects
@@ -58,13 +63,17 @@ namespace mctools {
     if ( mctruth_v.size()>0 ) {
       const larlite::mctruth& mct = mctruth_v.front();
       neutrino.E_MeV = mct.GetNeutrino().Nu().Trajectory().front().E()*1000.0;
-      neutrino.start.resize(3);
+      neutrino.start.resize(4);
       neutrino.start[0] = mct.GetNeutrino().Nu().Trajectory().front().X();
       neutrino.start[1] = mct.GetNeutrino().Nu().Trajectory().front().Y();
       neutrino.start[2] = mct.GetNeutrino().Nu().Trajectory().front().Z();
+      neutrino.start[3] = mct.GetNeutrino().Nu().Trajectory().front().T();
     }
     
     node_v.emplace_back( std::move(neutrino) );
+
+    // load spacechargemicroboone
+    larutil::SpaceChargeMicroBooNE sce;
 
     for (int vidx=0; vidx<(int)track_v.size(); vidx++ ) {
       const larlite::mctrack& mct = track_v[vidx];
@@ -86,12 +95,16 @@ namespace mctools {
       else if ( mct.PdgCode()==2112 ) tracknode.E_MeV -= 940.0;
       else if ( abs(mct.PdgCode())==13 )   tracknode.E_MeV -= 105.;
       else if ( abs(mct.PdgCode())==211 )  tracknode.E_MeV -= 135.;
-      
-      tracknode.start.resize(3);
+      tracknode.origin = mct.Origin();
+
+      // real position, time
+      tracknode.start.resize(4);
       tracknode.start[0] = mct.Start().X();
       tracknode.start[1] = mct.Start().Y();
       tracknode.start[2] = mct.Start().Z();
-      tracknode.origin = mct.Origin();
+      tracknode.start[3] = mct.Start().T();
+      _get_imgpos( tracknode.start, tracknode.imgpos4, sce );
+      
       
       node_v.emplace_back( std::move(tracknode) );
     }
@@ -111,14 +124,21 @@ namespace mctools {
 
       Node_t showernode( node_v.size(), 1, mcsh.TrackID(), vidx, mcsh.PdgCode() );
       showernode.E_MeV = mcsh.Start().E();
-      showernode.start.resize(3);
+      showernode.origin = mcsh.Origin();      
+      showernode.start.resize(4);
+      // showernode.start[0] = mcsh.DetProfile().X();
+      // showernode.start[1] = mcsh.DetProfile().Y();
+      // showernode.start[2] = mcsh.DetProfile().Z();
+      // showernode.start[3] = mcsh.DetProfile().T(); 
       showernode.start[0] = mcsh.Start().X();
       showernode.start[1] = mcsh.Start().Y();
       showernode.start[2] = mcsh.Start().Z();
-      showernode.origin = mcsh.Origin();
+      showernode.start[3] = mcsh.Start().T();
+      _get_imgpos( showernode.start, showernode.imgpos4, sce );
+      //showernode.imgpos4 = showernode.start;
+      //showernode.imgpos4[3] = 3200 + mcsh.DetProfile().X()/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
       
       node_v.emplace_back( std::move(showernode) );
-      //}
     }
 
     // sort Node_t object by geant track ID, relabel node IDs
@@ -227,7 +247,8 @@ namespace mctools {
        << " trackid=" << node.tid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
-       << " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << ")"
+       << " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3] << ")"
+       << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << ")"
        << " (mid,mother)=(" << node.mid << "," << node.mother << ") "
        << " ndaughters=" << node.daughter_v.size()
        << " npixels=(";
@@ -500,7 +521,7 @@ namespace mctools {
    */
   std::vector<MCPixelPGraph::Node_t*> MCPixelPGraph::getNeutrinoParticles( bool exclude_neutrons ) {
     std::vector<Node_t*> nodelist;
-    Node_t* rootnode = &node_v[0];
+    //Node_t* rootnode = &node_v[0];
     for ( auto& node : node_v ) {
       if ( node.origin==1 ) {
         // neutrino particle
@@ -512,6 +533,41 @@ namespace mctools {
     return nodelist;      
   }
   
+  /**
+   * convert real position+time and calculate apparent position
+   */
+  void MCPixelPGraph::_get_imgpos( std::vector<float>& realpos4,
+                                   std::vector<float>& imgpos4,
+                                   larutil::SpaceChargeMicroBooNE& sce )
+  {
 
+    imgpos4.resize(4,0);
+    
+    // apparent position according to image
+    std::vector<double> dpos(3,0);
+    for (int i=0; i<3; i++) {
+      dpos[i]   = realpos4[i];
+    }
+    
+    std::vector<double> offset = sce.GetPosOffsets( dpos[0], dpos[1], dpos[2] );
+    std::vector<float>  txyz(4,0);    
+    dpos[0] = dpos[0] - offset[0] + 0.7;
+    dpos[1] = dpos[1] + offset[1];
+    dpos[2] = dpos[2] + offset[2];
+    for (int i=0; i<3; i++) {
+      txyz[1+i] = realpos4[i];
+    }
+    txyz[0] = realpos4[3];
+    float tick = CrossingPointsAnaMethods::getTick( txyz, 4050.0, &sce );
+    for (int i=0; i<3; i++) {
+      imgpos4[i] = dpos[i];
+    }
+    imgpos4[3] = tick;
+
+    // now make x an apparent x
+    imgpos4[0] = (tick-3200)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
+    
+  }
+  
 }
 }

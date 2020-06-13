@@ -11,6 +11,7 @@
 #include "DataFormat/storage_manager.h"
 #include "DataFormat/mcshower.h"
 #include "DataFormat/mctrack.h"
+#include "LArUtil/SpaceChargeMicroBooNE.h"
 
 /**
  * Determine particle graph. Collect pixels for each particle.
@@ -52,7 +53,8 @@ namespace mctools {
       std::vector<int>      daughter_idx_v; // daughter node indices in node_v
       std::vector<Node_t*>  daughter_v;     // pointer to daughters 
       std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (row,col)
-      std::vector<float> start;
+      std::vector<float> start;   //< (x,y,z,t) before sce
+      std::vector<float> imgpos4; //< (x,y,z,tick) after sce
       int origin;
 
       Node_t()
@@ -77,7 +79,8 @@ namespace mctools {
         mother(_mother),
         mid(_mid),
         E_MeV(_energy),
-        start({0,0,0}),
+        start({0,0,0,0}),
+        imgpos4({0,0,0,0}),
         origin(-1)
       {};
 
@@ -123,7 +126,9 @@ namespace mctools {
                          const std::vector<larcv::Image2D>& instance_v,
                          const std::vector<larcv::Image2D>& ancestor_v,
                          const std::vector<float> threshold_v );
-
+    void _get_imgpos( std::vector<float>& realpos4,
+                      std::vector<float>& imgpos4,
+                      larutil::SpaceChargeMicroBooNE& sce );                      
 
   public:
 
