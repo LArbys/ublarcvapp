@@ -181,7 +181,7 @@ namespace ublarcvapp {
 
       // ideally we should do something smart, determining gaps based on if we can tell a track is crossing it.
       // for now, we set a gap limit
-      larcv::Image2D gapimg(badchimgs_v.at(p).meta());
+      larcv::Image2D gapimg(badch.meta());
       gapimg.paint(0);
 
       for ( auto& gap : gaplist ) {
