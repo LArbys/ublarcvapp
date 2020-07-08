@@ -120,4 +120,52 @@ namespace ublarcvapp {
 
     }//end of funtion
 
+    void InfillImageStitcher::Overlayloop(int p,larcv::ImageMeta& output_meta,
+                                          larcv::Image2D& outputimg,
+                                          larcv::Image2D& overlapcountimg,
+                                          const std::vector<larcv::Image2D>& wholeview_v,
+                                          const std::vector<larcv::Image2D>& badch_v ) {
+
+      // loop through pixels of whole img to take average and overlay
+      double x_min = output_meta.min_x();
+      double x_max = output_meta.max_x();
+      double y_min = output_meta.min_y();
+      double y_max = output_meta.max_y();
+
+      size_t row_min = output_meta.row(y_min);
+      size_t col_min = output_meta.col(x_min);
+
+      size_t nrows = (y_max - y_min) / output_meta.pixel_height();
+      size_t ncols = (x_max - x_min) / output_meta.pixel_width();
+
+      for(size_t col_index=0; col_index < ncols; ++col_index) {
+        for(size_t row_index=0; row_index < nrows; ++row_index) {
+          double original = outputimg.pixel(row_index+row_min, col_index+col_min);
+          double overlapcount = overlapcountimg.pixel(row_index+row_min, col_index+col_min);
+          double truevalue= wholeview_v.at(p).pixel(row_index+row_min, col_index+col_min);
+          double badchval = badch_v.at(p).pixel(row_index+row_min, col_index+col_min);
+          if (overlapcount > 0){
+            outputimg.set_pixel(row_index+row_min, col_index+col_min, original/overlapcount);
+          }
+          if (p != 2){
+            if (col_index<2400){
+              //if not dead, set as original value
+              if (badchval==0)
+                outputimg.set_pixel(row_index+row_min, col_index+col_min,truevalue);
+            }
+          }
+          else{
+            if (badchval==0)
+              outputimg.set_pixel(row_index+row_min, col_index+col_min,truevalue);
+        
+          }
+          double finalvalue = outputimg.pixel(row_index+row_min, col_index+col_min);
+          if (finalvalue<10.0){
+            outputimg.set_pixel(row_index+row_min, col_index+col_min,0.0);
+          }
+        }
+      }//end of pixel loop
+      
+    }//end of funtion
+  
 }//end of ublarcvapp namespace

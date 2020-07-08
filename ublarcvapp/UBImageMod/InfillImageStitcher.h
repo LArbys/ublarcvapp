@@ -28,6 +28,12 @@ namespace ublarcvapp {
                       larcv::Image2D& overlapcountimg,
                       const std::vector<larcv::Image2D>& wholeview_v,
                       larcv::EventChStatus& ev_chstatus);
+
+      void Overlayloop(int p,larcv::ImageMeta& output_meta,
+                       larcv::Image2D& outputimg,
+                       larcv::Image2D& overlapcountimg,
+                       const std::vector<larcv::Image2D>& wholeview_v,
+                       const std::vector<larcv::Image2D>& badch_v);
     };
 
 

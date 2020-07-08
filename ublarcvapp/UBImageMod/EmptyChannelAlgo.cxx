@@ -39,12 +39,12 @@ namespace ublarcvapp {
     std::vector<int> empty_v( meta.cols(), 0 );    
 
     for (size_t col=0; col<meta.cols(); col++) {
-      bool isempty = true;
+      //bool isempty = true;
       for ( size_t row=0; row<meta.rows(); row++) {
         float val = tpcimg.pixel(row,col);
         if ( val>threshold && (max_value<0 || val<max_value) ) {
-          isempty = false;
-          empty_v[col] = 1;
+          //isempty = false;
+          empty_v[col] = 1; //not empty
           break;
         }
       }
@@ -145,10 +145,13 @@ namespace ublarcvapp {
       int gapstart = 0;
       std::vector< std::pair<int,int> > gaplist;
       for ( int c=0; c<cols; c++) {
-
+        // if ( emptych[c]==0 ) {
+        //   std::cout << "[EmptyChannelAlgo::findMissingBadChs] plane["  << badch.meta().plane() << "] empty col["  << c << "]" << std::endl;
+        // }
         if ( !ingap ) {
           // not in a gap
-          if ( emptych[c]==1 && badch.pixel(0,c)!=0 ) { // we don't want to capture the same info. as the bad channels
+          //if ( emptych[c]==0 && badch.pixel(0,c)!=0 ) { // we don't want to capture the same info. as the bad channels
+          if ( emptych[c]==0 ) { // we don't want to capture the same info. as the bad channels
             // start a gap
             gapstart = c;
             //if ( gapstart<0 ) gapstart = 0;
@@ -160,11 +163,11 @@ namespace ublarcvapp {
         }
         else {
           // in a gap
-          if ( emptych[c]==0 ) {
+          if ( emptych[c]==1 ) {
             // end a gap
             int start = gapstart;
             int end   = c-1;
-            //std::cout << "[EmptyChannelAlgo::findMissingBadChs] found gap [" << start << "," << end << "]" << std::endl;
+            //std::cout << "[EmptyChannelAlgo::findMissingBadChs] plane["  << badch.meta().plane() << "] found gap [" << start << "," << end << "]" << std::endl;
             gaplist.push_back( std::pair<int,int>(start,end) );
             gapsize = 0;
             ingap = false;
