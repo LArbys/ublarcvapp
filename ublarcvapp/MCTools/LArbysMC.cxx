@@ -53,17 +53,19 @@ namespace mctools {
   }
 
   /**
-   * bind variables to the TTree we will fill to
+   * @brief bind variables to the TTree we will fill to
+   *
+   * @param[in] mc_tree ROOT TTree to which we add branches
    *
    */
   void LArbysMC::bindAnaVariables( TTree* mc_tree )
   {
 
     // event indexing
-    mc_tree->Branch("run",     &_run,     "run/I");
-    mc_tree->Branch("subrun",  &_subrun,  "subrun/I");
-    mc_tree->Branch("event",   &_event,   "event/I");
-    mc_tree->Branch("entry"  , &_entry,   "entry/I");
+    mc_tree->Branch("larbysmc_run",     &_run,     "larbysmc_run/I");
+    mc_tree->Branch("larbysmc_subrun",  &_subrun,  "larbysmc_subrun/I");
+    mc_tree->Branch("larbysmc_event",   &_event,   "larbysmc_event/I");
+    mc_tree->Branch("larbysmc_entry"  , &_entry,   "larbysmc_entry/I");
 
     mc_tree->Branch("nuPresent",       &_neutrino_present, "nuPresent/O" );
     mc_tree->Branch("currentType",     &_current_type,     "currentType/I");
