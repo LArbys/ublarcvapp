@@ -25,6 +25,20 @@ namespace mctools {
     larcv::EventImage2D* ev_ins = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "instance" );
     larcv::EventImage2D* ev_anc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "ancestor" );
 
+    if ( ev_adc->Image2DArray().size()==0 ) {
+      throw std::runtime_error("No ADC images!");
+    }
+    if ( ev_seg->Image2DArray().size()==0 ) {
+      throw std::runtime_error("No segment images!");
+    }
+    if ( ev_ins->Image2DArray().size()==0 ) {
+      throw std::runtime_error("No instance images!");
+    }
+    if ( ev_anc->Image2DArray().size()==0 ) {
+      throw std::runtime_error("No ancestor images!");
+    }
+    
+    
     larlite::event_mctrack*  ev_mctrack  = (larlite::event_mctrack*) ioll.get_data( larlite::data::kMCTrack,  "mcreco" );
     larlite::event_mcshower* ev_mcshower = (larlite::event_mcshower*)ioll.get_data( larlite::data::kMCShower, "mcreco" );
     larlite::event_mctruth*  ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
@@ -362,16 +376,44 @@ namespace mctools {
         for (size_t c=0; c<meta.cols(); c++ ) {
           int wire = (int)meta.pos_x(c);
 
-          float adc = adc_v[p].pixel(r,c);
+          float adc = 0.0;
+          try {
+            adc = adc_v[p].pixel(r,c,__FILE__,__LINE__);
+          }
+          catch (...) {
+            std::cerr << __FILE__ << ":L" << __LINE__ << " error getting ADC pixel (" << r << "," << c << ")" << std::endl;
+            continue;
+          }
           if ( adc<threshold )
             continue;
 
           nabove_thresh[p]++;
           
           // above threshold, now lets find instance or ancestor
-          int tid = instance_v[p].pixel(r,c);
-          int aid = ancestor_v[p].pixel(r,c);
-          int seg = segment_v[p].pixel(r,c);
+          int tid = 0;
+          try {            
+            tid = instance_v[p].pixel(r,c,__FILE__,__LINE__);
+          }
+          catch (...) {
+            std::cerr << __FILE__ << ":L" << __LINE__ << " error getting instance pixel (" << r << "," << c << ")" << std::endl;
+            continue;            
+          }
+          int aid = 0;
+          try {
+            aid = ancestor_v[p].pixel(r,c,__FILE__,__LINE__);
+          }
+          catch (...) {
+            std::cerr << __FILE__ << ":L" << __LINE__ << " error getting ancestor pixel (" << r << "," << c << ")" << std::endl;
+            continue;                        
+          }
+          int seg = 0; 
+          try {
+            seg = segment_v[p].pixel(r,c,__FILE__,__LINE__);
+          }
+          catch (...) {
+            std::cerr << __FILE__ << ":L" << __LINE__ << " error getting segment pixel (" << r << "," << c << ")" << std::endl;
+            continue;                                    
+          }
 
           if ( tid>0 || aid>0 )
             nabove_thresh_withlabel[p]++;

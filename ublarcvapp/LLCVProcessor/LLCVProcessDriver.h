@@ -37,8 +37,8 @@ namespace llcv {
     /* void override_larlite_output_file( const std::string fname ); */
     /* void override_larcv_output_file( const std::string fname ); */
 
-    bool process_entry( bool autosave_entry ); ///< replaces parent process_entry, includes larlite modules
-    bool process_entry(size_t entry, bool force_reload=false, bool autosave_entry=true);
+    bool process_entry( bool autosave_entry ); ///< replaces parent process function, includes llcv modules
+    bool process_entry(size_t entry, bool force_reload=false, bool autosave_entry=true); ///< replaces parent function, includes llcv modules
     
     larlite::storage_manager& io_larlite() { return _io_larlite; };
 

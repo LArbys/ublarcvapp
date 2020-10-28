@@ -32,7 +32,7 @@ iolcv.initialize()
 
 nentries = iolcv.get_n_entries()
 print "Number of entries: ",nentries
-nentries = 10
+#nentries = 10
 
 print "Start loop."
 
@@ -65,8 +65,8 @@ for ientry in xrange( nentries ):
         h.GetZaxis().SetRangeUser(0,100)
 
     mcpg.buildgraph( iolcv, ioll )
-    #mcpg.printAllNodeInfo()
-    mcpg.printGraph()
+    mcpg.printAllNodeInfo()
+    #mcpg.printGraph()
 
     primaries = mcpg.getPrimaryParticles()    
 
