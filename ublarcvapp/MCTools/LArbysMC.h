@@ -18,10 +18,9 @@ namespace ublarcvapp {
 namespace mctools {
 
   /**
-     \class ProcessBase
-     User defined class LArbysImageMC ... these comments are used to generate
-     doxygen documentation!
-  */
+   * @class LArbysMC
+   * @brief Calculate truth variables useful for low energy excess analysis
+   */
   class LArbysMC  {
 
   public:
@@ -63,12 +62,12 @@ namespace mctools {
   public:
     
     /// Event ID
-    int _run;
-    int _subrun;
-    int _event;
-    int _entry;
+    int _run;    ///< run number
+    int _subrun; ///< subrun number
+    int _event;  ///< event number
+    int _entry;  ///< entry number
 
-    std::string _rse_producer;
+    std::string _rse_producer; ///< larlite data product to use to get (run,subrun,event)
 
     // neutrino interaction info
     bool _neutrino_present; ///< event has neutrino
