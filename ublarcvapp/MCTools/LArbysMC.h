@@ -108,9 +108,11 @@ namespace mctools {
     int _nshower;        ///< number of showers
     int _nneutron;       ///< number of neutrons
     int _1l1p0pi;        ///< final state is 1 lepton>35 MeV, 1 proton>60 MeV, 0 charged pion>35 MeV, 0 pi0
+    int _1l0p0pi;        ///< final state is 1 lepton>35 MeV, 0 proton>60 MeV, 0 charged pion>35 MeV, 0 pi0
 
-    std::string  _producer_wireimage;
-    float        _plane_vtx_pixsum[3];
+    std::string  _producer_wireimage;  ///< producer name for wire image
+    float        _plane_vtx_pixsum[3]; ///< vertex pixel sum
+    float        _vtx_med_pixsum;      ///< vertex median pixel sum
 
     struct entry_info{
       int run;

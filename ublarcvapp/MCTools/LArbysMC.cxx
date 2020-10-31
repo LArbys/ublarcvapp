@@ -1,6 +1,8 @@
 #ifndef __LARLITECV_LARBYSMC_CXX__
 #define __LARLITECV_LARBYSMC_CXX__
 
+#include <algorithm>
+
 #include "LArbysMC.h"
 
 #include "LArUtil/LArProperties.h"
@@ -85,6 +87,7 @@ namespace mctools {
     mc_tree->Branch("vtx_tick",        &_vtx_tick,         "vtx_tick/F");
     mc_tree->Branch("vtx_wire",        _vtx_wire,          "vtx_wire[3]/F");
     mc_tree->Branch("vtx_pixsum",      _plane_vtx_pixsum,  "vtx_pixsum[3]/F");
+    mc_tree->Branch("vtx_med_pixsum",  &_vtx_med_pixsum,   "vtx_med_pixsum/F");
     
     mc_tree->Branch("evis",            &_evis,             "evis/F");
     mc_tree->Branch("evis_had",        &_evis_had,         "evis_had/F");
@@ -104,7 +107,8 @@ namespace mctools {
     mc_tree->Branch("nshower", &_nshower,"nshower/I");
     mc_tree->Branch("nneutron", &_nneutron,"nneutron/I");
     mc_tree->Branch("npi0",     &_npi0, "npi0/I" );
-    mc_tree->Branch("is1l1p0pi", &_1l1p0pi, "is1l1p0pi/I");    
+    mc_tree->Branch("is1l1p0pi", &_1l1p0pi, "is1l1p0pi/I");
+    mc_tree->Branch("is1l0p0pi", &_1l0p0pi, "is1l0p0pi/I");
 
   }
 
@@ -171,6 +175,9 @@ namespace mctools {
         _vtx_wire[p] = larutil::Geometry::GetME()->WireCoordinate( dpos, p );
       }
     }
+
+    for (int p=0; p<3; p++) _plane_vtx_pixsum[p] = 0.;
+    _vtx_med_pixsum = 0.;
         
     // final state tally
     _nprimary = 0;
@@ -185,6 +192,7 @@ namespace mctools {
     _nshower  = 0;
     _npi0 = 0;
     _1l1p0pi = 0;
+    _1l0p0pi = 0;    
     
     _evis = 0;
     _evis_had = 0;
@@ -342,6 +350,8 @@ namespace mctools {
 
     if ( _nproton_60mev==1 && _nlepton_35mev==1 && _nmeson_35mev==0 && _npi0==0 )
       _1l1p0pi = 1;
+    if ( _nproton_60mev==0 && _nlepton_35mev==1 && _nmeson_35mev==0 && _npi0==0 )
+      _1l0p0pi = 1;
     
 
     if ( _mc_tree )
@@ -364,6 +374,24 @@ namespace mctools {
     calculateVertexPixsum( iolcv, _vtx_tick, _vtx_wire[0], _vtx_wire[1], _vtx_wire[2], 3, plane_vtx_pixsum );
     for (int p=0; p<3; p++)
       _plane_vtx_pixsum[p] = plane_vtx_pixsum[p];
+    // sort plane sum to get median
+    struct plane_pixsum_t {
+      int plane;
+      float pixsum;
+      bool operator<(const plane_pixsum_t& rhs ) {
+        if ( pixsum<rhs.pixsum ) return true;
+        return false;
+      };
+    };
+    std::vector< plane_pixsum_t > ranked_pixsum_v;
+    for (int p=0; p<3; p++) {
+      plane_pixsum_t pp;
+      pp.plane = p;
+      pp.pixsum = _plane_vtx_pixsum[p];
+      ranked_pixsum_v.push_back( pp );
+    }
+    std::sort( ranked_pixsum_v.begin(), ranked_pixsum_v.end() );
+    _vtx_med_pixsum = ranked_pixsum_v[1].pixsum;
     
     return true;
   }
