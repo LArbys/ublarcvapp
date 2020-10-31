@@ -24,7 +24,11 @@ namespace mctools {
     _producer_mctruth  = "generator";
     _producer_mctrack  = "mcreco";
     _producer_mcshower = "mcreco";
+    _producer_wireimage = "wire";
     _psce = new larutil::SpaceChargeMicroBooNE();
+    for (int p=0; p<3; p++) _plane_vtx_pixsum[p] = 0.;
+      
+    
   }
 
   LArbysMC::~LArbysMC()
@@ -80,7 +84,8 @@ namespace mctools {
     mc_tree->Branch("vtx_sce_z",       &_vtx_sce_z,        "vtx_sce_z/F");
     mc_tree->Branch("vtx_tick",        &_vtx_tick,         "vtx_tick/F");
     mc_tree->Branch("vtx_wire",        _vtx_wire,          "vtx_wire[3]/F");
-
+    mc_tree->Branch("vtx_pixsum",      _plane_vtx_pixsum,  "vtx_pixsum[3]/F");
+    
     mc_tree->Branch("evis",            &_evis,             "evis/F");
     mc_tree->Branch("evis_had",        &_evis_had,         "evis_had/F");
     mc_tree->Branch("evis_vtx",        &_evis_vtx,         "evis_vtx/F");
@@ -343,6 +348,63 @@ namespace mctools {
       _mc_tree->Fill();
 
     return true;
+  }
+
+  /**
+   * @brief calculate MC info that includes image-based metrics
+   *
+   * @param[inout] iolcv LArCV data manager
+   * @param[inout] mgr   larlite data manager
+   */
+  bool LArbysMC::process(larcv::IOManager& iolcv, larlite::storage_manager& mgr)
+  {
+    
+    process( mgr );
+    std::vector<float> plane_vtx_pixsum(3,0);
+    calculateVertexPixsum( iolcv, _vtx_tick, _vtx_wire[0], _vtx_wire[1], _vtx_wire[2], 3, plane_vtx_pixsum );
+    for (int p=0; p<3; p++)
+      _plane_vtx_pixsum[p] = plane_vtx_pixsum[p];
+    
+    return true;
+  }
+
+  void LArbysMC::calculateVertexPixsum( larcv::IOManager& iolcv,
+                                        float vtx_tick, float vtx_wireu, float vtx_wirev, float vtx_wirey,
+                                        int pix_radius,
+                                        std::vector<float>& plane_vtx_pixsum  )
+  {
+
+    larcv::EventImage2D* ev_adc =
+      (larcv::EventImage2D*)iolcv.get_data(larcv::kProductImage2D,_producer_wireimage);
+
+    auto const& adc_v = ev_adc->as_vector();
+    int vtx_row = adc_v.front().meta().row( vtx_tick );
+    int row_max = (int)adc_v.front().meta().rows();
+    int col_max = (int)adc_v.front().meta().cols();
+    std::vector<int> vtx_col(adc_v.size(),0);
+    vtx_col[0] = adc_v[0].meta().col( vtx_wireu );
+    vtx_col[1] = adc_v[1].meta().col( vtx_wirev );
+    vtx_col[2] = adc_v[2].meta().col( vtx_wirey );
+
+    plane_vtx_pixsum.resize(3,0);
+    for (int p=0; p<3; p++)
+      plane_vtx_pixsum[p] = 0.;
+    
+    int rad = abs(pix_radius);
+    for (int r=-rad; r<=rad; r++) {
+      int row = vtx_row+r;
+      if ( row<0 || row>=row_max )continue;
+      for (int c=-rad; c<=rad; c++) {
+        for (int p=0; p<3; p++) {
+          int col = vtx_col[p]+c;
+          if ( col<0 || col>=col_max ) continue;
+          float pixval = adc_v[p].pixel( row, col );
+          if ( pixval>10.0 )
+            plane_vtx_pixsum[p] += pixval;
+        }//end of plane loop
+      }//end of c loop
+    }//end of r loop
+    
   }
 
 
