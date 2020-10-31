@@ -28,3 +28,28 @@ Example of end-point labels (corsiak cosmic image)
 
 Image above made using example script found in the `test` folder: `run_crossingpointsanamethods.py`
 
+## LArbysMC
+
+Use this to calculate truth variables useful for analysis. Defines target final states.
+
+You can add the truth variables calculate to any TTree.
+
+... before event loop ...
+
+```
+TTree* t = new TTree("mytree", "tree we add analysis variables to");
+
+larcv::LArbysMC lmc;
+
+lmc.bindAnaVariables( t );
+```
+
+... inside event loop ...
+
+```
+lmc.process( iolcv, ioll );
+t.Fill();
+```
+
+Note, if you dont have access to larcv products or do not want to calculate vertex activity variables,
+use `lmc.process( ioll )` instead.
