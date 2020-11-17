@@ -49,14 +49,46 @@ namespace mctools {
                 ev_anc->Image2DArray(),
                 *ev_mcshower, *ev_mctrack, *ev_mctruth );
   }
-  
+
+  /**
+   * @brief build only the particle graph (no pixel scan)
+   *
+   */
+  void MCPixelPGraph::buildgraphonly( larlite::storage_manager& ioll )
+  {
+    larlite::event_mctrack*  ev_mctrack  = (larlite::event_mctrack*) ioll.get_data( larlite::data::kMCTrack,  "mcreco" );
+    larlite::event_mcshower* ev_mcshower = (larlite::event_mcshower*)ioll.get_data( larlite::data::kMCShower, "mcreco" );
+    larlite::event_mctruth*  ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
+
+    buildgraphonly( *ev_mcshower, *ev_mctrack, *ev_mctruth );
+  }
+
+  /**
+   * @brief build the truth graph and assign pixels
+   *
+   */
   void MCPixelPGraph::buildgraph( const std::vector<larcv::Image2D>& adc_v,
                                   const std::vector<larcv::Image2D>& segment_v,
                                   const std::vector<larcv::Image2D>& instance_v,
                                   const std::vector<larcv::Image2D>& ancestor_v,
                                   const larlite::event_mcshower& shower_v,
                                   const larlite::event_mctrack&  track_v,
-                                  const larlite::event_mctruth&  mctruth_v ) {
+                                  const larlite::event_mctruth&  mctruth_v )
+  {
+
+    buildgraphonly( shower_v, track_v, mctruth_v );
+    
+    std::vector<float> threshold_v(adc_v.size(),10.0);
+    _scanPixelData( adc_v, segment_v, instance_v, ancestor_v, threshold_v );
+  }
+  
+  /**
+   * @brief build the particle graph (no pixel assignments)
+   *
+   */
+  void MCPixelPGraph::buildgraphonly( const larlite::event_mcshower& shower_v,
+                                      const larlite::event_mctrack&  track_v,
+                                      const larlite::event_mctruth&  mctruth_v ) {
 
     // how do we build this graph?
     // we want to order N    
@@ -212,8 +244,6 @@ namespace mctools {
       
     }//end of node loop
 
-    std::vector<float> threshold_v(adc_v.size(),10.0);
-    _scanPixelData( adc_v, segment_v, instance_v, ancestor_v, threshold_v );
     
     //printAllNodeInfo();
     //printGraph();
@@ -295,7 +325,7 @@ namespace mctools {
     int depth = 0;
     if (rootnode==nullptr )
       rootnode = &node_v.front();
-    _recursivePrintGraph( rootnode, depth );
+    _recursivePrintGraph( rootnode, depth, visible_only );
   }
 
   /*

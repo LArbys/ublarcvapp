@@ -40,6 +40,12 @@ namespace mctools {
                      const larlite::event_mctrack&  track_v,
                      const larlite::event_mctruth&  mctruth_v );
 
+    void buildgraphonly( larlite::storage_manager& ioll );    
+    void buildgraphonly( const larlite::event_mcshower& shower_v,
+                         const larlite::event_mctrack&  track_v,
+                         const larlite::event_mctruth&  mctruth_v );
+    
+
 
     struct Node_t {
       int nodeidx;    // position in node_v
@@ -52,7 +58,7 @@ namespace mctools {
       float E_MeV;    // energy
       std::vector<int>      daughter_idx_v; // daughter node indices in node_v
       std::vector<Node_t*>  daughter_v;     // pointer to daughters 
-      std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (row,col)
+      std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (tick,wire) coordinates
       std::vector<float> start;   //< (x,y,z,t) before sce
       std::vector<float> imgpos4; //< (x,y,z,tick) after sce
       int origin;
