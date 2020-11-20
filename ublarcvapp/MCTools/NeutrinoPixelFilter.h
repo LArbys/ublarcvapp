@@ -3,7 +3,6 @@
 
 #include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/IOManager.h"
-#include "DataFormat/storage_manager.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -22,7 +21,7 @@ namespace mctools {
     ~NeutrinoPixelFilter()
       {};
 
-    void process( larcv::IOManager& iolarcv, larlite::storage_manager& ioll );
+    void process( larcv::IOManager& iolarcv );
     
   };
 
