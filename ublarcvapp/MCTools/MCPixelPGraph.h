@@ -52,6 +52,8 @@ namespace mctools {
       int type;       // track=0, shower=1
       int vidx;       // position in mcshower or mctrack vector
       int tid;        // geant4 track-ID
+      int aid;        // ancestor geant4 trackid
+      int mtid;       // mother geant4 trackid
       int pid;        // particle ID
       Node_t* mother; // pointer to Mother Node_t
       int mid;        // mother nodeidx
@@ -68,6 +70,7 @@ namespace mctools {
         type(-1),
         vidx(-1),        
         tid(-1),
+        aid(-1),
         pid(-1),
         mother(nullptr),
         mid(-1),

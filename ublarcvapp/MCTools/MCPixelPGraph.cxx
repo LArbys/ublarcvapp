@@ -137,6 +137,8 @@ namespace mctools {
 
       Node_t tracknode( node_v.size(), 0, mct.TrackID(), vidx, mct.PdgCode() );
       tracknode.E_MeV = mct.Start().E();
+      tracknode.aid  = mct.AncestorTrackID();
+      tracknode.mtid = mct.MotherTrackID();      
       if ( mct.PdgCode()==2212 ) tracknode.E_MeV -= 938.0;
       else if ( mct.PdgCode()==2112 ) tracknode.E_MeV -= 940.0;
       else if ( abs(mct.PdgCode())==13 )   tracknode.E_MeV -= 105.;
@@ -172,6 +174,8 @@ namespace mctools {
       showernode.E_MeV = mcsh.Start().E();
       showernode.origin = mcsh.Origin();      
       showernode.start.resize(4);
+      showernode.aid  = mcsh.AncestorTrackID();
+      showernode.mtid = mcsh.MotherTrackID();      
       // showernode.start[0] = mcsh.DetProfile().X();
       // showernode.start[1] = mcsh.DetProfile().Y();
       // showernode.start[2] = mcsh.DetProfile().Z();
@@ -209,10 +213,12 @@ namespace mctools {
         }
         else {
           // secondary
-          mothernode = findTrackID( track.MotherTrackID() );
-          if( mothernode==nullptr ) {
+          mothernode = findTrackID( track.MotherTrackID() );          
+          if( mothernode==nullptr || mothernode->tid!=(int)track.MotherTrackID() ) {
             // try ancestor ID
             mothernode = findTrackID( track.AncestorTrackID() );
+            if ( mothernode && mothernode->tid!=(int)track.AncestorTrackID() )
+              mothernode = nullptr;
           }
         }
       }
@@ -226,9 +232,11 @@ namespace mctools {
         else {
           //secondary
           mothernode = findTrackID( shower.MotherTrackID() );
-          if( mothernode==nullptr ) {
+          if( mothernode==nullptr || mothernode->tid!=(int)shower.MotherTrackID() ) {
             // try ancestor ID
             mothernode = findTrackID( shower.AncestorTrackID() );
+            if ( mothernode && mothernode->tid!=(int)shower.AncestorTrackID() )
+              mothernode = nullptr;
           }
         }
       }
@@ -285,15 +293,19 @@ namespace mctools {
    */
   std::string MCPixelPGraph::strNodeInfo( const Node_t& node ) {
     std::stringstream ss;
-    ss << "node[" << node.nodeidx << "," << &node << "] "
+    //ss << "node[" << node.nodeidx << "," << &node << "] "
+    ss << "node[" << node.nodeidx << "] "
        << " (type,vidx)=(" << node.type << "," << node.vidx << ") "
        << " origin=" << node.origin
        << " trackid=" << node.tid
+       << " motherid=" << node.mtid      
+       << " aid=" << node.aid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
        << " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3] << ")"
        << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << ")"
-       << " (mid,mother)=(" << node.mid << "," << node.mother << ") "
+      //<< " (mid,mother)=(" << node.mid << "," << node.mother << ") "
+       << " (mid,mother)=(" << node.mid << ") "
        << " ndaughters=" << node.daughter_v.size()
        << " npixels=(";
     for ( size_t i=0; i<node.pix_vv.size(); i++ ) {
@@ -354,8 +366,8 @@ namespace mctools {
     }
 
     // we loop through our daughters
+    ++depth;    
     for ( auto& daughter : node->daughter_v ) {
-      ++depth;
       _recursivePrintGraph( daughter, depth, visible_only );
     }
     --depth;
@@ -457,14 +469,26 @@ namespace mctools {
           if ( tid>0 ) {
             // first we use the instance ID          
             node = findTrackID( tid );
+            if ( node && node->tid!=tid )
+              node = nullptr; // reset
           }
-
+          
           // use ancestor if we could not find the node
-          if ( !node && aid>0) {
+          if ( !node && aid>0 ) {
             node = findTrackID( aid );
+            if ( node && node->tid!=aid )
+              node = nullptr;
           }
 
           if ( node ) {
+
+            if ( node->tid!=tid && node->aid!=aid ) {
+              std::cout << "pixel assigned without matching tid or aid exactly: "
+                        << " pix-tid=" << tid << " pix-aid=" << aid
+                        << " node-tid=" << node->tid << " node-mid=" << node->mtid << " node-aid=" << node->aid
+                        << std::endl;
+            }
+            
             nassigned[p]++;
             node->pix_vv[p].push_back( tick );
             node->pix_vv[p].push_back( wire );
@@ -483,7 +507,8 @@ namespace mctools {
       std::cout << " plane[" << p << "]"
                 << " num above threshold=" << nabove_thresh[p]
                 << " and with label=" << nabove_thresh_withlabel[p]
-                << " num assigned=" << nassigned[p];
+                << " num assigned=" << nassigned[p]
+                << " num unassigned=" << _unassigned_pixels_vv[p].size()/2;
       if ( nabove_thresh_withlabel[p]>0 )
         std::cout << " fraction=" << float(nassigned[p])/float(nabove_thresh_withlabel[p]);
       std::cout << std::endl;
