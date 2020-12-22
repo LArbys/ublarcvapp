@@ -5,6 +5,7 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # Collect the headers
 set( HEADERS MCPixelPGraph.h
+  TruthTrackSCE.h
   crossingPointsAnaMethods.h
   NeutrinoVertex.h
   LArbysMC.h
@@ -12,6 +13,7 @@ set( HEADERS MCPixelPGraph.h
 
 # Add sources
 add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
+  TruthTrackSCE.cxx
   crossingPointsAnaMethods.cxx
   NeutrinoVertex.cxx
   LArbysMC.cxx
