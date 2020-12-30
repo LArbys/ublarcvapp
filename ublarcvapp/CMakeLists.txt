@@ -19,4 +19,6 @@ if (LARCV_USE_GEO2D)
   add_subdirectory(LArOpenCVHandle)
 endif()
 
-add_subdirectory(DLTagger)
+if (Boost_FOUND)
+  add_subdirectory(DLTagger)
+endif()
