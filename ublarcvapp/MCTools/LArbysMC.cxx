@@ -465,6 +465,9 @@ namespace mctools {
     std::cout << " nneutron: " << _nneutron << std::endl;
     std::cout << " npi0: " << _npi0 << std::endl;
     std::cout << " is 1L1P (+ 0 pi + 0 pi0): " << _1l1p0pi << std::endl;
+    std::cout << " is 1L0P (+ 0 pi + 0 pi0): " << _1l0p0pi << std::endl;
+    std::cout << " vertex median pixel sum: " << _vtx_med_pixsum << std::endl;
+    std::cout << " vertex (U,V,Y) pixel sums: ( " << _plane_vtx_pixsum[0] << "," << _plane_vtx_pixsum[1] << "," << _plane_vtx_pixsum[2] << ")" << std::endl;    
     std::cout << " evis: " << _evis << "; lepton: " << _evis_lep << "; hadronic: " << _evis_had << "; vertex " << _evis_vtx << std::endl;
     std::cout << " (x,y,z) true: (" << _vtx_x << "," << _vtx_y << "," << _vtx_z << ")" << std::endl;
     std::cout << " (x,y,z) sce: (" << _vtx_sce_x << "," << _vtx_sce_y << "," << _vtx_sce_z << ")" << std::endl;
