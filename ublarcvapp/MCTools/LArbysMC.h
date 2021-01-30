@@ -83,6 +83,7 @@ namespace mctools {
     float _vtx_sce_x;   ///< true neutrino vertex x-position, space charge applied
     float _vtx_sce_y;   ///< true neutrino vertex y-position, space charge applied
     float _vtx_sce_z;   ///< true neutrino vertex z-position, space charge applied
+    float _vtx_detx;    ///< true neutrino vertex non-t0-corrected x-position, space charge applied
     float _vtx_tick;    ///< true neutrino vertex tick, space charge applied
     float _vtx_wire[3]; ///< true neutrino vertex [U,V,Y] plane, space charge applied
 

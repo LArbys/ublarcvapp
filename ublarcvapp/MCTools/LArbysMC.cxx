@@ -84,6 +84,7 @@ namespace mctools {
     mc_tree->Branch("vtx_sce_x",       &_vtx_sce_x,        "vtx_sce_x/F");
     mc_tree->Branch("vtx_sce_y",       &_vtx_sce_y,        "vtx_sce_y/F");
     mc_tree->Branch("vtx_sce_z",       &_vtx_sce_z,        "vtx_sce_z/F");
+    mc_tree->Branch("vtx_detx",        &_vtx_detx,         "vtx_detx/F");      
     mc_tree->Branch("vtx_tick",        &_vtx_tick,         "vtx_tick/F");
     mc_tree->Branch("vtx_wire",        _vtx_wire,          "vtx_wire[3]/F");
     mc_tree->Branch("vtx_pixsum",      _plane_vtx_pixsum,  "vtx_pixsum[3]/F");
@@ -162,6 +163,7 @@ namespace mctools {
     const float trig_time = 4050.0;
     const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
     _vtx_tick = ( _vtx_t*1.0e-3 - (trig_time-4050.0) )/0.5 + _vtx_sce_x/cm_per_tick + 3200.0;
+    _vtx_detx = ( (int)_vtx_tick - 3200 )*cm_per_tick;
 
     if ( _vtx_y<-117.0 || _vtx_y>117.0
          || _vtx_z<0 || _vtx_z>1036.0 ) {
@@ -477,7 +479,7 @@ namespace mctools {
     std::cout << " evis: " << _evis << "; lepton: " << _evis_lep << "; hadronic: " << _evis_had << "; vertex " << _evis_vtx << std::endl;
     std::cout << " (x,y,z) true: (" << _vtx_x << "," << _vtx_y << "," << _vtx_z << ")" << std::endl;
     std::cout << " (x,y,z) sce: (" << _vtx_sce_x << "," << _vtx_sce_y << "," << _vtx_sce_z << ")" << std::endl;
-    std::cout << " tick: " << _vtx_tick << std::endl;
+    std::cout << " tick: " << _vtx_tick << " (non-t0-corrected x: " << _vtx_detx << ")" << std::endl;
     std::cout << " wires: (" << _vtx_wire[0] << "," << _vtx_wire[1] << "," << _vtx_wire[2] << ")" << std::endl;
     std::cout << "==============================================================================" << std::endl;    
   }
