@@ -409,10 +409,13 @@ namespace mctools {
     int vtx_row = adc_v.front().meta().row( vtx_tick );
     int row_max = (int)adc_v.front().meta().rows();
     int col_max = (int)adc_v.front().meta().cols();
-    std::vector<int> vtx_col(adc_v.size(),0);
-    vtx_col[0] = adc_v[0].meta().col( vtx_wireu );
-    vtx_col[1] = adc_v[1].meta().col( vtx_wirev );
-    vtx_col[2] = adc_v[2].meta().col( vtx_wirey );
+    std::vector<int> vtx_col(adc_v.size(),-1);
+    if (vtx_wireu>=0 && vtx_wireu<(int)adc_v[0].meta().cols() )
+      vtx_col[0] = adc_v[0].meta().col( vtx_wireu );
+    if (vtx_wirev>=0 && vtx_wirev<(int)adc_v[1].meta().cols() )    
+      vtx_col[1] = adc_v[1].meta().col( vtx_wirev );
+    if (vtx_wirey>=0 && vtx_wirey<(int)adc_v[2].meta().cols() )
+      vtx_col[2] = adc_v[2].meta().col( vtx_wirey );
 
     plane_vtx_pixsum.resize(3,0);
     for (int p=0; p<3; p++)
@@ -424,6 +427,9 @@ namespace mctools {
       if ( row<0 || row>=row_max )continue;
       for (int c=-rad; c<=rad; c++) {
         for (int p=0; p<3; p++) {
+
+          if ( vtx_col[p]<0 ) continue;
+          
           int col = vtx_col[p]+c;
           if ( col<0 || col>=col_max ) continue;
           float pixval = adc_v[p].pixel( row, col );
