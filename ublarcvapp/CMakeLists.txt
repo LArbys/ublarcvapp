@@ -18,5 +18,5 @@ if (LARCV_USE_GEO2D)
 endif()
 
 if (Boost_FOUND)
-add_subdirectory(DLTagger)
+  add_subdirectory(DLTagger)
 endif()

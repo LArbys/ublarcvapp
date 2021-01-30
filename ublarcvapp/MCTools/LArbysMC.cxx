@@ -84,6 +84,7 @@ namespace mctools {
     mc_tree->Branch("vtx_sce_x",       &_vtx_sce_x,        "vtx_sce_x/F");
     mc_tree->Branch("vtx_sce_y",       &_vtx_sce_y,        "vtx_sce_y/F");
     mc_tree->Branch("vtx_sce_z",       &_vtx_sce_z,        "vtx_sce_z/F");
+    mc_tree->Branch("vtx_detx",        &_vtx_detx,         "vtx_detx/F");      
     mc_tree->Branch("vtx_tick",        &_vtx_tick,         "vtx_tick/F");
     mc_tree->Branch("vtx_wire",        _vtx_wire,          "vtx_wire[3]/F");
     mc_tree->Branch("vtx_pixsum",      _plane_vtx_pixsum,  "vtx_pixsum[3]/F");
@@ -162,6 +163,7 @@ namespace mctools {
     const float trig_time = 4050.0;
     const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
     _vtx_tick = ( _vtx_t*1.0e-3 - (trig_time-4050.0) )/0.5 + _vtx_sce_x/cm_per_tick + 3200.0;
+    _vtx_detx = ( (int)_vtx_tick - 3200 )*cm_per_tick;
 
     if ( _vtx_y<-117.0 || _vtx_y>117.0
          || _vtx_z<0 || _vtx_z>1036.0 ) {
@@ -409,10 +411,13 @@ namespace mctools {
     int vtx_row = adc_v.front().meta().row( vtx_tick );
     int row_max = (int)adc_v.front().meta().rows();
     int col_max = (int)adc_v.front().meta().cols();
-    std::vector<int> vtx_col(adc_v.size(),0);
-    vtx_col[0] = adc_v[0].meta().col( vtx_wireu );
-    vtx_col[1] = adc_v[1].meta().col( vtx_wirev );
-    vtx_col[2] = adc_v[2].meta().col( vtx_wirey );
+    std::vector<int> vtx_col(adc_v.size(),-1);
+    if (vtx_wireu>=0 && vtx_wireu<(int)adc_v[0].meta().cols() )
+      vtx_col[0] = adc_v[0].meta().col( vtx_wireu );
+    if (vtx_wirev>=0 && vtx_wirev<(int)adc_v[1].meta().cols() )    
+      vtx_col[1] = adc_v[1].meta().col( vtx_wirev );
+    if (vtx_wirey>=0 && vtx_wirey<(int)adc_v[2].meta().cols() )
+      vtx_col[2] = adc_v[2].meta().col( vtx_wirey );
 
     plane_vtx_pixsum.resize(3,0);
     for (int p=0; p<3; p++)
@@ -424,6 +429,9 @@ namespace mctools {
       if ( row<0 || row>=row_max )continue;
       for (int c=-rad; c<=rad; c++) {
         for (int p=0; p<3; p++) {
+
+          if ( vtx_col[p]<0 ) continue;
+          
           int col = vtx_col[p]+c;
           if ( col<0 || col>=col_max ) continue;
           float pixval = adc_v[p].pixel( row, col );
@@ -465,10 +473,13 @@ namespace mctools {
     std::cout << " nneutron: " << _nneutron << std::endl;
     std::cout << " npi0: " << _npi0 << std::endl;
     std::cout << " is 1L1P (+ 0 pi + 0 pi0): " << _1l1p0pi << std::endl;
+    std::cout << " is 1L0P (+ 0 pi + 0 pi0): " << _1l0p0pi << std::endl;
+    std::cout << " vertex median pixel sum: " << _vtx_med_pixsum << std::endl;
+    std::cout << " vertex (U,V,Y) pixel sums: ( " << _plane_vtx_pixsum[0] << "," << _plane_vtx_pixsum[1] << "," << _plane_vtx_pixsum[2] << ")" << std::endl;    
     std::cout << " evis: " << _evis << "; lepton: " << _evis_lep << "; hadronic: " << _evis_had << "; vertex " << _evis_vtx << std::endl;
     std::cout << " (x,y,z) true: (" << _vtx_x << "," << _vtx_y << "," << _vtx_z << ")" << std::endl;
     std::cout << " (x,y,z) sce: (" << _vtx_sce_x << "," << _vtx_sce_y << "," << _vtx_sce_z << ")" << std::endl;
-    std::cout << " tick: " << _vtx_tick << std::endl;
+    std::cout << " tick: " << _vtx_tick << " (non-t0-corrected x: " << _vtx_detx << ")" << std::endl;
     std::cout << " wires: (" << _vtx_wire[0] << "," << _vtx_wire[1] << "," << _vtx_wire[2] << ")" << std::endl;
     std::cout << "==============================================================================" << std::endl;    
   }
