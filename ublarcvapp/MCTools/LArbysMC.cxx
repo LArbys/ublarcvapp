@@ -404,10 +404,18 @@ namespace mctools {
                                         std::vector<float>& plane_vtx_pixsum  )
   {
 
+    plane_vtx_pixsum.resize(3,0);
+    for (int p=0; p<3; p++)
+      plane_vtx_pixsum[p] = 0.;
+    
     larcv::EventImage2D* ev_adc =
       (larcv::EventImage2D*)iolcv.get_data(larcv::kProductImage2D,_producer_wireimage);
 
     auto const& adc_v = ev_adc->as_vector();
+
+    if ( vtx_tick<=adc_v.front().meta().min_y() || vtx_tick>=adc_v.front().meta().max_y() )
+      return;
+
     int vtx_row = adc_v.front().meta().row( vtx_tick );
     int row_max = (int)adc_v.front().meta().rows();
     int col_max = (int)adc_v.front().meta().cols();
@@ -419,10 +427,6 @@ namespace mctools {
     if (vtx_wirey>=0 && vtx_wirey<(int)adc_v[2].meta().cols() )
       vtx_col[2] = adc_v[2].meta().col( vtx_wirey );
 
-    plane_vtx_pixsum.resize(3,0);
-    for (int p=0; p<3; p++)
-      plane_vtx_pixsum[p] = 0.;
-    
     int rad = abs(pix_radius);
     for (int r=-rad; r<=rad; r++) {
       int row = vtx_row+r;
