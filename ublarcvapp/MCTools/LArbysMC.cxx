@@ -187,8 +187,6 @@ namespace mctools {
 
     for (int p=0; p<3; p++) _plane_vtx_pixsum[p] = 0.;
     _vtx_med_pixsum = 0.;
-    _vtx_dwall = 0.;
-    _vtx_boundary = 0;
         
     // final state tally
     _nprimary = 0;
@@ -469,6 +467,9 @@ namespace mctools {
     _current_type = -1;
     _interaction_type = -1;
     _genie_mode = -1;
+
+    _vtx_dwall = 0.;
+    _vtx_boundary = 0;    
     
   }
 
