@@ -114,6 +114,9 @@ namespace mctools {
     float        _plane_vtx_pixsum[3]; ///< vertex pixel sum
     float        _vtx_med_pixsum;      ///< vertex median pixel sum
 
+    float _vtx_dwall;    ///< dwall using the true (no SCE) vertex
+    int   _vtx_boundary; ///< nearest boundary
+
     struct entry_info{
       int run;
       int subrun;

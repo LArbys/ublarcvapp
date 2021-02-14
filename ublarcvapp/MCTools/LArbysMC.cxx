@@ -14,6 +14,8 @@
 #include "DataFormat/mcshower.h"
 #include "DataFormat/mctruth.h"
 
+#include "ublarcvapp/ubdllee/dwall.h"
+
 namespace ublarcvapp {
 namespace mctools {
   
@@ -89,6 +91,8 @@ namespace mctools {
     mc_tree->Branch("vtx_wire",        _vtx_wire,          "vtx_wire[3]/F");
     mc_tree->Branch("vtx_pixsum",      _plane_vtx_pixsum,  "vtx_pixsum[3]/F");
     mc_tree->Branch("vtx_med_pixsum",  &_vtx_med_pixsum,   "vtx_med_pixsum/F");
+    mc_tree->Branch("vtx_dwall",       &_vtx_dwall,        "vtx_dwall/F");
+    mc_tree->Branch("vtx_boundary",    &_vtx_boundary,     "vtx_boundary/I");    
     
     mc_tree->Branch("evis",            &_evis,             "evis/F");
     mc_tree->Branch("evis_had",        &_evis_had,         "evis_had/F");
@@ -152,7 +156,10 @@ namespace mctools {
     _vtx_t            = nu.Nu().Trajectory().front().T();
     _vtx_x            = nu.Nu().Trajectory().front().X();
     _vtx_y            = nu.Nu().Trajectory().front().Y();
-    _vtx_z            = nu.Nu().Trajectory().front().Z();    
+    _vtx_z            = nu.Nu().Trajectory().front().Z();
+
+    std::vector<float> fvtx = { _vtx_x, _vtx_y, _vtx_z };
+    _vtx_dwall = ublarcvapp::dwall( fvtx, _vtx_boundary );
 
     // SCE correction
     std::vector<double> pos_offset = _psce->GetPosOffsets( _vtx_x, _vtx_y, _vtx_z );
@@ -180,6 +187,8 @@ namespace mctools {
 
     for (int p=0; p<3; p++) _plane_vtx_pixsum[p] = 0.;
     _vtx_med_pixsum = 0.;
+    _vtx_dwall = 0.;
+    _vtx_boundary = 0;
         
     // final state tally
     _nprimary = 0;
@@ -481,7 +490,7 @@ namespace mctools {
     std::cout << " vertex median pixel sum: " << _vtx_med_pixsum << std::endl;
     std::cout << " vertex (U,V,Y) pixel sums: ( " << _plane_vtx_pixsum[0] << "," << _plane_vtx_pixsum[1] << "," << _plane_vtx_pixsum[2] << ")" << std::endl;    
     std::cout << " evis: " << _evis << "; lepton: " << _evis_lep << "; hadronic: " << _evis_had << "; vertex " << _evis_vtx << std::endl;
-    std::cout << " (x,y,z) true: (" << _vtx_x << "," << _vtx_y << "," << _vtx_z << ")" << std::endl;
+    std::cout << " (x,y,z) true: (" << _vtx_x << "," << _vtx_y << "," << _vtx_z << ") dwall=" << _vtx_dwall << " boundary=" << _vtx_boundary << std::endl;
     std::cout << " (x,y,z) sce: (" << _vtx_sce_x << "," << _vtx_sce_y << "," << _vtx_sce_z << ")" << std::endl;
     std::cout << " tick: " << _vtx_tick << " (non-t0-corrected x: " << _vtx_detx << ")" << std::endl;
     std::cout << " wires: (" << _vtx_wire[0] << "," << _vtx_wire[1] << "," << _vtx_wire[2] << ")" << std::endl;
