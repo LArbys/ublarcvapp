@@ -74,6 +74,7 @@ namespace mctools {
     int _current_type;      ///< CC=0, NC=1
     int _interaction_type;  ///< Nuance interaction mode
     int _genie_mode;        ///< GENIE interaction mode
+    int _nu_pdg;            ///< Neutrino pdg if present, non-present set to 0
 
     float _Enu_true;    ///< true neutrino energy
     float _vtx_t;       ///< true neutrino vertex time

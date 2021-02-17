@@ -80,6 +80,7 @@ namespace mctools {
     mc_tree->Branch("interactionType", &_interaction_type, "interactionType/I");
     mc_tree->Branch("genieMode",       &_genie_mode,       "genieMode/I");
     mc_tree->Branch("Enu_true",        &_Enu_true,         "Enu_true/F");
+    mc_tree->Branch("nu_pdg",          &_nu_pdg,           "nu_pdg/I");
     mc_tree->Branch("vtx_x",           &_vtx_x,            "vtx_x/F");
     mc_tree->Branch("vtx_y",           &_vtx_y,            "vtx_y/F");
     mc_tree->Branch("vtx_z",           &_vtx_z,            "vtx_z/F");        
@@ -152,6 +153,7 @@ namespace mctools {
     _current_type     = nu.CCNC();
     _interaction_type = nu.InteractionType();
     _genie_mode       = nu.Mode();
+    _nu_pdg           = nu.Nu().PdgCode();
     _Enu_true         = nu.Nu().Trajectory().front().E()*1000.0;
     _vtx_t            = nu.Nu().Trajectory().front().T();
     _vtx_x            = nu.Nu().Trajectory().front().X();
@@ -197,7 +199,7 @@ namespace mctools {
     _nlepton  = 0;
     _nlepton_35mev  = 0;    
     _nmeson   = 0;
-    _nmeson_35mev   = 0;    
+    _nmeson_35mev  = 0;    
     _nshower  = 0;
     _npi0 = 0;
     _1l1p0pi = 0;
@@ -467,9 +469,37 @@ namespace mctools {
     _current_type = -1;
     _interaction_type = -1;
     _genie_mode = -1;
+    _nu_pdg = 0;
 
+    _vtx_x = _vtx_y = _vtx_z = 0.;
+    _vtx_sce_x = _vtx_sce_y = _vtx_sce_z = 0.;
+    _vtx_detx = 0;
+    _vtx_tick = 0;
+    for (int p=0; p<3; p++) {
+      _vtx_wire[p] = 0;
+      _plane_vtx_pixsum[p] = 0;
+    }
+    _vtx_med_pixsum = 0.;
     _vtx_dwall = 0.;
-    _vtx_boundary = 0;    
+    _vtx_boundary = 0;
+
+    _evis = 0.;
+    _evis_had = 0.;
+    _evis_vtx =0.;
+    _evis_lep = 0;
+    _hi_lep_pdg = 0.;
+    _nprimary = 0;
+    _nproton = 0;
+    _nproton_60mev = 0;
+    _nlepton =0;
+    _nlepton_35mev = 0;
+    _nmeson = 0;
+    _nmeson_35mev = 0;
+    _nshower = 0;
+    _nneutron = 0;
+    _npi0 =0;
+    _1l1p0pi = 0;
+    _1l0p0pi = 0;
     
   }
 
