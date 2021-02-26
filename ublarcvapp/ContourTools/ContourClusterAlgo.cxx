@@ -95,12 +95,12 @@ namespace ublarcvapp {
       
       // dilate image first
       cv::Mat& cvimg = cvimg_stage1_v[p];
-      cv::dilate( cvimg, cvimg, cv::Mat(), cv::Point(-1,-1), dilate_iterations, 1, 1 );
+      if ( dilate_iterations>0 )
+        cv::dilate( cvimg, cvimg, cv::Mat(), cv::Point(-1,-1), dilate_iterations, 1, 1 );
       
       // find contours
       ContourList_t contour_v;
       cv::findContours( cvimg_stage1_v[p], contour_v, cv::RETR_LIST, cv::CHAIN_APPROX_SIMPLE );
-
       //std::cout << "Plane " << p << " number of contours: " << contour_v.size() << std::endl;
       
       // for each contour, find convex hull, find defect points
