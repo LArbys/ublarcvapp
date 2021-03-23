@@ -10,6 +10,15 @@
 namespace ublarcvapp {
 namespace mctools {
 
+  /**
+   * @ingroup MCTools
+   * @class TruthTrackSCE
+   *
+   * Provides a function to take the true track trajectory (stored as a larlite::mctrack object)
+   * and applies the space-charge effect. This will provide a 3D 
+   * trajectory that matches what the wire-planes in a LArTPC will see.
+   *
+   */
   class TruthTrackSCE : public larcv::larcv_base {
 
   public:
@@ -31,9 +40,9 @@ namespace mctools {
     
   protected:
 
-    bool _kown_sce;
-    const larutil::SpaceChargeMicroBooNE* _p_sce;
-    bool _kdebug;
+    bool _kown_sce; ///< if true, class assumes it owns memory pointed to by _p_sce and will destroy it in destructor
+    const larutil::SpaceChargeMicroBooNE* _p_sce; ///< pointer to class that calculates charge displacement due to space-charge effect
+    bool _kdebug; ///< if true, dump verbose output
 
   };
   

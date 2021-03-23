@@ -3,6 +3,12 @@
 namespace ublarcvapp {
 namespace mctools {
 
+  /**
+   * @brief default constructor
+   *
+   *  This instance will make its own SpaceChargeMicroBooNE instance
+   *
+   */
   TruthTrackSCE::TruthTrackSCE()
     : larcv::larcv_base("TruthTrackSCE"),
     _kown_sce(true),
@@ -11,6 +17,11 @@ namespace mctools {
     _p_sce = new larutil::SpaceChargeMicroBooNE();
   }
 
+  /**
+   * @brief constructor using external spacechargemicroboone instance
+   *
+   * @param psce Pointer to instance of SpaceChargeMicroBooNE
+   */  
   TruthTrackSCE::TruthTrackSCE( larutil::SpaceChargeMicroBooNE* psce )
     : larcv::larcv_base("TruthTrackSCE"),
     _kown_sce(false),
@@ -25,30 +36,59 @@ namespace mctools {
     _p_sce = nullptr;
   }
 
+  /**
+   * @brief apply space charge effect along a true trajectory
+   *
+   * @param[in] mct True simulation trajectory
+   * @return track with space-charge applied points
+   */
   larlite::track TruthTrackSCE::applySCE( const larlite::mctrack& mct )
   {
     larlite::track ll;
     ll.reserve( mct.size() );
 
+    TVector3 last_pt;
+
+    int npts = 0;
     for ( auto const& step : mct ) {
-      std::vector<double> start = { step.Position()[0], step.Position()[1], step.Position()[2] };
+      TVector3 start = { step.Position()[0], step.Position()[1], step.Position()[2] };
       std::vector<double> s_offset = _p_sce->GetPosOffsets(start[0],start[1],start[2]);
       TVector3 start_sce;
       start_sce[0] = start[0] - s_offset[0] + 0.7;
       start_sce[1] = start[1] + s_offset[1];
       start_sce[2] = start[2] + s_offset[2];
-      TVector3 dir(0,0,1);
+
 
       LARCV_DEBUG() << "convert (" << start[0] << "," << start[1] << "," << start[2] << ") "
                     << "to (" << start_sce[0] << "," << start_sce[1] << "," << start_sce[2] << ")" << std::endl;      
       ll.add_vertex( start_sce );
-      ll.add_direction(dir);
+      if ( npts>0 ) {
+        TVector3 dir = start_sce - last_pt;
+        float norm = dir.Mag();
+        if ( norm>0 ) {
+          for (int i=0; i<3; i++)
+            dir[i] /= norm;
+        }
+        ll.add_direction(dir);
+        if ( npts==1 )
+          ll.add_direction(dir); // add extra for first point
+      }
+      last_pt = start_sce;
+      npts++;
     }
 
     LARCV_DEBUG() << "made track with " << ll.NumberTrajectoryPoints() << " points." << std::endl;
     return ll;
   }
 
+  /**
+   * @brief find closest distance to series of line segments
+   *
+   * @param[in] testpt Test 3D point
+   * @param[in] track  series of line segments
+   * @param[out] min_r smallest distance to line segments
+   * @param[in] min_step  index of line segment that point was closest to
+   */
   void TruthTrackSCE::dist2track( const std::vector<float>& testpt,
                                   const larlite::track& track,
                                   float& min_r,
@@ -111,7 +151,14 @@ namespace mctools {
     
   }
 
-
+  /**
+   * @brief distance from point to single line segment
+   *
+   * @param[in] linept1 one end of line segment
+   * @param[in] linept2 other end of line segment
+   * @param[in] pt  test point
+   * @return distance of point from line segment
+   */
   float TruthTrackSCE::pointLineDistance( const std::vector<float>& linept1,
                                           const std::vector<float>& linept2,
                                           const std::vector<float>& pt )
