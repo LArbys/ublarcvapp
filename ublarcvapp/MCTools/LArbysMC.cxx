@@ -221,15 +221,15 @@ namespace mctools {
         // neutrino interaction primary
         int pid  = mct.PdgCode();
 
-        std::cout << "track[" << vidx << "] origin=" << mct.Origin()
-                  << " tid=" << mct.TrackID()
-                  << " [ mid=" << mct.MotherTrackID()
-                  << " mpdg=" << mct.MotherPdgCode() << " ]"
-                  << " [ aid=" << mct.AncestorTrackID()
-                  << " apdg=" << mct.AncestorPdgCode() << "]"
-                  << " pid=" << mct.PdgCode()
-                  << " E=" << mct.Start().E()          
-                  << std::endl;
+        // std::cout << "track[" << vidx << "] origin=" << mct.Origin()
+        //           << " tid=" << mct.TrackID()
+        //           << " [ mid=" << mct.MotherTrackID()
+        //           << " mpdg=" << mct.MotherPdgCode() << " ]"
+        //           << " [ aid=" << mct.AncestorTrackID()
+        //           << " apdg=" << mct.AncestorPdgCode() << "]"
+        //           << " pid=" << mct.PdgCode()
+        //           << " E=" << mct.Start().E()          
+        //           << std::endl;
         
         
         if ( abs(pid)==12 || abs(pid)==14 || abs(pid)==16 )
@@ -305,15 +305,15 @@ namespace mctools {
         // neutrino interaction primary
         int pid  = mcs.PdgCode();
 
-        std::cout << "shower[" << vidx << "] origin=" << mcs.Origin()
-                  << " tid=" << mcs.TrackID()
-                  << " [ mid=" << mcs.MotherTrackID()
-                  << " mpd=" << mcs.MotherPdgCode() << " ]"
-                  << " [ aid=" << mcs.AncestorTrackID()
-                  << " apdg=" << mcs.AncestorPdgCode() << " ]"
-                  << " pid=" << mcs.PdgCode()
-                  << " E=" << mcs.Start().E()
-                  << std::endl;
+        // std::cout << "shower[" << vidx << "] origin=" << mcs.Origin()
+        //           << " tid=" << mcs.TrackID()
+        //           << " [ mid=" << mcs.MotherTrackID()
+        //           << " mpd=" << mcs.MotherPdgCode() << " ]"
+        //           << " [ aid=" << mcs.AncestorTrackID()
+        //           << " apdg=" << mcs.AncestorPdgCode() << " ]"
+        //           << " pid=" << mcs.PdgCode()
+        //           << " E=" << mcs.Start().E()
+        //           << std::endl;
         
         if ( abs(pid)==12 || abs(pid)==14 || abs(pid)==16 )
           continue; // neutrino: skip
