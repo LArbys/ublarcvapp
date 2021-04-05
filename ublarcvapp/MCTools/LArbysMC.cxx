@@ -507,7 +507,7 @@ namespace mctools {
   void LArbysMC::printInteractionInfo() {
     std::cout << "[LArbysMC::printInteractionInfo] ==============================================" << std::endl;
     std::cout << " rse: (" << _run << "," << _subrun << "," << _event << ") entry=" << _entry << std::endl;
-    std::cout << " True Nu E: " << _Enu_true << " GeV" << std::endl;
+    std::cout << " True Nu E: " << _Enu_true << " GeV, pid=" << _nu_pdg << std::endl;
     std::cout << " genie mode: " << _genie_mode << std::endl;
     std::cout << " is CC: " << (_current_type==0) << std::endl;
     std::cout << " interaction type: " << _interaction_type << std::endl;
