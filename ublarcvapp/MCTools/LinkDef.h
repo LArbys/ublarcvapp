@@ -21,6 +21,7 @@
 #pragma link C++ class ublarcvapp::mctools::NeutrinoVertex+;
 #pragma link C++ class ublarcvapp::mctools::LArbysMC+;
 #pragma link C++ class ublarcvapp::mctools::NeutrinoPixelFilter+;
+#pragma link C++ class ublarcvapp::mctools::TruthTrackSCE+;
 #endif
 
 
