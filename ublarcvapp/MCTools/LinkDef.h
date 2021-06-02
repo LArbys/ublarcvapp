@@ -22,6 +22,7 @@
 #pragma link C++ class ublarcvapp::mctools::LArbysMC+;
 #pragma link C++ class ublarcvapp::mctools::NeutrinoPixelFilter+;
 #pragma link C++ class ublarcvapp::mctools::TruthTrackSCE+;
+#pragma link C++ class ublarcvapp::mctools::TruthShowerTrunkSCE+;
 #endif
 
 
