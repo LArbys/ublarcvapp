@@ -25,6 +25,11 @@ namespace ubimagemod {
                    const int drow,
                    const float maxstepsize );
     
+    int labelTrackPath( const larlite::track& track,
+                        larcv::Image2D& smin,
+                        larcv::Image2D& smax,
+                        const float maxstepsize=0.1 );
+    
     bool show_timing;
   };
   

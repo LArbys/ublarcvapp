@@ -192,6 +192,116 @@ namespace ubimagemod {
       LARCV_INFO() << "mask: " << std::chrono::duration_cast<std::chrono::microseconds>(end_mask - start_mask).count() << std::endl;
     return nmasked;
   }
+
+  /**
+   * @brief label the pixels with the minimum and maximum path along the track
+   *
+   */
+  int TrackImageMask::labelTrackPath( const larlite::track& track,
+                                      larcv::Image2D& smin_img,
+                                      larcv::Image2D& smax_img,
+                                      const float maxstepsize )
+  {
+
+    int npts = track.NumberTrajectoryPoints();    
+    LARCV_DEBUG() << "track length=" << npts << std::endl;
+    
+    if ( npts<=1 ) {
+      LARCV_WARNING() << "No mask generated for track with only 1 point" << std::endl;
+      // no mask can be generated in this case
+      return 0;
+    }
+
+    const float driftv = larutil::LArProperties::GetME()->DriftVelocity();
+    const float usec_per_tick = 0.5;
+    int plane = smin_img.meta().plane();
+    if ( plane<0 || plane>=(int)larutil::Geometry::GetME()->Nplanes() ) {
+      LARCV_WARNING() << "Invalid plane: " << plane << std::endl;
+      return 0;
+    }
+
+    // microboone only
+    const std::vector<Double_t>& firstwireproj = larutil::Geometry::GetME()->GetFirstWireProj(); 
+    std::vector<double> orthovect = { 0,
+                                      larutil::Geometry::GetME()->GetOrthVectorsY().at(plane),
+                                      larutil::Geometry::GetME()->GetOrthVectorsZ().at(plane) };
+    
+    int nrows = smin_img.meta().rows();
+    int ncols = smin_img.meta().cols();
+
+    // first we make a list of pixels covered by the track
+    // we also get the min and max col bounds
+    struct Pix_t {
+      int col;
+      int row;
+      float smin;
+      float smax;
+      Pix_t()
+        : col(0),row(0),smin(0),smax(0)
+      {};
+      Pix_t( int c, int r, float ssmin, float ssmax )
+        : col(c), row(r), smin(ssmin), smax(ssmax)
+      {};
+    };
+    
+    std::map< std::pair<int,int>, Pix_t > pixel_map;
+
+    float len_traveled = 0.;    
+    for (int ipt=0; ipt<npts-1; ipt++) {
+
+      TVector3 start = track.LocationAtPoint(ipt);
+      TVector3 end   = track.LocationAtPoint(ipt+1);
+      TVector3 dir   = end-start;
+      
+      double segsize = dir.Mag();
+
+      int nsteps = 1;
+      if ( segsize>maxstepsize ) {
+        nsteps = segsize/maxstepsize + 1;
+      }
+      
+      float stepsize = segsize/float(nsteps);
+
+      for (int istep=0; istep<=nsteps; istep++) {
+        // get 3d position along track
+        TVector3 pos = start + istep*(stepsize/segsize)*dir;
+        // project into image        
+        float tick = pos[0]/driftv/usec_per_tick + 3200; // tick
+        float rowcoord = (tick-smin_img.meta().min_y())/smin_img.meta().pixel_height();
+
+        //  length on track
+        float s = len_traveled + istep*stepsize;
+        
+        // from larlite Geometry::WireCoordinate(...)
+        float wirecoord = pos[1]*orthovect[1] + pos[2]*orthovect[2] - firstwireproj.at(plane);
+        float colcoord = (wirecoord-smin_img.meta().min_x())/smin_img.meta().pixel_width();
+        
+        int row = (int)rowcoord;
+        int col = (int)colcoord;
+        if ( row<0 || row>=nrows ) continue;
+        if ( col<0 || col>=ncols ) continue;
+
+        std::pair<int,int> pixcoord(col,row);
+
+        auto it = pixel_map.find( pixcoord );
+        if ( it==pixel_map.end() ) {
+          // new entry
+          pixel_map[pixcoord] = Pix_t( col, row, s, s );
+          it = pixel_map.find( pixcoord );
+        }
+        it->second.smax = s;
+      }//end of pixel steps
+    }//end of trajectory point list
+
+    int nlabeled = 0;
+    for (auto it=pixel_map.begin(); it!=pixel_map.end();  it++) {
+      smin_img.set_pixel( it->second.row, it->second.col, it->second.smin );
+      smax_img.set_pixel( it->second.row, it->second.col, it->second.smax );
+      nlabeled++;
+    }
+
+    return nlabeled;
+  }
   
 }
 }
