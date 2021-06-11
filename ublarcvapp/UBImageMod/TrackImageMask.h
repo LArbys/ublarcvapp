@@ -13,17 +13,19 @@ namespace ubimagemod {
   public:
     
     TrackImageMask()
-      : larcv::larcv_base( "TrackImageMask" )
+      : larcv::larcv_base( "TrackImageMask" ),
+      show_timing(false)
       {};
 
-    void maskTrack( const larlite::track& track,
-                    const larcv::Image2D& adc,
-                    larcv::Image2D& mask,
-                    const float thresh,                                    
-                    const int dcol,
-                    const int drow,
-                    const float maxstepsize );
+    int maskTrack( const larlite::track& track,
+                   const larcv::Image2D& adc,
+                   larcv::Image2D& mask,
+                   const float thresh,                                    
+                   const int dcol,
+                   const int drow,
+                   const float maxstepsize );
     
+    bool show_timing;
   };
   
 }

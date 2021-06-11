@@ -4,10 +4,12 @@
 #include "LArUtil/LArProperties.h"
 #include "larcv/core/DataFormat/ImageMeta.h"
 
+#include <chrono>
+
 namespace ublarcvapp {
 namespace ubimagemod {
 
-  void TrackImageMask::maskTrack( const larlite::track& track,
+  int TrackImageMask::maskTrack( const larlite::track& track,
                                   const larcv::Image2D& img,
                                   larcv::Image2D& mask,
                                   const float threshold,
@@ -22,7 +24,7 @@ namespace ubimagemod {
     if ( npts<=1 ) {
       LARCV_WARNING() << "No mask generated for track with only 1 point" << std::endl;
       // no mask can be generated in this case
-      return;
+      return 0;
     }
 
     const float driftv = larutil::LArProperties::GetME()->DriftVelocity();
@@ -31,7 +33,7 @@ namespace ubimagemod {
     int plane = meta.plane();
     if ( plane<0 || plane>=(int)larutil::Geometry::GetME()->Nplanes() ) {
       LARCV_WARNING() << "Invalid plane: " << plane << std::endl;
-      return;
+      return 0;
     }
 
     // microboone only
@@ -43,6 +45,8 @@ namespace ubimagemod {
     int nrows = meta.rows();
     int ncols = meta.cols();
 
+    std::chrono::steady_clock::time_point start_pixlist = std::chrono::steady_clock::now();
+    
     // first we make a list of pixels covered by the track
     // we also get the min and max col bounds
     std::set< std::pair<int,int> > pixel_list;
@@ -97,6 +101,9 @@ namespace ubimagemod {
       pixel_v.push_back( std::vector<int>{ it.first, it.second} );
     }
     LARCV_DEBUG() << "Number of pixels: " << pixel_v.size() << std::endl;
+
+    std::chrono::steady_clock::time_point end_pixlist = std::chrono::steady_clock::now();
+    LARCV_DEBUG() << "make pixlist: " << std::chrono::duration_cast<std::chrono::microseconds>(end_pixlist - start_pixlist).count() << std::endl;
     
     // ok now for the masking
 
@@ -114,7 +121,7 @@ namespace ubimagemod {
 
     if ( colwidth<=0 || rowwidth<=0 ) {
       LARCV_WARNING() << "Bad cropped window size. colwidth=" << colwidth << " rowwidth=" << rowwidth << std::endl;
-      return;
+      return 0;
     }
 
     // make data array
@@ -137,6 +144,7 @@ namespace ubimagemod {
 
     // parallelize masking with block kernel
     int nmasked = 0;
+    std::chrono::steady_clock::time_point start_mask = std::chrono::steady_clock::now();    
     
     #pragma omp parallel for         
     for (int ikernel=0; ikernel<N; ikernel++) {
@@ -179,7 +187,10 @@ namespace ubimagemod {
       }
     }
     LARCV_INFO() << "num pixels masked: " << nmasked << std::endl;
-    
+    std::chrono::steady_clock::time_point end_mask = std::chrono::steady_clock::now();
+    if ( show_timing )
+      LARCV_INFO() << "mask: " << std::chrono::duration_cast<std::chrono::microseconds>(end_mask - start_mask).count() << std::endl;
+    return nmasked;
   }
   
 }
