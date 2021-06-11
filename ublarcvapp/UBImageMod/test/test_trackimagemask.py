@@ -11,6 +11,7 @@ from ublarcvapp import ublarcvapp
 Test the class TrackImageMask
 """
 
+PLOT_ME = True
 
 # make a dummy larcv image
 # first define a meta, looks like a UB image
@@ -38,23 +39,25 @@ print(algo)
 
 
 algo.maskTrack( lltrack, img, mask, -1.0, 2, 2, 0.2 )
-algo.labelTrackPath( lltrack, smin, smax )
+algo.labelTrackPath( lltrack, img, smin, smax )
 
-rt.gStyle.SetOptStat(0)
-c = rt.TCanvas("c","c",1200,2400)
-c.Divide(1,4)
-himg = larcv.rootutils.as_th2d(img,"img")
-hmask = larcv.rootutils.as_th2d(mask,"mask")
-hpath_min = larcv.rootutils.as_th2d(smin,"smin")
-hpath_max = larcv.rootutils.as_th2d(smax,"smax")
-c.cd(1)
-himg.Draw("colz")
-c.cd(2)
-hmask.Draw("colz")
-c.cd(3)
-hpath_min.Draw("colz")
-c.cd(4)
-hpath_max.Draw("colz")
-print("[ENTER] to continue")
-raw_input()
+if PLOT_ME:
+
+    rt.gStyle.SetOptStat(0)
+    c = rt.TCanvas("c","c",1200,2400)
+    c.Divide(1,4)
+    himg = larcv.rootutils.as_th2d(img,"img")
+    hmask = larcv.rootutils.as_th2d(mask,"mask")
+    hpath_min = larcv.rootutils.as_th2d(smin,"smin")
+    hpath_max = larcv.rootutils.as_th2d(smax,"smax")
+    c.cd(1)
+    himg.Draw("colz")
+    c.cd(2)
+    hmask.Draw("colz")
+    c.cd(3)
+    hpath_min.Draw("colz")
+    c.cd(4)
+    hpath_max.Draw("colz")
+    print("[ENTER] to continue")
+    raw_input()
 
