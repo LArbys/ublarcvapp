@@ -35,14 +35,31 @@ namespace ubimagemod {
                         const larcv::Image2D& img,                         
                         larcv::Image2D& smin,
                         larcv::Image2D& smax,
+                        const float threshold,
                         const float maxstepsize=0.1 );
 
     int makePixelList( const larlite::track& track,
                        const larcv::Image2D& img,
+                       const float threshold,
                        const float maxstepsize=0.1,                       
                        bool fill_map=true );
-    
 
+
+    float sumOverPixelList( const std::vector< std::vector<int> >& pixlist_v,
+                            const larcv::Image2D& img,
+                            const int dcol,
+                            const int drow,
+                            const float thresh ) const;
+    
+    bool getExtremaPixelValues( const std::vector< std::vector<int> >& pixlist_v,
+                                const larcv::Image2D& img,
+                                const int dcol,
+                                const int drow,
+                                const float thresh,
+                                float& pixval_min,
+                                float& pixval_max ) const;
+    
+    
     // first we make a list of pixels covered by the track
     // we also get the min and max col bounds
     struct Pix_t {
