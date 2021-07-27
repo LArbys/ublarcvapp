@@ -24,6 +24,7 @@ namespace ublarcvapp {
     pydwall() {};
     virtual ~pydwall() {};
     static float  dwall( const float x, const float y, const float z );
+    static float  dwall_noAC( const float x, const float y, const float z );    
   };
   
 }
