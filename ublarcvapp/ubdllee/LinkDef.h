@@ -12,6 +12,7 @@
 #pragma link C++ class ublarcvapp::ubdllee::DLInteraction+;
 #pragma link C++ class ublarcvapp::ubdllee::MergeDLInteraction+;
 #pragma link C++ class ublarcvapp::ubdllee::DLMerger+;
+#pragma link C++ class ublarcvapp::pydwall+;
 #endif
 
 

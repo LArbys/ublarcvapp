@@ -133,5 +133,15 @@ namespace ublarcvapp {
       fpos[i] = (float)pos[i];
     return (double)dwall_noAC( fpos, boundary_type);
   }
+
+  /**
+   * @brief a python-friendly version of dwall
+   *
+   */
+  float  pydwall::dwall( const float x, const float y, const float z ) {
+    std::vector<float> pos = { x, y, z };
+    int boundary = 0;
+    return (float)ublarcvapp::dwall( pos, boundary );
+  }
   
 }

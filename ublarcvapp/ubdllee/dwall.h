@@ -13,6 +13,18 @@ namespace ublarcvapp {
 
   float  dwall_noAC( const std::vector<float>& pos, int& boundary_type );
   double dwall_noAC( const std::vector<double>& pos, int& boundary_type );  
+
+  /**
+   * @brief class to provide python binding to dwall functions
+   *
+   */
+  class pydwall {
+
+  public:   
+    pydwall() {};
+    virtual ~pydwall() {};
+    static float  dwall( const float x, const float y, const float z );
+  };
   
 }
 
