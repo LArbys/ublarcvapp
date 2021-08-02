@@ -4,6 +4,7 @@
 #include <vector>
 
 // larcv
+#include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/IOManager.h"
 #include "larcv/core/DataFormat/Image2D.h"
 
@@ -22,11 +23,12 @@
 namespace ublarcvapp {
 namespace mctools {
 
-  class MCPixelPGraph {
+  class MCPixelPGraph : public larcv::larcv_base {
   public:
 
     MCPixelPGraph()
-      : adc_tree("wire")
+      : larcv::larcv_base("MCPixelPGraph"),
+      adc_tree("wire")
       {};
     virtual ~MCPixelPGraph() {};
 
@@ -63,6 +65,7 @@ namespace mctools {
       std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (tick,wire) coordinates
       std::vector<float> start;   //< (x,y,z,t) before sce
       std::vector<float> imgpos4; //< (x,y,z,tick) after sce
+      std::vector< std::vector<float> > plane_bbox_twHW_vv; /// bounding box for pixels in each plane
       int origin;
 
       Node_t()
@@ -139,6 +142,9 @@ namespace mctools {
                       std::vector<float>& imgpos4,
                       larutil::SpaceChargeMicroBooNE& sce );                      
 
+    std::map<int,int> _shower_daughter2mother;
+    void _fill_shower_daughter2mother_map( const std::vector<larlite::mcshower>& mcsh_v );
+      
   public:
 
     // configuration parameters

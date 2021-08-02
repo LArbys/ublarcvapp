@@ -77,6 +77,9 @@ namespace mctools {
   {
 
     buildgraphonly( shower_v, track_v, mctruth_v );
+
+    // fill the daugher to mother shower ID map
+    _fill_shower_daughter2mother_map( shower_v );    
     
     std::vector<float> threshold_v(adc_v.size(),10.0);
     _scanPixelData( adc_v, segment_v, instance_v, ancestor_v, threshold_v );
@@ -123,12 +126,12 @@ namespace mctools {
 
     for (int vidx=0; vidx<(int)track_v.size(); vidx++ ) {
       const larlite::mctrack& mct = track_v[vidx];
-      // std::cout << "track[" << vidx << "] origin=" << mct.Origin()
-      //           << " tid=" << mct.TrackID()
-      //           << " mid=" << mct.MotherTrackID()
-      //           << " aid=" << mct.AncestorTrackID()
-      //           << " pid=" << mct.PdgCode()
-      //           << std::endl;
+      LARCV_DEBUG() << "track[" << vidx << "] origin=" << mct.Origin()
+                    << " tid=" << mct.TrackID()
+                    << " mid=" << mct.MotherTrackID()
+                    << " aid=" << mct.AncestorTrackID()
+                    << " pid=" << mct.PdgCode()
+                    << std::endl;
 
       // toss out neutrons? (sigh...)
       
@@ -160,12 +163,12 @@ namespace mctools {
     for (int vidx=0; vidx<(int)shower_v.size(); vidx++ ) {
       const larlite::mcshower& mcsh = shower_v[vidx];
 
-      // std::cout << "shower[" << vidx << "] origin=" << mcsh.Origin()
-      //           << " tid=" << mcsh.TrackID()
-      //           << " mid=" << mcsh.MotherTrackID()
-      //           << " aid=" << mcsh.AncestorTrackID()
-      //           << " pid=" << mcsh.PdgCode()
-      //           << std::endl;
+      LARCV_DEBUG() << "shower[" << vidx << "] origin=" << mcsh.Origin()
+                    << " tid=" << mcsh.TrackID()
+                    << " mid=" << mcsh.MotherTrackID()
+                    << " aid=" << mcsh.AncestorTrackID()
+                    << " pid=" << mcsh.PdgCode()
+                    << std::endl;
       
       //if ( mcsh.Origin()==1 ) {
       // neutrino origin
@@ -267,8 +270,25 @@ namespace mctools {
     Node_t dummy;
     dummy.tid = trackid;
     auto it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
-    if ( it==node_v.end() ) {
-      
+    if ( it==node_v.end() || it->tid!=dummy.tid ) {
+      // no node, check the daughter ID map
+      auto it_showerdaughter = _shower_daughter2mother.find( trackid );
+      if ( it_showerdaughter!=_shower_daughter2mother.end() ) {
+        // found an id
+        LARCV_DEBUG() << "  found map to mother: " << it_showerdaughter->second << std::endl;
+        dummy.tid = it_showerdaughter->second;
+      }
+      else {
+        // still nope
+        return nullptr;
+      }
+      // try again
+      it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
+      if ( it!=node_v.end() )
+        LARCV_DEBUG() << "  mother id maps to existing node" << std::endl;
+    }
+    
+    if ( it==node_v.end() || it->tid!=dummy.tid ) { 
       return nullptr;
     }
     //std::cout << "find trackid=" << trackid << ": " << strNodeInfo( *it ) << std::endl;    
@@ -448,6 +468,7 @@ namespace mctools {
             std::cerr << __FILE__ << ":L" << __LINE__ << " error getting ancestor pixel (" << r << "," << c << ")" << std::endl;
             continue;                        
           }
+
           int seg = 0; 
           try {
             seg = segment_v[p].pixel(r,c,__FILE__,__LINE__);
@@ -456,6 +477,9 @@ namespace mctools {
             std::cerr << __FILE__ << ":L" << __LINE__ << " error getting segment pixel (" << r << "," << c << ")" << std::endl;
             continue;                                    
           }
+
+          if ( tid<0 && (seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma) )
+            tid *= -1;
 
           if ( tid>0 || aid>0 )
             nabove_thresh_withlabel[p]++;
@@ -469,8 +493,10 @@ namespace mctools {
           if ( tid>0 ) {
             // first we use the instance ID          
             node = findTrackID( tid );
-            if ( node && node->tid!=tid )
-              node = nullptr; // reset
+            if ( node==nullptr && adc>10.0 )
+              LARCV_DEBUG() << "  no node for charge-pixel tid=" << tid << std::endl;
+            // if ( node && node->tid!=tid )
+            //   node = nullptr; // reset (what's this?)
           }
           
           // use ancestor if we could not find the node
@@ -482,12 +508,12 @@ namespace mctools {
 
           if ( node ) {
 
-            if ( node->tid!=tid && node->aid!=aid ) {
-              std::cout << "pixel assigned without matching tid or aid exactly: "
-                        << " pix-tid=" << tid << " pix-aid=" << aid
-                        << " node-tid=" << node->tid << " node-mid=" << node->mtid << " node-aid=" << node->aid
-                        << std::endl;
-            }
+            // if ( node->tid!=tid && node->aid!=aid ) {
+            //   std::cout << "pixel assigned without matching tid or aid exactly: "
+            //             << " pix-tid=" << tid << " pix-aid=" << aid
+            //             << " node-tid=" << node->tid << " node-mid=" << node->mtid << " node-aid=" << node->aid
+            //             << std::endl;
+            // }
             
             nassigned[p]++;
             node->pix_vv[p].push_back( tick );
@@ -500,23 +526,51 @@ namespace mctools {
           
         }//end of loop over columns
       }//end of loop over rows
+      
     }//end of loop over planes
 
-    std::cout << "[MCPixelPGraph::_scanPixelData]" << std::endl;
+    // no make bounding boxes
+    for ( auto& node : node_v ) {
+      node.plane_bbox_twHW_vv.clear();
+      node.plane_bbox_twHW_vv.resize(_nplanes);      
+      for (size_t p=0; p<_nplanes; p++ ) {
+        node.plane_bbox_twHW_vv[p].resize( 4, 0 );
+
+        float minx = 1e9;
+        float maxx = 0;
+        float miny = 1e9;
+        float maxy = 0.;
+        int npix = node.pix_vv[p].size()/2;
+        for ( int ipix=0; ipix<npix; ipix++) {
+          float wire = node.pix_vv[p][2*ipix+1];
+          float tick = node.pix_vv[p][2*ipix];
+          if ( minx>wire ) minx = wire;
+          if ( maxx<wire ) maxx = wire;
+          if ( miny>tick ) miny = tick;
+          if ( maxy<tick ) maxy = tick;
+        }
+        node.plane_bbox_twHW_vv[p][0] = 0.5*(maxy+miny); // middle tick
+        node.plane_bbox_twHW_vv[p][1] = 0.5*(maxx+minx); // middle wire
+        node.plane_bbox_twHW_vv[p][2] = 0.5*fabs(maxy-miny); // half-height
+        node.plane_bbox_twHW_vv[p][3] = 0.5*fabs(maxx-minx); // half-width
+      }// end of loop over planes 
+    }//end of loop over nodes
+
+    LARCV_INFO() << "[MCPixelPGraph::_scanPixelData]" << std::endl;
     for (size_t p=0; p<_nplanes; p++ ) {
-      std::cout << " plane[" << p << "]"
-                << " num above threshold=" << nabove_thresh[p]
-                << " and with label=" << nabove_thresh_withlabel[p]
-                << " num assigned=" << nassigned[p]
-                << " num unassigned=" << _unassigned_pixels_vv[p].size()/2;
+      LARCV_INFO() << " plane[" << p << "]"
+                   << " num above threshold=" << nabove_thresh[p]
+                   << " and with label=" << nabove_thresh_withlabel[p]
+                   << " num assigned=" << nassigned[p]
+                   << " num unassigned=" << _unassigned_pixels_vv[p].size()/2;
       if ( nabove_thresh_withlabel[p]>0 )
-        std::cout << " fraction=" << float(nassigned[p])/float(nabove_thresh_withlabel[p]);
-      std::cout << std::endl;
+        LARCV_INFO() << " fraction=" << float(nassigned[p])/float(nabove_thresh_withlabel[p]);
+      LARCV_INFO() << std::endl;
     }
-    std::cout << "  ancestor list from all shower pixels: [";
+    LARCV_INFO() << "  ancestor list from all shower pixels: [";
     for ( auto& aid : shower_ancestor_ids )
-      std::cout << aid << " ";
-    std::cout << "]" << std::endl;
+      LARCV_INFO() << aid << " ";
+    LARCV_INFO() << "]" << std::endl;
     
   }
 
@@ -664,6 +718,24 @@ namespace mctools {
     // now make x an apparent x
     imgpos4[0] = (tick-3200)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
     
+  }
+
+  void MCPixelPGraph::_fill_shower_daughter2mother_map( const std::vector<larlite::mcshower>& mcsh_v )
+  {
+    LARCV_DEBUG() << "daughter2mother fill" << std::endl;
+    _shower_daughter2mother.clear();
+
+    
+    for (auto const& mcsh : mcsh_v ) {      
+      int showerid = mcsh.TrackID();
+      std::vector<unsigned int> dlist = mcsh.DaughterTrackID();
+      std::sort( dlist.begin(), dlist.end() );
+      for (auto const& daughterid : dlist ) {
+        _shower_daughter2mother[daughterid]= showerid;
+        LARCV_DEBUG() << "  " << daughterid << " -> " << showerid << std::endl;
+      }
+    }
+    LARCV_INFO() << "Num entries in daughter2mother map: " << _shower_daughter2mother.size() << std::endl;
   }
   
 }

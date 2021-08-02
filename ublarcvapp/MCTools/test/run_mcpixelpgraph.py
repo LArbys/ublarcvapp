@@ -37,6 +37,7 @@ print "Number of entries: ",nentries
 print "Start loop."
 
 mcpg = ublarcvapp.mctools.MCPixelPGraph()
+mcpg.set_verbosity( larcv.msg.kDEBUG )
 mcpg.set_adc_treename( args.adc )
 
 tmp = rt.TFile("temp.root","recreate")
@@ -68,21 +69,33 @@ for ientry in xrange( nentries ):
     mcpg.printAllNodeInfo()
     #mcpg.printGraph()
 
-    primaries = mcpg.getPrimaryParticles()    
+    #primaries = mcpg.getPrimaryParticles()
+    primaries = mcpg.getNeutrinoParticles()
 
     # get primary electron, make tgraph of pixels
     graph_v = []
+    bbox_v  = []
     for i in xrange(primaries.size()):
         node = primaries.at(i)
-        #print "primary pid[",node.pid,"]"
-        if node.pid in [11,2212,13,-13]:
-            #print "making tgraph for pid=",node.pid
+        print "primary pid[",node.pid,"]"
+        if node.pid in [11,2212,13,-13,22,211,-211]:
+            print "  making tgraph for pid=",node.pid
             e_v = []
+            bb_v = []
             for p in xrange(3):
                 if node.pix_vv[p].size()==0:
                     e_v.append(None)
+                    bb_v.append(None)
                     continue
                 g = rt.TGraph( node.pix_vv[p].size()/2 )
+
+                bb = rt.TBox( node.plane_bbox_twHW_vv[p][1]-node.plane_bbox_twHW_vv[p][3],
+                              node.plane_bbox_twHW_vv[p][0]-node.plane_bbox_twHW_vv[p][2],
+                              node.plane_bbox_twHW_vv[p][1]+node.plane_bbox_twHW_vv[p][3],
+                              node.plane_bbox_twHW_vv[p][0]+node.plane_bbox_twHW_vv[p][2] )
+                bb.SetFillStyle(0)
+                bb.SetLineWidth(2)
+                
                 for j in xrange( node.pix_vv[p].size()/2 ):
                     g.SetPoint(j, node.pix_vv[p][2*j+1], node.pix_vv[p][2*j] ) # wire, tick
                 g.SetMarkerStyle(20)
@@ -90,17 +103,31 @@ for ientry in xrange( nentries ):
                 if node.pid==11:
                     if node.origin==1:
                         g.SetMarkerColor(rt.kRed)
+                        bb.SetLineColor(rt.kRed)
                 elif node.pid in [13,-13]:
                     if node.origin==2:
                         g.SetMarkerColor(rt.kGreen)
+                        bb.SetLineColor(rt.kGreen)                        
                     elif node.origin==1:
                         g.SetMarkerColor(rt.kMagenta)
+                        bb.SetLineColor(rt.kMagenta)                        
                 elif node.pid in [2212]:
                     if node.origin==1:                    
                         g.SetMarkerColor(rt.kBlue)
+                        bb.SetLineColor(rt.kBlue)                        
+                elif node.pid in [22]:
+                    g.SetMarkerColor(rt.kOrange)
+                    bb.SetLineColor(rt.kOrange)                    
+                elif node.pid in [211,-211]:
+                    g.SetMarkerColor(rt.kViolet)
+                    bb.SetLineColor(rt.kViolet)                    
                 e_v.append(g)
+                bb_v.append(bb)
             graph_v.append(e_v)
+            bbox_v.append(bb_v)
 
+    print "num graphs: ",len(graph_v)
+    
     #draw canvas
     for p in xrange(3):
         c.cd(p+1)
@@ -108,6 +135,9 @@ for ientry in xrange( nentries ):
         for e_v in graph_v:
             if e_v[p] is not None:
                 e_v[p].Draw("P")
+        for bb_v in bbox_v:
+            if bb_v[p] is not None:
+                bb_v[p].Draw()
     c.Update()
 
     print "[enter to continue]"
