@@ -5,6 +5,7 @@ parser.add_argument("-ill", "--input-larlite",required=True,type=str,help="Input
 parser.add_argument("-ilcv","--input-larcv",required=True,type=str,help="Input LArCV file")
 parser.add_argument("-adc", "--adc",type=str,default="wire",help="Name of tree with Wire ADC values [default: wire]")
 parser.add_argument("-tb",  "--tick-backward",action='store_true',default=False,help="Input LArCV data is tick-backward [default: false]")
+parser.add_argument("-d",   "--debug", action='store_true', default=False, help="Run in debug mode")
 args = parser.parse_args()
 
 import ROOT as rt
@@ -37,7 +38,10 @@ print "Number of entries: ",nentries
 print "Start loop."
 
 mcpg = ublarcvapp.mctools.MCPixelPGraph()
-mcpg.set_verbosity( larcv.msg.kDEBUG )
+if args.debug:
+    mcpg.set_verbosity( larcv.msg.kDEBUG )
+else:
+    mcpg.set_verbosity( larcv.msg.kINFO )
 mcpg.set_adc_treename( args.adc )
 
 tmp = rt.TFile("temp.root","recreate")
@@ -70,7 +74,7 @@ for ientry in xrange( nentries ):
     #mcpg.printGraph()
 
     #primaries = mcpg.getPrimaryParticles()
-    primaries = mcpg.getNeutrinoParticles()
+    primaries = mcpg.node_v
 
     # get primary electron, make tgraph of pixels
     graph_v = []

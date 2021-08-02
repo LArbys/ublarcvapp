@@ -1,5 +1,7 @@
 #include "MCPixelPGraph.h"
 
+#include <sstream>
+
 // larcv
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/DataFormatTypes.h"
@@ -317,17 +319,17 @@ namespace mctools {
     ss << "node[" << node.nodeidx << "] "
        << " (type,vidx)=(" << node.type << "," << node.vidx << ") "
        << " origin=" << node.origin
-       << " trackid=" << node.tid
-       << " motherid=" << node.mtid      
+       << " tid=" << node.tid
+       << " mid=" << node.mtid      
        << " aid=" << node.aid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
-       << " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3] << ")"
+      //<< " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3] << ")"
        << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << ")"
       //<< " (mid,mother)=(" << node.mid << "," << node.mother << ") "
-       << " (mid,mother)=(" << node.mid << ") "
+      //<< " (mid,mother)=(" << node.mid << ") "
        << " ndaughters=" << node.daughter_v.size()
-       << " npixels=(";
+       << " npixs=(";
     for ( size_t i=0; i<node.pix_vv.size(); i++ ) {
       ss << node.pix_vv[i].size()/2;
       if ( i+1<node.pix_vv.size() ) ss << ", ";
@@ -556,21 +558,23 @@ namespace mctools {
       }// end of loop over planes 
     }//end of loop over nodes
 
-    LARCV_INFO() << "[MCPixelPGraph::_scanPixelData]" << std::endl;
     for (size_t p=0; p<_nplanes; p++ ) {
-      LARCV_INFO() << " plane[" << p << "]"
-                   << " num above threshold=" << nabove_thresh[p]
-                   << " and with label=" << nabove_thresh_withlabel[p]
-                   << " num assigned=" << nassigned[p]
-                   << " num unassigned=" << _unassigned_pixels_vv[p].size()/2;
+      std::stringstream msg;      
+      msg << " plane[" << p << "]"
+          << " num above threshold=" << nabove_thresh[p]
+          << " and with label=" << nabove_thresh_withlabel[p]
+          << " num assigned=" << nassigned[p]
+          << " num unassigned=" << _unassigned_pixels_vv[p].size()/2;
       if ( nabove_thresh_withlabel[p]>0 )
-        LARCV_INFO() << " fraction=" << float(nassigned[p])/float(nabove_thresh_withlabel[p]);
-      LARCV_INFO() << std::endl;
+        msg << " fraction=" << float(nassigned[p])/float(nabove_thresh_withlabel[p]);
+      LARCV_INFO() << msg.str() << std::endl;
     }
-    LARCV_INFO() << "  ancestor list from all shower pixels: [";
+    std::stringstream msg;
+    msg << "  ancestor list from all shower pixels: [";
     for ( auto& aid : shower_ancestor_ids )
-      LARCV_INFO() << aid << " ";
-    LARCV_INFO() << "]" << std::endl;
+      msg << aid << " ";
+    msg << "]";
+    LARCV_INFO() << msg.str() << std::endl;
     
   }
 
