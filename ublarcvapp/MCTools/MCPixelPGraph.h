@@ -142,6 +142,8 @@ namespace mctools {
                       std::vector<float>& imgpos4,
                       larutil::SpaceChargeMicroBooNE& sce );                      
 
+  public:
+    
     std::map<int,int> _shower_daughter2mother;
     void _fill_shower_daughter2mother_map( const std::vector<larlite::mcshower>& mcsh_v );
       
