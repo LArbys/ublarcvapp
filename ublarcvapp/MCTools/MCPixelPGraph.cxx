@@ -538,11 +538,15 @@ namespace mctools {
       for (size_t p=0; p<_nplanes; p++ ) {
         node.plane_bbox_twHW_vv[p].resize( 4, 0 );
 
+        int npix = node.pix_vv[p].size()/2;
+        if ( npix==0 )
+          continue;
+        
         float minx = 1e9;
         float maxx = 0;
         float miny = 1e9;
         float maxy = 0.;
-        int npix = node.pix_vv[p].size()/2;
+
         for ( int ipix=0; ipix<npix; ipix++) {
           float wire = node.pix_vv[p][2*ipix+1];
           float tick = node.pix_vv[p][2*ipix];
