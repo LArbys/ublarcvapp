@@ -145,7 +145,7 @@ namespace ublarcvapp {
     }
     
     //Perform PCA analysis
-    cv::PCA pca_analysis(data_pts, cv::Mat(), CV_PCA_DATA_AS_ROW);
+    cv::PCA pca_analysis(data_pts, cv::Mat(), cv::PCA::DATA_AS_ROW);
     //Store the center of the object
     center = cv::Point(static_cast<int>(pca_analysis.mean.at<double>(0, 0)),
 		       static_cast<int>(pca_analysis.mean.at<double>(0, 1)));

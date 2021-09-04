@@ -717,9 +717,9 @@ namespace ublarcvapp {
     
     // (2) fit line using opencv function
     std::vector<float> startline; // 6 parameters (vx, vy, vz, x0, y0, z0 )
-    cv::fitLine( point3d_start, startline, CV_DIST_L2, 0.0, 0.01, 0.01 );
+    cv::fitLine( point3d_start, startline, cv::DIST_L2, 0.0, 0.01, 0.01 );
     std::vector<float> endline; // 6 parameters (vx, vy, vz, x0, y0, z0 )
-    cv::fitLine( point3d_end, endline, CV_DIST_L2, 0.0, 0.01, 0.01 );
+    cv::fitLine( point3d_end, endline, cv::DIST_L2, 0.0, 0.01, 0.01 );
 
     // get direction from start to end to help us orient the lines
     std::vector<float> cluster_dir(3); // min -> max
@@ -876,7 +876,7 @@ namespace ublarcvapp {
       for ( auto& idx : cluster_indices[p] )
 	contour_list.push_back( plane_contours_v[p][idx] );
       for (int ictr=0; ictr<(int)contour_list.size(); ictr++)
-	cv::drawContours( cluster.m_cvimg_v[p], contour_list, ictr, cv::Scalar(255,0,0), CV_FILLED );	
+	cv::drawContours( cluster.m_cvimg_v[p], contour_list, ictr, cv::Scalar(255,0,0), cv::FILLED );	
     }
 
     // fill in the path

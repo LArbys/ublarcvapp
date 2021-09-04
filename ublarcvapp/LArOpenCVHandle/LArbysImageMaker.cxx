@@ -67,7 +67,7 @@ namespace larcv {
 		    << "Reading  image (rows,cols) = (" << meta.num_pixel_row() << "," << meta.num_pixel_column() << ") "
 		    << " ... (height,width) = (" << meta.height() << "," << meta.width() << ")" << std::endl;
 
-      std::get<0>(ret) = cv::Mat(cvmeta.cols(),cvmeta.rows(),CV_8UC1,cvScalar(0.));
+      std::get<0>(ret) = cv::Mat(cvmeta.cols(),cvmeta.rows(),CV_8UC1,cv::Scalar(0.));
       std::get<1>(ret) = meta;
       auto& mat  = std::get<0>(ret);
       
