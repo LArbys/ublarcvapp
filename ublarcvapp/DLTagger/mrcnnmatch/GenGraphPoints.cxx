@@ -1,7 +1,7 @@
 #include "GenGraphPoints.h"
 
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 #include "ublarcvapp/UBWireTool/UBWireTool.h"
 

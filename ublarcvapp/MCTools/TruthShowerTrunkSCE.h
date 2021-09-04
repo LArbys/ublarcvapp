@@ -2,9 +2,9 @@
 #define __UBLARCVAPP_MCTOOLS_TRUTHSHOWERTRUNKSCE_H__
 
 #include <vector>
-#include "LArUtil/SpaceChargeMicroBooNE.h"
-#include "DataFormat/mcshower.h"
-#include "DataFormat/track.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/DataFormat/mcshower.h"
+#include "larlite/DataFormat/track.h"
 #include "larcv/core/Base/larcv_base.h"
 
 namespace ublarcvapp {

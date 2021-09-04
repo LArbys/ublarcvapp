@@ -9,7 +9,7 @@
 
 #ifdef HAS_LARLITE
 //larlite
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/Geometry.h"
 #endif
 
 // ROOT TRandom3

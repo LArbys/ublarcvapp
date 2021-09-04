@@ -14,7 +14,7 @@
 #include <array>
 
 // larlite
-#include "DataFormat/storage_manager.h"
+#include "larlite/DataFormat/storage_manager.h"
 
 // larcv
 #include "larcv/core/Base/larcv_base.h"

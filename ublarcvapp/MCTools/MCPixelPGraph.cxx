@@ -7,12 +7,12 @@
 #include "larcv/core/DataFormat/DataFormatTypes.h"
 
 // larlite
-#include "DataFormat/mctrack.h"
-#include "DataFormat/mcshower.h"
-#include "DataFormat/mctruth.h"
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/mcshower.h"
+#include "larlite/DataFormat/mctruth.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 #include "crossingPointsAnaMethods.h"
 

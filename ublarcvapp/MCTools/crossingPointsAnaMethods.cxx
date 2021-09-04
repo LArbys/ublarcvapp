@@ -6,11 +6,11 @@
 #include "TTree.h"
 #include "TLorentzVector.h"
 
-#include "LArUtil/SpaceChargeMicroBooNE.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
-#include "DataFormat/mctrack.h"
-#include "DataFormat/trigger.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/trigger.h"
 
 // ublarcvapp
 #include "ublarcvapp/UBWireTool/UBWireTool.h"

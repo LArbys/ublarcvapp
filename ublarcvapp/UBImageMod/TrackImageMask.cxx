@@ -1,7 +1,7 @@
 #include "TrackImageMask.h"
 
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 #include "larcv/core/DataFormat/ImageMeta.h"
 
 #include <chrono>

@@ -1,7 +1,7 @@
 #include "DLTaggerProcess.h"
 
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/EventChStatus.h"

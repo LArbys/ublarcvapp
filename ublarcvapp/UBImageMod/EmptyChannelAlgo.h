@@ -4,8 +4,8 @@
 #include <vector>
 
 // larlite
-#include "larlite/core/Base/DataFormatConstants.h"
-#include "larlite/core/DataFormat/chstatus.h" // needed because of duplicate name!
+#include "larlite/Base/DataFormatConstants.h"
+#include "larlite/DataFormat/chstatus.h" // needed because of duplicate name!
 
 // larcv
 #include "larcv/core/DataFormat/Image2D.h"

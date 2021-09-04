@@ -7,13 +7,13 @@
 #include "larcv/core/DataFormat/EventROI.h"
 #include "larcv/core/DataFormat/EventChStatus.h"
 
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/DetectorProperties.h"
-#include "LArUtil/TimeService.h"
-#include "DataFormat/mctruth.h"
-#include "DataFormat/mctrack.h"
-#include "DataFormat/mcshower.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/DetectorProperties.h"
+#include "larlite/LArUtil/TimeService.h"
+#include "larlite/DataFormat/mctruth.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/mcshower.h"
 
 #include "ublarcvapp/ubdllee/dwall.h"
 

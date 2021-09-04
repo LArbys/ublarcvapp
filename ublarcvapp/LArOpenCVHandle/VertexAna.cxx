@@ -7,8 +7,8 @@
 #include "larcv/core/DataFormat/EventPixel2D.h"
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "LArOpenCV/ImageCluster/Base/ImageClusterTypes.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 #include "LArbysUtils.h"
 
 namespace larcv {

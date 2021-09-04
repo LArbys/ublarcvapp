@@ -20,7 +20,7 @@
 #include "larcv/core/DataFormat/EventChStatus.h"
 #include "larcv/core/DataFormat/IOManager.h"
 
-#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 #include "TTree.h"
 
 #include "ublarcvapp/LArliteHandler/LArliteManager.h"

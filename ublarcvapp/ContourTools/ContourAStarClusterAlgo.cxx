@@ -4,8 +4,8 @@
 #include <stdexcept>
 
 // larlite
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
 
 // larcv
 #include "larcv/core/CVUtil/CVUtil.h"

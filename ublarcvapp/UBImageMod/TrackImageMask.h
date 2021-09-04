@@ -3,7 +3,7 @@
 
 #include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/Image2D.h"
-#include "DataFormat/track.h"
+#include "larlite/DataFormat/track.h"
 
 namespace ublarcvapp {
 namespace ubimagemod {

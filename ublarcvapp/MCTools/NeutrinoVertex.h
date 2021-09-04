@@ -10,8 +10,8 @@
 #include <vector>
 
 // larlite/core
-#include "DataFormat/storage_manager.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/DataFormat/storage_manager.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 namespace ublarcvapp {
 namespace mctools {

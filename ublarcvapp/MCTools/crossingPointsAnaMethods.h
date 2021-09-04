@@ -4,8 +4,8 @@
 #include <vector>
 
 // larlite
-#include "DataFormat/mctrack.h"
-#include "DataFormat/mctrajectory.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/mctrajectory.h"
 
 class TTree;
 

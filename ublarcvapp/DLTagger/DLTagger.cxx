@@ -6,8 +6,8 @@
 #include "ublarcvapp/ubdllee/FixedCROIFromFlashAlgo.h"
 #include "ublarcvapp/ContourTools/ContourClusterAlgo.h"
 
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
 
 #include "Geo2D/Core/Geo2D.h"
 

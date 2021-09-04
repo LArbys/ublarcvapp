@@ -6,7 +6,7 @@
 #include <string>
 #include "larcv/core/Processor/ProcessFactory.h"
 #include "larcv/core/DataFormat/IOManager.h"
-#include "DataFormat/storage_manager.h"
+#include "larlite/DataFormat/storage_manager.h"
 
 namespace ublarcvapp {
 namespace llcv {

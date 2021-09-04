@@ -1,7 +1,7 @@
 #include "MRCNNMatchTypes.h"
 
 // larlite
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/Geometry.h"
 
 namespace ublarcvapp {
 namespace dltagger {

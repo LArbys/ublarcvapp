@@ -4,7 +4,7 @@
 #include <vector>
 
 // larlite
-#include "DataFormat/track.h"
+#include "larlite/DataFormat/track.h"
 
 // larcv
 #include "larcv/core/Base/larcv_base.h"

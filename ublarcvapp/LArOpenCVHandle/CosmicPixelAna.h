@@ -4,7 +4,7 @@
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/Processor/ProcessFactory.h"
 #include "LArbysImageMaker.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 namespace larcv {
 

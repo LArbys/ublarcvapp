@@ -2,8 +2,8 @@
 #define LARBYSUTILS_CXX
 
 #include "LArbysUtils.h"
-#include "LArUtil/GeometryHelper.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/GeometryHelper.h"
+#include "larlite/LArUtil/LArProperties.h"
 #include <numeric>
 #include <assert.h>
 

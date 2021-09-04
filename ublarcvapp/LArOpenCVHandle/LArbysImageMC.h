@@ -6,7 +6,7 @@
 
 #include <vector>
 #include "TTree.h"
-#include "LArUtil/PxUtils.h"
+#include "larlite/LArUtil/PxUtils.h"
 #include "larcv/core/DataFormat/Image2D.h"
 #include "Geo2D/Core/HalfLine.h"
 #include "Geo2D/Core/Line.h"

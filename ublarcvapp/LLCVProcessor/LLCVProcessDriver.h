@@ -11,7 +11,7 @@
 #include "larcv/core/Processor/ProcessDriver.h"
 
 // larlite
-#include "core/DataFormat/storage_manager.h"
+#include "larlite/DataFormat/storage_manager.h"
 
 #include "ublarcvapp/LArliteHandler/LArliteManager.h"
 

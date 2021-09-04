@@ -9,10 +9,10 @@
 #include "larcv/core/DataFormat/Image2D.h"
 
 // larlite
-#include "DataFormat/storage_manager.h"
-#include "DataFormat/mcshower.h"
-#include "DataFormat/mctrack.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/DataFormat/storage_manager.h"
+#include "larlite/DataFormat/mcshower.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 /**
  * Determine particle graph. Collect pixels for each particle.
