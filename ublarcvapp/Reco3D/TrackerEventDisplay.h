@@ -19,8 +19,8 @@
 #include "TTree.h"
 #include "TVector3.h"
 
-#include "DataFormat/storage_manager.h"
-#include "DataFormat/track.h"
+#include "larlite/DataFormat/storage_manager.h"
+#include "larlite/DataFormat/track.h"
 
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/Processor/ProcessFactory.h"

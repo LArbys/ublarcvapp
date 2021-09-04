@@ -6,8 +6,8 @@
 #include <cmath>
 
 // larlite
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
 
 // ublarcvapp
 #include "ublarcvapp/UBWireTool/UBWireTool.h"

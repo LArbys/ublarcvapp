@@ -2,15 +2,16 @@
 #define LARLITE_AStarTracker_CXX
 
 #include "AStarTracker.h"
-#include "DataFormat/track.h"
-#include "DataFormat/vertex.h"
-#include "DataFormat/hit.h"
+
+#include "larlite/DataFormat/track.h"
+#include "larlite/DataFormat/vertex.h"
+#include "larlite/DataFormat/hit.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/wire.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/GeometryHelper.h"
+#include "larlite/LArUtil/TimeService.h"
 #include "larcv/core/DataFormat/Image2D.h"
-#include "DataFormat/mctrack.h"
-#include "DataFormat/wire.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/GeometryHelper.h"
-#include "LArUtil/TimeService.h"
 
 #include "TCanvas.h"
 #include "TF1.h"

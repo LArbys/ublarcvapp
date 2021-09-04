@@ -2,7 +2,7 @@
 #define __UBLARCVAPP_RECO3D_TRACK_REVERSER_H__
 
 #include "larcv/core/Base/larcv_base.h"
-#include "DataFormat/track.h"
+#include "larlite/DataFormat/track.h"
 
 namespace ublarcvapp {
 namespace reco3d {
