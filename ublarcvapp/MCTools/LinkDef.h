@@ -23,6 +23,7 @@
 #pragma link C++ class ublarcvapp::mctools::NeutrinoPixelFilter+;
 #pragma link C++ class ublarcvapp::mctools::TruthTrackSCE+;
 #pragma link C++ class ublarcvapp::mctools::TruthShowerTrunkSCE+;
+#pragma link C++ class ublarcvapp::mctools::FlashMatcher+;
 #endif
 
 
