@@ -20,9 +20,9 @@ namespace mctools {
     FlashMatcher() {};
     virtual ~FlashMatcher() {};
 
-    static Float_t grabTickFromMCTrack( larlite::storage_manager& ioll );
-    static std::vector<double> grabTickFromOpflash( larlite::storage_manager& opio );
-    static Float_t matchTicksFromTrackAndFlash( larlite::storage_manager& opio );
+    static double grabTickFromMCTrack( larlite::storage_manager& ioll );
+    static std::vector<double> grabTickFromOpflash( larlite::storage_manager& opio, std::string producer );
+    static double matchTicks( double mctrack_tick, std::vector<double> flash_ticks );
 
   };
 

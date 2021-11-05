@@ -52,11 +52,12 @@ for ientry in range( nentries ):
     opio.go_to(ientry)
 
     track_tick = fmutil.grabTickFromMCTrack( ioll )
-    op_tick = fmutil.grabTickFromOpflash( opio )
+    op_tick = fmutil.grabTickFromOpflash( opio, "simpleFlashCosmic" )
 #    fmtrack_tick = vtxutil.getImageCoords( ioll )
     print("track_tick",track_tick)
     print("op_tick",op_tick)
 #    iolcv.read_entry(ientry)
-
+    match = fmutil.matchTicks( track_tick, op_tick )
+    print("Found match: ", match )
 
 print("=== FIN ==")
