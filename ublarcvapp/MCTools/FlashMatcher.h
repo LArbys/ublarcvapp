@@ -5,11 +5,8 @@
  * class for flash matching with mc truth
  */
 
-#include <vector>
-
 // larlite/core
 #include "larlite/DataFormat/storage_manager.h"
-#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 namespace ublarcvapp {
 namespace mctools {

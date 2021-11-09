@@ -1,8 +1,5 @@
 #include "FlashMatcher.h"
 
-#include <algorithm>
-
-#include "larlite/LArUtil/Geometry.h"
 #include "larlite/DataFormat/mctrack.h"
 #include "larlite/DataFormat/opflash.h"
 
@@ -12,12 +9,11 @@ namespace ublarcvapp {
 namespace mctools {
 
   /*
-   * grab time coordinate -> tick from mctrack mcstep
+   * grab time coordinate from mctrack mcstep -> convert to tick
    *
    * @param[in] ioll The larlite storage manager that contains mctruth class
-   * @return tick
+   * @return tuple with tick, producer string, and cosmic flag
    */
-
   std::tuple<double, std::string, Bool_t> FlashMatcher::grabTickFromMCTrack( larlite::storage_manager& ioll )
   {
     larlite::event_mctrack* ev_mctrack
@@ -38,8 +34,6 @@ namespace mctools {
 
     const larlite::mcstep& start = mctrack.Start();
 
-    //std::cout << "Time: " << start.T() << std::endl;
-
     larutil::SpaceChargeMicroBooNE* _sce = nullptr;
     double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
 
@@ -47,9 +41,14 @@ namespace mctools {
 
   }
 
+  /*
+   * grab time coordinate from opflash -> convert to tick
+   *
+   * @param[in] opio The larlite storage manager that contains opflash class
+   * @param[in] producer String labeling the producer, e.g. "simpleFlashBeam"
+   * @return Vector containing all opflash times for the track in ticks
+   */
   std::vector<double> FlashMatcher::grabTickFromOpflash( larlite::storage_manager& opio, std::string producer ) {
-
-    //std::cout << "If this is a neutrino, this would print 1: " << isNeutrino << std::endl;
 
     std::vector<double> tickContainer = {};
 
@@ -68,9 +67,18 @@ namespace mctools {
   return tickContainer;
   }
 
+  /*
+   * matches mctrack tick to opflash tick
+   * for cosmics, will return -999.999 if there is no opflash found within the threshold
+   * for beam tracks, will find the closest matching opflash
+   *
+   * @param[in] mctrackTick Time in ticks for the mctrack to be matched to
+   * @param[in] flashTicks Vector of potential opflash matches in ticks
+   * @param[in] isCosmic Cosmic flag to determine threshold
+   *
+   * @return Value of the closest matching opflash tick
+   */
   double FlashMatcher::matchTicks( double mctrackTick, std::vector<double> flashTicks, Bool_t isCosmic ) {
-
-    // for cosmic tracks, will return -999.999 if there is no opflash found within the threshold
 
     double threshold;
     if (isCosmic == 1) {
