@@ -8,18 +8,28 @@
 namespace ublarcvapp {
 namespace mctools {
 
+
+  int FlashMatcher::numTracks( larlite::storage_manager& ioll ) {
+    larlite::event_mctrack* ev_mctrack
+      = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
+
+    int numTracks = ev_mctrack->size();
+
+    return numTracks;
+  }
   /*
    * grab time coordinate from mctrack mcstep -> convert to tick
    *
    * @param[in] ioll The larlite storage manager that contains mctruth class
    * @return tuple with tick, producer string, and cosmic flag
    */
-  std::tuple<double, std::string, Bool_t> FlashMatcher::grabTickFromMCTrack( larlite::storage_manager& ioll )
-  {
+  std::tuple<double, std::string, Bool_t> FlashMatcher::grabTickFromMCTrack( larlite::storage_manager& ioll, int i ) {
     larlite::event_mctrack* ev_mctrack
       = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
 
-    auto const& mctrack = ev_mctrack->at(0);
+    std::cout << "Number of tracks in event: " << ev_mctrack->size() << std::endl;
+
+    auto const& mctrack = ev_mctrack->at(i);
 
     std::cout << "Origin: " << mctrack.Origin() << std::endl;
 
@@ -82,19 +92,22 @@ namespace mctools {
 
     double threshold;
     if (isCosmic == 1) {
-        threshold = 400.0; // 1 tick = 0.5 us
+        threshold = 2.0; // 1 tick = 0.5 us
     } else {
       threshold = std::numeric_limits<double>::infinity();
     }
 
-    auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), mctrackTick );
+    if (flashTicks.empty() == 1)
+      return 999.999;
 
-    double a = *(match - 1);
+    auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), mctrackTick );
     double b = *(match);
 
-    if (match == flashTicks.begin() && fabs(b-mctrackTick) <= threshold) {
+    if (match == flashTicks.begin() && fabs(b - mctrackTick) <= threshold) {
       return flashTicks[0];
     }
+
+    double a = *(match - 1);
 
     if (fabs(mctrackTick - a) < fabs(mctrackTick - b) && fabs(mctrackTick - a) <= threshold) {
       return flashTicks [ match - flashTicks.begin() - 1 ];
