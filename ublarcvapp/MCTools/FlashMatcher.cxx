@@ -1,5 +1,6 @@
 #include "FlashMatcher.h"
 
+#include "larlite/DataFormat/mcshower.h"
 #include "larlite/DataFormat/mctrack.h"
 #include "larlite/DataFormat/opflash.h"
 
@@ -17,13 +18,24 @@ namespace mctools {
 
     return numTracks;
   }
+
+  int FlashMatcher::numShowers( larlite::storage_manager& ioll ) {
+
+    larlite::event_mcshower* ev_mcshower
+      = (larlite::event_mcshower*)ioll.get_data(larlite::data::kMCShower,"mcreco");
+
+    int numShowers = ev_mcshower->size();
+
+    return numShowers;
+
+  }
   /*
    * grab time coordinate from mctrack mcstep -> convert to tick
    *
    * @param[in] ioll The larlite storage manager that contains mctruth class
    * @return tuple with tick, producer string, and cosmic flag
    */
-  std::tuple<double, std::string, Bool_t> FlashMatcher::grabTickFromMCTrack( larlite::storage_manager& ioll, int i ) {
+  double FlashMatcher::grabTickFromMCTrack( larlite::storage_manager& ioll, int i ) {
     larlite::event_mctrack* ev_mctrack
       = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
 
@@ -31,12 +43,15 @@ namespace mctools {
 
     auto const& mctrack = ev_mctrack->at(i);
 
+    std::cout << "TrackID is: " << mctrack.TrackID() << std::endl;
+    std::cout << "Mother TrackID is: " << mctrack.MotherTrackID() << std::endl;
+    std::cout << "PDG is: " << mctrack.PdgCode() << std::endl;
+
     std::cout << "Origin: " << mctrack.Origin() << std::endl;
 
-    std::string producer;
-    Bool_t isCosmic;
     if ( mctrack.Origin() == 1 ) {
       producer = "simpleFlashBeam";
+      isCosmic = 0;
     } else {
       producer = "simpleFlashCosmic";
       isCosmic = 1;
@@ -47,7 +62,50 @@ namespace mctools {
     larutil::SpaceChargeMicroBooNE* _sce = nullptr;
     double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
 
-    return std::make_tuple( tick, producer, isCosmic );
+    // check for primary muons (cosmic)
+    if ( isCosmic == 1 && mctrack.TrackID() != mctrack.MotherTrackID() && mctrack.PdgCode() != 13 ) {
+      tick = -999.997;
+    }
+
+    return tick;
+
+  }
+
+  double FlashMatcher::grabTickFromMCShower( larlite::storage_manager& ioll, int i ) {
+
+    larlite::event_mcshower* ev_mcshower
+      = (larlite::event_mcshower*)ioll.get_data(larlite::data::kMCShower,"mcreco");
+
+    std::cout << "Number of showers in event: " << ev_mcshower->size() << std::endl;
+
+    auto const& mcshower = ev_mcshower->at(i);
+
+    std::cout << "TrackID is: " << mcshower.TrackID() << std::endl;
+    std::cout << "Mother TrackID is: " << mcshower.MotherTrackID() << std::endl;
+    std::cout << "PDG is: " << mcshower.PdgCode() << std::endl;
+
+    std::cout << "Origin: " << mcshower.Origin() << std::endl;
+
+    if ( mcshower.Origin() == 1 ) {
+      producer = "simpleFlashBeam";
+      isCosmic = 0;
+    } else {
+      producer = "simpleFlashCosmic";
+      isCosmic = 1;
+    }
+
+    const larlite::mcstep& start = mcshower.Start();
+
+    larutil::SpaceChargeMicroBooNE* _sce = nullptr;
+    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
+
+    // check for primary muons (cosmic)
+    if ( isCosmic == 1 && mcshower.TrackID() != mcshower.MotherTrackID() ) {
+      tick = -999.997;
+    }
+
+    return tick;
+
 
   }
 
@@ -58,7 +116,7 @@ namespace mctools {
    * @param[in] producer String labeling the producer, e.g. "simpleFlashBeam"
    * @return Vector containing all opflash times for the track in ticks
    */
-  std::vector<double> FlashMatcher::grabTickFromOpflash( larlite::storage_manager& opio, std::string producer ) {
+  std::vector<double> FlashMatcher::grabTickFromOpflash( larlite::storage_manager& opio ) {
 
     std::vector<double> tickContainer = {};
 
@@ -88,7 +146,7 @@ namespace mctools {
    *
    * @return Value of the closest matching opflash tick
    */
-  double FlashMatcher::matchTicks( double mctrackTick, std::vector<double> flashTicks, Bool_t isCosmic ) {
+  double FlashMatcher::matchTicks( double mctrackTick, std::vector<double> flashTicks ) {
 
     double threshold;
     if (isCosmic == 1) {

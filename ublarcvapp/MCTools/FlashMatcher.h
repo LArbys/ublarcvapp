@@ -14,13 +14,22 @@ namespace mctools {
   class FlashMatcher {
   public:
 
-    FlashMatcher() {};
+    FlashMatcher() {
+
+        isCosmic = 0;
+
+    };
     virtual ~FlashMatcher() {};
 
-    static int numTracks( larlite::storage_manager& ioll );
-    static std::tuple<double, std::string, Bool_t> grabTickFromMCTrack( larlite::storage_manager& ioll, int i );
-    static std::vector<double> grabTickFromOpflash( larlite::storage_manager& opio, std::string producer );
-    static double matchTicks( double mctrack_tick, std::vector<double> flash_ticks, Bool_t isCosmic );
+    int numTracks( larlite::storage_manager& ioll );
+    int numShowers( larlite::storage_manager& ioll );
+    double grabTickFromMCTrack( larlite::storage_manager& ioll, int i );
+    double grabTickFromMCShower( larlite::storage_manager& ioll, int i );
+    std::vector<double> grabTickFromOpflash( larlite::storage_manager& opio );
+    double matchTicks( double mctrack_tick, std::vector<double> flash_ticks );
+
+    Bool_t isCosmic;
+    std::string producer;
 
   };
 
