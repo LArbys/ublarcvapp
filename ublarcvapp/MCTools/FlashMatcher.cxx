@@ -3,6 +3,7 @@
 #include "larlite/DataFormat/mcshower.h"
 #include "larlite/DataFormat/mctrack.h"
 #include "larlite/DataFormat/opflash.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 #include "crossingPointsAnaMethods.h"
 
@@ -60,12 +61,19 @@ namespace mctools {
     const larlite::mcstep& start = mctrack.Start();
 
     larutil::SpaceChargeMicroBooNE* _sce = nullptr;
-    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
 
-    // check for primary muons (cosmic)
-    if ( isCosmic == 1 && mctrack.TrackID() != mctrack.MotherTrackID() && mctrack.PdgCode() != 13 ) {
-      tick = -999.997;
+    const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
+    double xPos = start.X();
+
+    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
+    tick = tick - xPos / cm_per_tick;
+
+    // check for primaries
+    if ( mctrack.TrackID() != mctrack.MotherTrackID() ) {
+      return -999.997;
     }
+
+    std::cout << "Ancestor ID: " << mctrack.AncestorTrackID() << std::endl;
 
     return tick;
 
@@ -97,12 +105,19 @@ namespace mctools {
     const larlite::mcstep& start = mcshower.Start();
 
     larutil::SpaceChargeMicroBooNE* _sce = nullptr;
-    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
 
-    // check for primary muons (cosmic)
-    if ( isCosmic == 1 && mcshower.TrackID() != mcshower.MotherTrackID() ) {
-      tick = -999.997;
+    const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
+    double xPos = start.X();
+
+    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
+    tick = tick - xPos / cm_per_tick;
+
+    // check for primaries
+    if ( mcshower.TrackID() != mcshower.MotherTrackID() ) {
+      return -999.997;
     }
+
+    std::cout << "Ancestor ID: " << mcshower.AncestorTrackID() << std::endl;
 
     return tick;
 

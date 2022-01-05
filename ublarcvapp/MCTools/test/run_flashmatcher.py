@@ -35,13 +35,22 @@ nentries = ioll.get_entries()
 print("Number of entries: ",nentries)
 
 print("Start loop.")
-fmutil = ublarcvapp.mctools.FlashMatcher
+fmutil = ublarcvapp.mctools.FlashMatcher()
 #vtxutil = ublarcvapp.mctools.NeutrinoVertex
 #print(vtxutil)
 print(fmutil)
 
 #c = rt.TCanvas("c","c",1200,1800)
 #c.Divide(1,3)
+
+listy = []
+
+# for testing:
+#match = fmutil.matchTicks( 100.0, [], 1 )  
+#print(match)
+
+print("isCosmic from ctor: ",fmutil.isCosmic)
+
 
 for ientry in range( nentries ):
 
@@ -51,14 +60,29 @@ for ientry in range( nentries ):
     ioll.go_to(ientry)
     opio.go_to(ientry)
 
-    track_tick, producer, isCosmic = fmutil.grabTickFromMCTrack( ioll )
-    print(producer)
-    op_tick = fmutil.grabTickFromOpflash( opio, producer )
-#    fmtrack_tick = vtxutil.getImageCoords( ioll )
-    print("track_tick",track_tick)
-    print("op_tick",op_tick)
-#    iolcv.read_entry(ientry)
-    match = fmutil.matchTicks( track_tick, op_tick, isCosmic )
-    print("Found match: ", match )
+    numTracks = fmutil.numTracks( ioll )
+    
+    for i in range( 0, numTracks, 1 ):
+        track_tick = fmutil.grabTickFromMCTrack( ioll, i )
 
+        producer = fmutil.producer
+        isCosmic = fmutil.isCosmic
+        
+        print("Now isCosmic has been set to: ",fmutil.isCosmic)
+        print(producer)
+        
+        op_tick = fmutil.grabTickFromOpflash( opio )
+        #    fmtrack_tick = vtxutil.getImageCoords( ioll )
+        print("track_tick",track_tick)
+        print("op_tick",op_tick)
+        #    iolcv.read_entry(ientry)
+        match = fmutil.matchTicks( track_tick, op_tick )
+        print("Found match: ", match )
+        if isCosmic == 1 and match != -999.999 and track_tick != -999.997:
+            listy.append( match - track_tick )
+
+print("list: ", listy)
+   
+print("size of list: ", len(listy))
+         
 print("=== FIN ==")
