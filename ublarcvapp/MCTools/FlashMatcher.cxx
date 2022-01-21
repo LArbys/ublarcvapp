@@ -11,6 +11,70 @@ namespace ublarcvapp {
 namespace mctools {
 
 
+  void FlashMatcher::initialize()
+  {
+    _fm_tree = new TTree("fmtree","Flashmatched Tree");
+    bindAnaVariables(_fm_tree);
+
+    std::cout << "Made tree and bound vars" << std::endl;
+
+    //_voxelTree = new TTree("voxtree","Voxeldata Tree");
+    //_voxelTree = mgr.CloneTree()
+
+  }
+
+  void FlashMatcher::bindAnaVariables( TTree* fm_tree )
+  {
+
+    // event indexing
+    fm_tree->Branch("flashmatcher_run",     &_run,     "flashmatcher_run/I");
+    fm_tree->Branch("flashmatcher_subrun",  &_subrun,  "flashmatcher_subrun/I");
+    fm_tree->Branch("flashmatcher_event",   &_event,   "flashmatcher_event/I");
+    fm_tree->Branch("flashmatcher_ancestorid"  , &_ancestorID,   "flashmatcher_ancestorid/I");
+    fm_tree->Branch("flashmatcher_clustertick"  , &_clusterTick,   "flashmatcher_clustertick/D");
+    fm_tree->Branch("flashmatcher_flashtick"  , &_flashTick,   "flashmatcher_flashtick/D");
+    fm_tree->Branch("flashmatcher_origin"  , &_origin,   "flashmatcher_origin/I");
+
+  }
+
+  bool FlashMatcher::process(larlite::storage_manager& mgr)
+  {
+
+    Clear();
+
+    _run    = mgr.run_id();
+    _subrun = mgr.subrun_id();
+    _event  = mgr.event_id();
+    _ancestorID = ancestorID;
+    _clusterTick = clusterTick;
+    _flashTick = flashTick;
+    _origin = origin;
+
+    if ( _fm_tree )
+      _fm_tree->Fill();
+
+    return true;
+
+  }
+
+  void FlashMatcher::finalize()
+  {
+    if ( _fm_tree )
+      _fm_tree->Write();
+  }
+
+  void FlashMatcher::Clear()
+  {
+    _run    = 0;
+    _subrun = 0;
+    _event  = 0;
+    _ancestorID = 0;
+    _clusterTick = 0;
+    _flashTick = 0;
+    _origin = 0;
+
+  }
+
   int FlashMatcher::numTracks( larlite::storage_manager& ioll ) {
     larlite::event_mctrack* ev_mctrack
       = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
@@ -49,6 +113,7 @@ namespace mctools {
     std::cout << "PDG is: " << mctrack.PdgCode() << std::endl;
 
     std::cout << "Origin: " << mctrack.Origin() << std::endl;
+    origin = mctrack.Origin();
 
     if ( mctrack.Origin() == 1 ) {
       producer = "simpleFlashBeam";
@@ -75,6 +140,8 @@ namespace mctools {
 
     std::cout << "Ancestor ID: " << mctrack.AncestorTrackID() << std::endl;
 
+    ancestorID = mctrack.AncestorTrackID();
+
     return tick;
 
   }
@@ -93,6 +160,7 @@ namespace mctools {
     std::cout << "PDG is: " << mcshower.PdgCode() << std::endl;
 
     std::cout << "Origin: " << mcshower.Origin() << std::endl;
+    origin = mcshower.Origin();
 
     if ( mcshower.Origin() == 1 ) {
       producer = "simpleFlashBeam";
@@ -170,24 +238,34 @@ namespace mctools {
       threshold = std::numeric_limits<double>::infinity();
     }
 
-    if (flashTicks.empty() == 1)
+    if (flashTicks.empty() == 1) {
+      clusterTick = mctrackTick;
+      flashTick = 999.999;
       return 999.999;
+    }
 
     auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), mctrackTick );
     double b = *(match);
 
     if (match == flashTicks.begin() && fabs(b - mctrackTick) <= threshold) {
+      clusterTick = mctrackTick;
+      flashTick = flashTicks[0];
       return flashTicks[0];
     }
 
     double a = *(match - 1);
 
     if (fabs(mctrackTick - a) < fabs(mctrackTick - b) && fabs(mctrackTick - a) <= threshold) {
+      clusterTick = mctrackTick;
+      flashTick = flashTicks [ match - flashTicks.begin() - 1 ];
       return flashTicks [ match - flashTicks.begin() - 1 ];
     }
 
-    if ( fabs(mctrackTick - b) <= threshold  )
+    if ( fabs(mctrackTick - b) <= threshold  ) {
+      clusterTick = mctrackTick;
+      flashTick = flashTicks[ match - flashTicks.begin() ];
       return flashTicks[ match - flashTicks.begin() ];
+    }
 
     return -999.999;
 
