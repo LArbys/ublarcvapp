@@ -8,7 +8,8 @@ endif()
 
 # CFLAGS
 SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
-SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fPIC -pedantic -fopenmp -mtune=native")
+SET(CMAKE_CXX_FLAGS "-std=c++14 -Wall -fPIC -pedantic -fopenmp -mtune=native")
+set(CMAKE_CXX_STANDARD 14)
 
 ## Dependencies
 
