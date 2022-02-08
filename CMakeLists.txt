@@ -8,14 +8,27 @@ endif()
 
 # CFLAGS
 SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
-SET(CMAKE_CXX_FLAGS "-std=c++14 -Wall -fPIC -pedantic -fopenmp -mtune=native")
-set(CMAKE_CXX_STANDARD 14)
+SET(CMAKE_CXX_FLAGS "-Wall -fPIC -pedantic -fopenmp -mtune=native")
 
 ## Dependencies
 
 #---CERN ROOT (required)
 find_package(ROOT CONFIG REQUIRED)
-
+# we set the compiler version based on the one used for ROOT
+execute_process(
+    COMMAND bash "-c" "root-config --features | awk '{print $1}'"
+    OUTPUT_VARIABLE ROOT_CXX_STANDARD )
+if (${ROOT_CXX_STANDARD} MATCHES "cxx17")
+  message("Using CXX17")
+  set(CMAKE_CXX_STANDARD 17)
+elseif (${ROOT_CXX_STANDARD} MATCHES "cxx14")
+  message("Using CXX17")
+  set(CMAKE_CXX_STANDARD 14)
+else ()
+  message("Using CXX11")  
+  set(CMAKE_CXX_STANDARD 11)
+endif()
+    
 #---LArCV (required)
 set( larcv_DIR "$ENV{LARCV_LIBDIR}/cmake/larcv")
 find_package( larcv REQUIRED )
