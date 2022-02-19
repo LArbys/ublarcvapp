@@ -189,7 +189,7 @@ namespace mctools {
       // showernode.start[1] = mcsh.Start().Y();
       // showernode.start[2] = mcsh.Start().Z();
       // showernode.start[3] = mcsh.Start().T();
-      _get_imgpos( showernode.start, showernode.imgpos4, sce );
+      _get_imgpos( showernode.start, showernode.imgpos4, sce, false );
       //showernode.imgpos4 = showernode.start;
       //showernode.imgpos4[3] = 3200 + mcsh.DetProfile().X()/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
       
@@ -697,7 +697,8 @@ namespace mctools {
    */
   void MCPixelPGraph::_get_imgpos( std::vector<float>& realpos4,
                                    std::vector<float>& imgpos4,
-                                   larutil::SpaceChargeMicroBooNE& sce )
+                                   larutil::SpaceChargeMicroBooNE& sce,
+				   bool apply_sce )
   {
 
     imgpos4.resize(4,0);
@@ -707,17 +708,27 @@ namespace mctools {
     for (int i=0; i<3; i++) {
       dpos[i]   = realpos4[i];
     }
+
+
+    std::vector<float>  txyz(4,0);
+    if ( apply_sce ) {
+      std::vector<double> offset = sce.GetPosOffsets( dpos[0], dpos[1], dpos[2] );        
+      dpos[0] = dpos[0] - offset[0] + 0.7;
+      dpos[1] = dpos[1] + offset[1];
+      dpos[2] = dpos[2] + offset[2];
+    }
+
     
-    std::vector<double> offset = sce.GetPosOffsets( dpos[0], dpos[1], dpos[2] );
-    std::vector<float>  txyz(4,0);    
-    dpos[0] = dpos[0] - offset[0] + 0.7;
-    dpos[1] = dpos[1] + offset[1];
-    dpos[2] = dpos[2] + offset[2];
     for (int i=0; i<3; i++) {
       txyz[1+i] = realpos4[i];
     }
     txyz[0] = realpos4[3];
-    float tick = CrossingPointsAnaMethods::getTick( txyz, 4050.0, &sce );
+    float tick = 0.;
+    if (apply_sce)
+      tick = CrossingPointsAnaMethods::getTick( txyz, 4050.0, &sce );
+    else
+      tick = CrossingPointsAnaMethods::getTick( txyz, 4050.0, NULL );
+    
     for (int i=0; i<3; i++) {
       imgpos4[i] = dpos[i];
     }

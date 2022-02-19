@@ -140,8 +140,9 @@ namespace mctools {
                          const std::vector<float> threshold_v );
     void _get_imgpos( std::vector<float>& realpos4,
                       std::vector<float>& imgpos4,
-                      larutil::SpaceChargeMicroBooNE& sce );                      
-
+                      larutil::SpaceChargeMicroBooNE& sce,
+		      bool apply_sce=true );
+    
   public:
     
     std::map<int,int> _shower_daughter2mother;
