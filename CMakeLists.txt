@@ -99,9 +99,9 @@ if (Boost_FOUND)
     message(STATUS "Using boost libraries: ${Boost_LIBRARIES}")
     message(STATUS "Using boost thread library: ${Boost_THREAD_LIBRARY}")
     link_directories(${Boost_LIBRARY_DIRS})
+else()
+    message(STATUS "Boost not found")
 endif (Boost_FOUND)
-
-#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 #--- glog
 #find_package(glog REQUIRED)

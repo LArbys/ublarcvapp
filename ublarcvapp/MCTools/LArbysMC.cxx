@@ -137,6 +137,13 @@ namespace mctools {
     _event  = mgr.event_id();
     _entry  = (int)mgr.get_index();
 
+    // no truth?
+    if ( ev_mctruth->size()==0 ) {
+      if ( _mc_tree )
+        _mc_tree->Fill();
+      return false;      
+    }
+    
     // If we've got a neutrino, sample that
     auto const& mct = ev_mctruth->at(0);
     _neutrino_present = mct.Origin()==larlite::simb::kBeamNeutrino;
