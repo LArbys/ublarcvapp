@@ -71,6 +71,8 @@ endif()
 find_package(Eigen3 REQUIRED)
 
 #---LArLite
+set( larlite_DIR $ENV{LARLITE_LIBDIR}/cmake/larlite )
+find_package( larlite REQUIRED )
 set( LARLITE_INC_DIRS "$ENV{LARLITE_INCDIR}" )
 set( LARLITE_LIB_DIR  "$ENV{LARLITE_LIBDIR}" )
 set( HAS_LARLITE 1 )

@@ -43,6 +43,9 @@ namespace ublarcvapp {
                                                      const int max_empty_gap,
                                                      const float empty_ch_max );
     
+    std::vector<larcv::Image2D> makeOverlayedBadChannelImage( const std::vector<larcv::Image2D>& img_v,
+							      const larcv::EventChStatus& ev_status, int minstatus,
+							      const float fill_in_value );
     
   };
   
