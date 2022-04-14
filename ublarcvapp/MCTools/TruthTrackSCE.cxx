@@ -164,9 +164,15 @@ namespace mctools {
                                           const std::vector<float>& pt )
   {
     
+    if ( pt.size()<3 )
+      throw std::runtime_error("TruthTrackSCE::pointLineDistance. test pt length < 3");
+    if ( linept1.size()<3 )
+      throw std::runtime_error("TruthTrackSCE::pointLineDistance. linept1 length < 3");
+    if ( linept2.size()<3 )
+      throw std::runtime_error("TruthTrackSCE::pointLineDistance. linept2 length < 3");
     
-    std::vector<float> d1(3);
-    std::vector<float> d2(3);
+    std::vector<float> d1(3,0);
+    std::vector<float> d2(3,0);
 
     float len1 = 0.;
     float linelen = 0.;
@@ -185,7 +191,7 @@ namespace mctools {
     }
 
     // cross-product
-    std::vector<float> d1xd2(3);
+    std::vector<float> d1xd2(3,0);
     d1xd2[0] =  d1[1]*d2[2] - d1[2]*d2[1];
     d1xd2[1] = -d1[0]*d2[2] + d1[2]*d2[0];
     d1xd2[2] =  d1[0]*d2[1] - d1[1]*d2[0];

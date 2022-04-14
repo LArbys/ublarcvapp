@@ -13,8 +13,22 @@ namespace ubimagemod {
   {
     pixel_v.clear();
     pixel_map.clear();
+    pixel_kernel_pixval_v.clear();
+    nmaskedpixels = 0;
+    npathpixels = 0;
   }
-  
+
+  /**
+   * @brief Mask pixels in an image along the path of a 3D trajectory
+   *
+   * @param[in]  track Path represented as sequence of line segments
+   * @param[in]  img   Original image, containing wire signal
+   * @param[out] mask Image whose pixels we mask
+   * @param[in]  threshold 
+   * @param[in]  dcol  Width of rectangular masking kernel
+   * @param[in]  drow  Height of rectangular masking kernel
+   * @param[in]  maxstepsize Maximum step we take along the line segment path (in cm)
+   */
   int TrackImageMask::maskTrack( const larlite::track& track,
                                  const larcv::Image2D& img,
                                  larcv::Image2D& mask,
@@ -23,9 +37,14 @@ namespace ubimagemod {
                                  const int drow,
                                  const float maxstepsize )
   {
-
+    
     // clear
     clear();
+
+    int N = (2*dcol+1)*(2*drow+1); // number of elements in kernel
+    kernel_dcol = dcol;
+    kernel_drow = drow;
+    kernel_N = N;
     
     int npts = track.NumberTrajectoryPoints();    
     LARCV_DEBUG() << "start: track length=" << npts << std::endl;
@@ -38,7 +57,7 @@ namespace ubimagemod {
 
     auto const& meta = img.meta();
 
-    int npixels = makePixelList( track, img, threshold, maxstepsize, false );
+    int npixels = makePixelList( track, img, 0.0, maxstepsize, true );
     LARCV_DEBUG() << "Number of pixels: " << pixel_v.size() << std::endl;    
     if ( npixels==0 )
       return 0;
@@ -65,6 +84,7 @@ namespace ubimagemod {
     // make data array
     std::vector<float> crop(colwidth*rowwidth,0);
     std::vector<float> cropmask(colwidth*rowwidth,0);
+    std::vector<float> cropmask_threshold(colwidth*rowwidth,0);    
 
     // copy the data into the cropped matrix
     // preserve the row-ordered data
@@ -78,11 +98,12 @@ namespace ubimagemod {
 
     // kernal loop, making mask
     // trying to write in a way that is easy to accelerate
-    int N = (2*dcol+1)*(2*drow+1); // number of elements in kernel
 
     // parallelize masking with block kernel
-    int nmasked = 0;
-    std::chrono::steady_clock::time_point start_mask = std::chrono::steady_clock::now();    
+    nmaskedpixels = 0;
+    std::chrono::steady_clock::time_point start_mask = std::chrono::steady_clock::now();
+    
+    pixel_kernel_pixval_v.resize( pixel_v.size()*N, 0.0 );
     
     #pragma omp parallel for         
     for (int ikernel=0; ikernel<N; ikernel++) {
@@ -106,29 +127,38 @@ namespace ubimagemod {
         int cropindex = icol*rowwidth+irow;
         float pixval = crop[ cropindex ];
 
+	
         if ( pixval>threshold ) {
           #pragma omp atomic
-          cropmask[ cropindex ] += 1.0;
-        }
+          cropmask_threshold[ cropindex ] += 1.0;
+	}
+        #pragma omp atomic
+	cropmask[ cropindex ] += 1.0;
+	
+	pixel_kernel_pixval_v[ N*itp + ikernel ] = pixval;
       }
     }  
     #pragma omp barrier
 
     for (size_t ii=0; ii<cropmask.size(); ii++ ) {
-      if ( cropmask[ii]>0 ) {
-        nmasked++;
-        cropmask[ii] = 1.0;
+      if ( cropmask_threshold[ii]>0 ) {
+        nmaskedpixels++;
+        cropmask_threshold[ii] = 1.0;
 
         int orig_row = (ii%rowwidth)-drow + row_origin;
         int orig_col = (ii/rowwidth)-dcol + col_origin;
         mask.set_pixel( orig_row, orig_col, 1.0 );
       }
+      if ( cropmask[ii]>0 ) {
+        npathpixels++;
+        cropmask[ii] = 1.0;
+      }      
     }
-    LARCV_INFO() << "num pixels masked: " << nmasked << std::endl;
+    LARCV_INFO() << "num pixels masked: " << nmaskedpixels << " out of num pixels on path (with kernel): " << npathpixels << std::endl;
     std::chrono::steady_clock::time_point end_mask = std::chrono::steady_clock::now();
     if ( show_timing )
       LARCV_INFO() << "mask: " << std::chrono::duration_cast<std::chrono::microseconds>(end_mask - start_mask).count() << std::endl;
-    return nmasked;
+    return nmaskedpixels;
   }
 
   /**
@@ -168,6 +198,17 @@ namespace ubimagemod {
     return nlabeled;
   }
 
+  /**
+   * @brief Provide a list of pixels we travel through while stepping along a track
+   * 
+   * The list of pixels are stored in the internal data member, `pixel_v`.
+   *
+   * @param[in] track Path we step along represented as sequence of line segments
+   * @param[in] img   2D image containing wire signals
+   * @param[in] threshold 
+   * @param[in] maxstepsize Maximum step we take along the line segment path
+   * @param[in] fill_map If true, we fill the pixel_map data member
+   */
   int TrackImageMask::makePixelList( const larlite::track& track,
                                      const larcv::Image2D& img,
                                      const float threshold,
@@ -177,6 +218,11 @@ namespace ubimagemod {
     
     pixel_v.clear();
     pixel_map.clear();
+    auto const& meta = img.meta();    
+    min_col = (int)meta.cols()-1;
+    min_row = (int)meta.rows()-1;
+    max_col = 0;
+    max_row = 0;    
 
     if ( maxstepsize<0 || std::isnan(maxstepsize) || std::isinf(maxstepsize) ) {
       LARCV_CRITICAL() << "Bad maxstepsize value: " << maxstepsize << std::endl;
@@ -194,7 +240,6 @@ namespace ubimagemod {
 
     const float driftv = larutil::LArProperties::GetME()->DriftVelocity();
     const float usec_per_tick = 0.5;
-    auto const& meta = img.meta();
     int plane = meta.plane();
     if ( plane<0 || plane>=(int)larutil::Geometry::GetME()->Nplanes() ) {
       LARCV_WARNING() << "Invalid plane: " << plane << std::endl;
@@ -210,13 +255,12 @@ namespace ubimagemod {
     int nrows = meta.rows();
     int ncols = meta.cols();
 
-    min_col = (int)meta.cols()-1;
-    min_row = (int)meta.rows()-1;
-    max_col = 0;
-    max_row = 0;    
-
     std::set< std::pair<int,int> > pixel_set;
     pixel_v.reserve( 2*npts );
+
+    std::pair<int,int> last_coord;
+    last_coord.first = 0;
+    last_coord.second = 0;
 
     float len_traveled = 0.;    
     for (int ipt=0; ipt<npts-1; ipt++) {
@@ -262,18 +306,27 @@ namespace ubimagemod {
         float pixval = img.pixel(row,col);
         if ( pixval<threshold )
           continue;
-        
+	
         std::pair<int,int> pixcoord(col,row);
+	bool newpix = (pixcoord!=last_coord);
 
         if ( fill_map ) {
           auto it = pixel_map.find( pixcoord );
           if ( it==pixel_map.end() ) {
             // new entry
-            pixel_map[pixcoord] = Pix_t( col, row, s, s );
+            pixel_map[pixcoord] = Pix_t( col, row, s, s, pixval );
             pixel_v.push_back( std::vector<int>{col,row} );            
             it = pixel_map.find( pixcoord );
           }
           it->second.smax = s;
+
+	  if (newpix) {
+	    auto it_old = pixel_map.find(last_coord);
+	    if ( it_old!=pixel_map.end() ) {
+	      it_old->second.smax = s;
+	    }
+	    last_coord = pixcoord;
+	  }
         }
         else {          
           auto it = pixel_set.find( pixcoord );
@@ -540,6 +593,75 @@ namespace ubimagemod {
     return true;    
   }
   
+
+  /**
+   * @brief Find the largest continous distance along path without charge
+   * 
+   * Uses the list of pixels are stored in the internal data member, `pixel_v`.
+   * Also uses the charge seen at each spot of the kernel for each pixel in pixel_v.
+   * This info is stored in `pixel_kernel_pixval_v`.
+   * Both are created in `maskTrack`. If this was not run, should return 0.
+   */
+  float TrackImageMask::getMaximumChargeGap( std::vector< std::vector<float> >& gap_points ) const
+  {
+    float current_gapsize = 0.;
+    float max_gapsize = 0.;
+
+    gap_points.resize(2);
+    for (int i=0; i<2; i++) {
+      gap_points[i].resize(2,0);
+    }
+    
+    for (size_t ipix=0; ipix<pixel_v.size(); ipix++) {
+      // whats the charge at this pixel, within the kernel
+      float totq = 0.;
+      for ( int i=0; i<kernel_N; i++ )
+	totq += pixel_kernel_pixval_v[ kernel_N*ipix + i ];
+
+      auto const& pixcoord = pixel_v[ipix];
+      auto const it=pixel_map.find( std::pair<int,int>( pixcoord[0], pixcoord[1] ) ); 
+      auto const& pix = it->second;	
+      
+      if ( totq>0.0 ) {
+	// not a gap, reset the gap
+	if ( current_gapsize>max_gapsize ) {
+	  max_gapsize = current_gapsize;
+	  // set the last gap point
+	  std::vector<float> gap_coord = { (float)pix.col, (float)pix.row };
+	  gap_points[1] = gap_coord;
+	}
+	  
+	current_gapsize = 0;
+	
+      }
+      else {
+
+	if ( current_gapsize==0.0 ) {
+	  // set first gap points
+	  std::vector<float> gap_coord = { (float)pix.col, (float)pix.row };
+	  gap_points[0] = gap_coord;
+	}
+	
+	current_gapsize += pix.smax-pix.smin;
+	if ( ipix+1==pixel_v.size() ) {
+	  // the last pixel
+	  if ( current_gapsize>max_gapsize ) {
+	    max_gapsize = current_gapsize;
+	    // set the last gap point
+	    std::vector<float> gap_coord = { (float)pix.col, (float)pix.row };
+	    gap_points[1] = gap_coord;
+	  }
+	}
+      }
+      // std::cout << "ipix[" << ipix << "]: (c,r)=(" << pix.col << "," << pix.row << ")"
+      // 		<< " pixval=" << pix.pixval
+      // 		<< " smin=" << pix.smin << " smax=" << pix.smax 
+      // 		<< " totq=" << totq << " current_gap=" << current_gapsize
+      // 		<< std::endl;
+    }
+    
+    return max_gapsize;
+  }
   
 }
 }

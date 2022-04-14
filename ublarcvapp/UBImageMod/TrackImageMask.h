@@ -20,6 +20,10 @@ namespace ubimagemod {
       max_row(0),
       show_timing(false)
       {};
+    ~TrackImageMask()
+    {
+      clear();
+    }
 
     void clear();
     
@@ -58,6 +62,10 @@ namespace ubimagemod {
                                 const float thresh,
                                 float& pixval_min,
                                 float& pixval_max ) const;
+
+    float getMaximumChargeGap( std::vector< std::vector<float> >& gap_points ) const;
+    int getMaskedPixels() const { return nmaskedpixels; };
+    int getPathPixels() const { return npathpixels; };
     
     
     // first we make a list of pixels covered by the track
@@ -67,21 +75,28 @@ namespace ubimagemod {
       int row;
       float smin;
       float smax;
+      float pixval;
       Pix_t()
-        : col(0),row(0),smin(0),smax(0)
+        : col(0),row(0),smin(0),smax(0),pixval(0)
       {};
-      Pix_t( int c, int r, float ssmin, float ssmax )
-        : col(c), row(r), smin(ssmin), smax(ssmax)
+      Pix_t( int c, int r, float ssmin, float ssmax,float pv )
+        : col(c), row(r), smin(ssmin), smax(ssmax),pixval(pv)
       {};
     };
 
     // output data members for use
     std::map< std::pair<int,int>, Pix_t > pixel_map; ///< map of pixel (col,row) to Pix_t struct
-    std::vector< std::vector<int> > pixel_v; ///< list of (col,row) pixels that follows path of tracko
+    std::vector< std::vector<int> > pixel_v; ///< list of (col,row) pixels that follows path of track
+    std::vector< float > pixel_kernel_pixval_v; ///< list of charge values within the kernel for each pixel
     int min_col;
     int min_row;
     int max_col;
-    int max_row;    
+    int max_row;
+    int kernel_dcol;
+    int kernel_drow;
+    int kernel_N;
+    int nmaskedpixels;
+    int npathpixels;
 
     bool show_timing; ///< set to true to print output
   };

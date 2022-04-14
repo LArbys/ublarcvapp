@@ -8,13 +8,27 @@ endif()
 
 # CFLAGS
 SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
-SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fPIC -pedantic -fopenmp -mtune=native")
+SET(CMAKE_CXX_FLAGS "-Wall -fPIC -pedantic -fopenmp -mtune=native")
 
 ## Dependencies
 
 #---CERN ROOT (required)
 find_package(ROOT CONFIG REQUIRED)
-
+# we set the compiler version based on the one used for ROOT
+execute_process(
+    COMMAND bash "-c" "root-config --features | awk '{print $1}'"
+    OUTPUT_VARIABLE ROOT_CXX_STANDARD )
+if (${ROOT_CXX_STANDARD} MATCHES "cxx17")
+  message( STATUS "using cxx17")
+  set(CMAKE_CXX_STANDARD 17)
+elseif (${ROOT_CXX_STANDARD} MATCHES "cxx14")
+  message( STATUS "using cxx14")
+  set(CMAKE_CXX_STANDARD 14)
+else ()
+  message( STATUS "using cxx11")  
+  set(CMAKE_CXX_STANDARD 11)
+endif()
+    
 #---LArCV (required)
 set( larcv_DIR "$ENV{LARCV_LIBDIR}/cmake/larcv")
 find_package( larcv REQUIRED )
@@ -57,6 +71,8 @@ endif()
 find_package(Eigen3 REQUIRED)
 
 #---LArLite
+set( larlite_DIR $ENV{LARLITE_LIBDIR}/cmake/larlite )
+find_package( larlite REQUIRED )
 set( LARLITE_INC_DIRS "$ENV{LARLITE_INCDIR}" )
 set( LARLITE_LIB_DIR  "$ENV{LARLITE_LIBDIR}" )
 set( HAS_LARLITE 1 )
@@ -83,9 +99,9 @@ if (Boost_FOUND)
     message(STATUS "Using boost libraries: ${Boost_LIBRARIES}")
     message(STATUS "Using boost thread library: ${Boost_THREAD_LIBRARY}")
     link_directories(${Boost_LIBRARY_DIRS})
+else()
+    message(STATUS "Boost not found")
 endif (Boost_FOUND)
-
-#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
 
 #--- glog
 #find_package(glog REQUIRED)

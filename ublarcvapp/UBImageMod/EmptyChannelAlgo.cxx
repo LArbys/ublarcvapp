@@ -218,15 +218,53 @@ namespace ublarcvapp {
                                                              empty_ch_max );
 
     for (size_t p=0; p<badch_v.size(); p++ ) {
-      auto& bchv = badch_v[p].as_mod_vector();
-      auto const& gv = gapch_v[p].as_vector();
-      for ( size_t i=0; i<bchv.size(); i++ ) {
-        bchv[i] += gv[i];
+
+      auto& badch = badch_v[p];
+      for (int c=0; c<(int)badch.meta().cols(); c++)  {
+	if ( gapch_v[p].pixel(0,c)>0 )
+	  badch.paint_col(c,255);
       }
+      
+      // auto& bchv = badch_v[p].as_mod_vector();
+      // auto const& gv = gapch_v[p].as_vector();
+      // for ( size_t i=0; i<bchv.size(); i++ ) {
+      //   //bchv[i] += gv[i];
+      // 	bchv[i] = 255;
+      // }
     }
       
     return badch_v;
   }
-  
+
+  std::vector<larcv::Image2D> EmptyChannelAlgo::makeOverlayedBadChannelImage( const std::vector<larcv::Image2D>& img_v,
+									      const larcv::EventChStatus& ev_status, int minstatus,
+									      const float fill_in_value )
+  {
+
+    std::vector<larcv::Image2D> out_v;
+    for (auto const& img : img_v ) {
+
+      larcv::Image2D out( img );
+      auto const& meta = img.meta();
+      int p = meta.plane();
+      auto it_chstatus = ev_status.ChStatusMap().find( p );
+      if ( it_chstatus!=ev_status.ChStatusMap().end() ) {
+	
+        const larcv::ChStatus& chs = ev_status.Status(p);
+        const std::vector<short>& status_v = chs.as_vector();
+        for ( int ch=0; ch<(int)status_v.size(); ch++) {
+	  if ( ch<meta.min_x() || ch>=meta.max_x() )
+	    continue;
+          int status = status_v.at(ch);
+          if ( ch<(int)meta.cols() && status<minstatus  )
+            out.paint_col( ch, fill_in_value );
+        }
+      }
+      
+      out_v.emplace_back( std::move(out) );
+    }
+    
+    return out_v;
+  }
   
 }
