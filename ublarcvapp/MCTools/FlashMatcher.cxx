@@ -31,6 +31,7 @@ namespace mctools {
     fm_tree->Branch("flashmatcher_subrun",  &_subrun,  "flashmatcher_subrun/I");
     fm_tree->Branch("flashmatcher_event",   &_event,   "flashmatcher_event/I");
     fm_tree->Branch("flashmatcher_ancestorid"  , &_ancestorID,   "flashmatcher_ancestorid/I");
+    //fm_tree->Branch("flashmatcher_trackid"  , &_trackID,   "flashmatcher_trackid/I");
     fm_tree->Branch("flashmatcher_clustertick"  , &_clusterTick,   "flashmatcher_clustertick/D");
     fm_tree->Branch("flashmatcher_flashtick"  , &_flashTick,   "flashmatcher_flashtick/D");
     fm_tree->Branch("flashmatcher_origin"  , &_origin,   "flashmatcher_origin/I");
@@ -46,6 +47,7 @@ namespace mctools {
     _subrun = mgr.subrun_id();
     _event  = mgr.event_id();
     _ancestorID = ancestorID;
+    //_trackID = trackID;
     _clusterTick = clusterTick;
     _flashTick = flashTick;
     _origin = origin;
@@ -69,6 +71,7 @@ namespace mctools {
     _subrun = 0;
     _event  = 0;
     _ancestorID = 0;
+    //_trackID = 0;
     _clusterTick = 0;
     _flashTick = 0;
     _origin = 0;
@@ -83,6 +86,55 @@ namespace mctools {
 
     return numTracks;
   }
+
+/*
+  int FlashMatcher::trackAncestorID( larlite::storage_manager& ioll, int i ) {
+
+    larlite::event_mctrack* ev_mctrack
+      = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
+
+    auto const& mctrack = ev_mctrack->at(i);
+
+    auto ancestorID = mctrack.AncestorTrackID();
+
+    return ancestorID;
+
+  }
+  */
+
+  int FlashMatcher::trackAncestorID() {
+
+    if (!ancestorID)
+      return -999;
+
+    return ancestorID;
+
+  }
+
+  int FlashMatcher::getTrackID() {
+
+    if (!trackID)
+      return -999;
+
+    return trackID;
+
+  }
+
+  int FlashMatcher::trackOrigin() {
+
+    if (!origin)
+      return -999;
+
+    return origin;
+
+  }
+
+/*
+  int FlashMatcher::trackOrigin( larlite::storage_manager& ioll, int i ) {
+
+
+  }
+  */
 
   int FlashMatcher::numShowers( larlite::storage_manager& ioll ) {
 
@@ -140,6 +192,7 @@ namespace mctools {
 
     std::cout << "Ancestor ID: " << mctrack.AncestorTrackID() << std::endl;
 
+    trackID = mctrack.TrackID();
     ancestorID = mctrack.AncestorTrackID();
 
     return tick;

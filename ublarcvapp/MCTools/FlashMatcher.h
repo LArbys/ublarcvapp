@@ -33,6 +33,13 @@ namespace mctools {
     void Clear();
 
     int numTracks( larlite::storage_manager& ioll );
+    //int trackAncestorID( larlite::storage_manager& ioll, int i );
+
+    // Getters for meta information
+    int trackAncestorID();
+    int getTrackID();
+    int trackOrigin();
+
     int numShowers( larlite::storage_manager& ioll );
     double grabTickFromMCTrack( larlite::storage_manager& ioll, int i );
     double grabTickFromMCShower( larlite::storage_manager& ioll, int i );
@@ -54,12 +61,14 @@ namespace mctools {
     int _subrun;
     int _event;
     int _ancestorID;
+    //int _trackID;
     double _clusterTick;
     double _flashTick;
     int _origin;
 
     // Vars not in tree but in loop
     int ancestorID;
+    int trackID;
     double clusterTick;
     double flashTick;
     int origin;
