@@ -74,19 +74,27 @@ namespace mctools {
         vidx(-1),        
         tid(-1),
         aid(-1),
+	mtid(-1),
         pid(-1),
         mother(nullptr),
         mid(-1),
         E_MeV(-1.0),
         start({0,0,0}),
+        imgpos4({0,0,0,0}),	
         origin(-1)
       {};
         
-      Node_t(int _nodeidx, int _type, int _tid, int _vidx, int _pid, Node_t* _mother=nullptr, int _mid=-1, float _energy=-1.0 )
+      Node_t(int _nodeidx, int _type, int _tid, int _vidx,
+	     int _pid,
+	     Node_t* _mother=nullptr,
+	     int _mid=-1,
+	     float _energy=-1.0 )
       : nodeidx(_nodeidx),
         type(_type),
         vidx(_vidx),        
         tid(_tid),
+	aid(-1),
+	mtid(-1),
         pid(_pid),
         mother(_mother),
         mid(_mid),
