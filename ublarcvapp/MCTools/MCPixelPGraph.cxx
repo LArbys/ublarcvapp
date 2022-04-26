@@ -143,7 +143,8 @@ namespace mctools {
       Node_t tracknode( node_v.size(), 0, mct.TrackID(), vidx, mct.PdgCode() );
       tracknode.E_MeV = mct.Start().E();
       tracknode.aid  = mct.AncestorTrackID();
-      tracknode.mtid = mct.MotherTrackID();      
+      tracknode.mtid = mct.MotherTrackID();
+      tracknode.process = mct.Process();
       if ( mct.PdgCode()==2212 ) tracknode.E_MeV -= 938.0;
       else if ( mct.PdgCode()==2112 ) tracknode.E_MeV -= 940.0;
       else if ( abs(mct.PdgCode())==13 )   tracknode.E_MeV -= 105.;
@@ -177,6 +178,7 @@ namespace mctools {
 
       Node_t showernode( node_v.size(), 1, mcsh.TrackID(), vidx, mcsh.PdgCode() );
       showernode.E_MeV = mcsh.Start().E();
+      showernode.process = mcsh.Process();
       showernode.origin = mcsh.Origin();      
       showernode.start.resize(4);
       showernode.aid  = mcsh.AncestorTrackID();
@@ -319,6 +321,7 @@ namespace mctools {
     ss << "node[" << node.nodeidx << "] "
        << " (type,vidx)=(" << node.type << "," << node.vidx << ") "
        << " origin=" << node.origin
+       << " p=" << node.process
        << " tid=" << node.tid
        << " mid=" << node.mtid      
        << " aid=" << node.aid

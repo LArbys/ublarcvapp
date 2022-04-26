@@ -60,6 +60,7 @@ namespace mctools {
       Node_t* mother; // pointer to Mother Node_t
       int mid;        // mother nodeidx
       float E_MeV;    // energy
+      std::string process; // creating process
       std::vector<int>      daughter_idx_v; // daughter node indices in node_v
       std::vector<Node_t*>  daughter_v;     // pointer to daughters 
       std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (tick,wire) coordinates
@@ -79,6 +80,7 @@ namespace mctools {
         mother(nullptr),
         mid(-1),
         E_MeV(-1.0),
+	process("null"),
         start({0,0,0}),
         imgpos4({0,0,0,0}),	
         origin(-1)
@@ -88,7 +90,8 @@ namespace mctools {
 	     int _pid,
 	     Node_t* _mother=nullptr,
 	     int _mid=-1,
-	     float _energy=-1.0 )
+	     float _energy=-1.0,
+	     std::string proc="null")
       : nodeidx(_nodeidx),
         type(_type),
         vidx(_vidx),        
@@ -99,6 +102,7 @@ namespace mctools {
         mother(_mother),
         mid(_mid),
         E_MeV(_energy),
+	process(proc),
         start({0,0,0,0}),
         imgpos4({0,0,0,0}),
         origin(-1)
