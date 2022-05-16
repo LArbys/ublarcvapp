@@ -175,15 +175,31 @@ namespace mctools {
       isCosmic = 1;
     }
 
-    const larlite::mcstep& start = mctrack.Start();
+    std::cout << "mctrack.size() = " << mctrack.size() << std::endl;
+
+    if ( mctrack.size() == 0 ) {
+      std::cout << "Empty vector of mcsteps (probably a cosmic that didn't cross the TPC)" << std::endl;
+      return -999.998;
+    }
+
+    //const larlite::mcstep& start = mctrack.Start();
+    const larlite::mcstep& start = mctrack.at(0);
+
+    std::cout << "First mcstep X positiom is " << start.X() << " while the track started at: " << mctrack.Start().X() << std::endl;
 
     larutil::SpaceChargeMicroBooNE* _sce = nullptr;
 
     const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
     double xPos = start.X();
+    double xPos2 = mctrack.Start().X();
 
     double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
     tick = tick - xPos / cm_per_tick;
+
+    double tick2 = CrossingPointsAnaMethods::getTick(mctrack.Start(), 4050.0, _sce);
+    tick2 = tick2 - xPos2 / cm_per_tick;
+
+    std::cout << "Tick for first mcstep in TPC: " << tick << " and tick for starting up in the sky: " << tick2 << std::endl;
 
     // check for primaries
     if ( mctrack.TrackID() != mctrack.MotherTrackID() ) {
