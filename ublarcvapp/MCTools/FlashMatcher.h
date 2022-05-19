@@ -9,6 +9,7 @@
 #include "larlite/DataFormat/storage_manager.h"
 
 #include "TTree.h"
+#include <tuple>
 
 namespace ublarcvapp {
 namespace mctools {
@@ -43,8 +44,9 @@ namespace mctools {
     int numShowers( larlite::storage_manager& ioll );
     double grabTickFromMCTrack( larlite::storage_manager& ioll, int i );
     double grabTickFromMCShower( larlite::storage_manager& ioll, int i );
-    std::vector<double> grabTickFromOpflash( larlite::storage_manager& opio );
-    double matchTicks( double mctrack_tick, std::vector<double> flash_ticks );
+    std::vector< std::pair<double, int> > grabTickFromOpflash( larlite::storage_manager& opio );
+    //std::vector<double>, std::vector<std::pair<double, int>> grabTickFromOpflash( larlite::storage_manager& opio );
+    std::pair<double, int> matchTicks( double mctrack_tick, std::vector< std::pair<double, int> > flash_ticks );
 
     Bool_t isCosmic;
     std::string producer;

@@ -268,21 +268,39 @@ namespace mctools {
    * @param[in] producer String labeling the producer, e.g. "simpleFlashBeam"
    * @return Vector containing all opflash times for the track in ticks
    */
-  std::vector<double> FlashMatcher::grabTickFromOpflash( larlite::storage_manager& opio ) {
+ std::vector< std::pair<double, int> > FlashMatcher::grabTickFromOpflash( larlite::storage_manager& opio ) {
 
-    std::vector<double> tickContainer = {};
+    std::vector< std::pair<double, int> > tickContainer;
 
     larlite::event_opflash* ev_opflash
       = (larlite::event_opflash*)opio.get_data(larlite::data::kOpFlash, producer);
+
+    int counter = 0;
 
     for (auto const& opflash : *ev_opflash) {
       double time = opflash.Time();
       //std::cout << time << std::endl;
       double tick = time/0.5 + 3200.0;
-      tickContainer.push_back(tick);
+      tickContainer.push_back(std::make_pair(tick,counter));
+      counter++;
     }
 
+    std::cout << "Element\t" << "index" << std::endl;
+    for (int i = 0; i < tickContainer.size(); i++) {
+      std::cout << tickContainer[i].first << "\t"
+               << tickContainer[i].second << std::endl;
+      }
+  //std::cout << "Tick container: " << tickContainer << std::endl;
+
   std::sort( tickContainer.begin(), tickContainer.end() );
+
+  std::cout << "Element\t"
+         << "index" << std::endl;
+    for (int i = 0; i < tickContainer.size(); i++) {
+        std::cout << tickContainer[i].first << "\t"
+             << tickContainer[i].second << std::endl;
+    }
+  //std::cout << "Tick container: " << tickContainer << std::endl;
 
   return tickContainer;
   }
@@ -298,7 +316,7 @@ namespace mctools {
    *
    * @return Value of the closest matching opflash tick
    */
-  double FlashMatcher::matchTicks( double mctrackTick, std::vector<double> flashTicks ) {
+std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector< std::pair<double, int> >  flashTicks ) {
 
     double threshold;
     if (isCosmic == 1) {
@@ -310,33 +328,33 @@ namespace mctools {
     if (flashTicks.empty() == 1) {
       clusterTick = mctrackTick;
       flashTick = 999.999;
-      return 999.999;
+      return std::make_pair(999.999,999);
     }
 
-    auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), mctrackTick );
-    double b = *(match);
+    auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), std::make_pair( mctrackTick, std::numeric_limits<int>::min()) );
+    double b = (*(match)).first;
 
     if (match == flashTicks.begin() && fabs(b - mctrackTick) <= threshold) {
       clusterTick = mctrackTick;
-      flashTick = flashTicks[0];
+      flashTick = flashTicks[0].first;
       return flashTicks[0];
     }
 
-    double a = *(match - 1);
+    double a = (*(match - 1)).first;
 
     if (fabs(mctrackTick - a) < fabs(mctrackTick - b) && fabs(mctrackTick - a) <= threshold) {
       clusterTick = mctrackTick;
-      flashTick = flashTicks [ match - flashTicks.begin() - 1 ];
+      flashTick = flashTicks [ match - flashTicks.begin() - 1 ].first;
       return flashTicks [ match - flashTicks.begin() - 1 ];
     }
 
     if ( fabs(mctrackTick - b) <= threshold  ) {
       clusterTick = mctrackTick;
-      flashTick = flashTicks[ match - flashTicks.begin() ];
+      flashTick = flashTicks[ match - flashTicks.begin() ].first;
       return flashTicks[ match - flashTicks.begin() ];
     }
 
-    return -999.999;
+    return std::make_pair(-999.999,999);
 
   }
 
