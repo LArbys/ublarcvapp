@@ -222,130 +222,132 @@ namespace ubimagemod {
     min_col = (int)meta.cols()-1;
     min_row = (int)meta.rows()-1;
     max_col = 0;
-    max_row = 0;    
+    max_row = 0;
 
-    if ( maxstepsize<0 || std::isnan(maxstepsize) || std::isinf(maxstepsize) ) {
-      LARCV_CRITICAL() << "Bad maxstepsize value: " << maxstepsize << std::endl;
-    }
+    LARCV_CRITICAL() << "UPDATE ME FOR MULTI-DETECTOR" << std::endl;
 
-    std::chrono::steady_clock::time_point start_pixlist = std::chrono::steady_clock::now();
+    // if ( maxstepsize<0 || std::isnan(maxstepsize) || std::isinf(maxstepsize) ) {
+    //   LARCV_CRITICAL() << "Bad maxstepsize value: " << maxstepsize << std::endl;
+    // }
+
+    // std::chrono::steady_clock::time_point start_pixlist = std::chrono::steady_clock::now();
     
-    int npts = track.NumberTrajectoryPoints();    
-    LARCV_DEBUG() << "track length=" << npts << std::endl;
-    if ( npts<=1 ) {
-      LARCV_WARNING() << "No mask generated for track with only 1 point" << std::endl;
-      // no mask can be generated in this case
-      return 0;
-    }
+    // int npts = track.NumberTrajectoryPoints();    
+    // LARCV_DEBUG() << "track length=" << npts << std::endl;
+    // if ( npts<=1 ) {
+    //   LARCV_WARNING() << "No mask generated for track with only 1 point" << std::endl;
+    //   // no mask can be generated in this case
+    //   return 0;
+    // }
 
-    const float driftv = larutil::LArProperties::GetME()->DriftVelocity();
-    const float usec_per_tick = 0.5;
-    int plane = meta.plane();
-    if ( plane<0 || plane>=(int)larutil::Geometry::GetME()->Nplanes() ) {
-      LARCV_WARNING() << "Invalid plane: " << plane << std::endl;
-      return 0;
-    }
+    // const float driftv = larutil::LArProperties::GetME()->DriftVelocity();
+    // const float usec_per_tick = 0.5;
+    // int plane = meta.plane();
+    // if ( plane<0 || plane>=(int)larlite::larutil::Geometry::GetME()->Nplanes() ) {
+    //   LARCV_WARNING() << "Invalid plane: " << plane << std::endl;
+    //   return 0;
+    // }
 
-    // microboone only
-    const std::vector<Double_t>& firstwireproj = larutil::Geometry::GetME()->GetFirstWireProj(); 
-    std::vector<double> orthovect = { 0,
-                                      larutil::Geometry::GetME()->GetOrthVectorsY().at(plane),
-                                      larutil::Geometry::GetME()->GetOrthVectorsZ().at(plane) };
+    // // microboone only
+    // const std::vector<Double_t>& firstwireproj = larutil::Geometry::GetME()->GetFirstWireProj(); 
+    // std::vector<double> orthovect = { 0,
+    //                                   larutil::Geometry::GetME()->GetOrthVectorsY().at(plane),
+    //                                   larutil::Geometry::GetME()->GetOrthVectorsZ().at(plane) };
     
-    int nrows = meta.rows();
-    int ncols = meta.cols();
+    // int nrows = meta.rows();
+    // int ncols = meta.cols();
 
-    std::set< std::pair<int,int> > pixel_set;
-    pixel_v.reserve( 2*npts );
+    // std::set< std::pair<int,int> > pixel_set;
+    // pixel_v.reserve( 2*npts );
 
-    std::pair<int,int> last_coord;
-    last_coord.first = 0;
-    last_coord.second = 0;
+    // std::pair<int,int> last_coord;
+    // last_coord.first = 0;
+    // last_coord.second = 0;
 
-    float len_traveled = 0.;    
-    for (int ipt=0; ipt<npts-1; ipt++) {
+    // float len_traveled = 0.;    
+    // for (int ipt=0; ipt<npts-1; ipt++) {
 
-      TVector3 start = track.LocationAtPoint(ipt);
-      TVector3 end   = track.LocationAtPoint(ipt+1);
-      TVector3 dir   = end-start;
+    //   TVector3 start = track.LocationAtPoint(ipt);
+    //   TVector3 end   = track.LocationAtPoint(ipt+1);
+    //   TVector3 dir   = end-start;
       
-      double segsize = dir.Mag();
+    //   double segsize = dir.Mag();
 
-      int nsteps = 1;
-      if ( segsize>maxstepsize ) {
-        nsteps = segsize/maxstepsize + 1;
-      }
+    //   int nsteps = 1;
+    //   if ( segsize>maxstepsize ) {
+    //     nsteps = segsize/maxstepsize + 1;
+    //   }
       
-      float stepsize = segsize/float(nsteps);
+    //   float stepsize = segsize/float(nsteps);
 
-      for (int istep=0; istep<=nsteps; istep++) {
-        // get 3d position along track
-        TVector3 pos = start + istep*(stepsize/segsize)*dir;
-        // project into image        
-        float tick = pos[0]/driftv/usec_per_tick + 3200; // tick
-        float rowcoord = (tick-meta.min_y())/meta.pixel_height();
+    //   for (int istep=0; istep<=nsteps; istep++) {
+    //     // get 3d position along track
+    //     TVector3 pos = start + istep*(stepsize/segsize)*dir;
+    //     // project into image        
+    //     float tick = pos[0]/driftv/usec_per_tick + 3200; // tick
+    //     float rowcoord = (tick-meta.min_y())/meta.pixel_height();
 
-        //  length on track
-        float s = len_traveled + istep*stepsize;
+    //     //  length on track
+    //     float s = len_traveled + istep*stepsize;
         
-        // from larlite Geometry::WireCoordinate(...)
-        float wirecoord = pos[1]*orthovect[1] + pos[2]*orthovect[2] - firstwireproj.at(plane);
-        float colcoord = (wirecoord-meta.min_x())/meta.pixel_width();
+    //     // from larlite Geometry::WireCoordinate(...)
+    //     float wirecoord = pos[1]*orthovect[1] + pos[2]*orthovect[2] - firstwireproj.at(plane);
+    //     float colcoord = (wirecoord-meta.min_x())/meta.pixel_width();
         
-        int row = (int)rowcoord;
-        int col = (int)colcoord;
+    //     int row = (int)rowcoord;
+    //     int col = (int)colcoord;
         
-        if ( row<0 || row>=nrows ) continue;
-        if ( col<0 || col>=ncols ) continue;
+    //     if ( row<0 || row>=nrows ) continue;
+    //     if ( col<0 || col>=ncols ) continue;
 
-        if ( min_row>row ) min_row = row;
-        if ( max_row<row ) max_row = row;
-        if ( min_col>col ) min_col = col;
-        if ( max_col<col ) max_col = col;
+    //     if ( min_row>row ) min_row = row;
+    //     if ( max_row<row ) max_row = row;
+    //     if ( min_col>col ) min_col = col;
+    //     if ( max_col<col ) max_col = col;
 
-        float pixval = img.pixel(row,col);
-        if ( pixval<threshold )
-          continue;
+    //     float pixval = img.pixel(row,col);
+    //     if ( pixval<threshold )
+    //       continue;
 	
-        std::pair<int,int> pixcoord(col,row);
-	bool newpix = (pixcoord!=last_coord);
+    //     std::pair<int,int> pixcoord(col,row);
+    // 	bool newpix = (pixcoord!=last_coord);
 
-        if ( fill_map ) {
-          auto it = pixel_map.find( pixcoord );
-          if ( it==pixel_map.end() ) {
-            // new entry
-            pixel_map[pixcoord] = Pix_t( col, row, s, s, pixval );
-            pixel_v.push_back( std::vector<int>{col,row} );            
-            it = pixel_map.find( pixcoord );
-          }
-          it->second.smax = s;
+    //     if ( fill_map ) {
+    //       auto it = pixel_map.find( pixcoord );
+    //       if ( it==pixel_map.end() ) {
+    //         // new entry
+    //         pixel_map[pixcoord] = Pix_t( col, row, s, s, pixval );
+    //         pixel_v.push_back( std::vector<int>{col,row} );            
+    //         it = pixel_map.find( pixcoord );
+    //       }
+    //       it->second.smax = s;
 
-	  if (newpix) {
-	    auto it_old = pixel_map.find(last_coord);
-	    if ( it_old!=pixel_map.end() ) {
-	      it_old->second.smax = s;
-	    }
-	    last_coord = pixcoord;
-	  }
-        }
-        else {          
-          auto it = pixel_set.find( pixcoord );
-          if ( it==pixel_set.end() ) {
-            pixel_set.insert( std::pair<int,int>(col,row) );
-            pixel_v.push_back( std::vector<int>{col,row} );
-          }
-        }
+    // 	  if (newpix) {
+    // 	    auto it_old = pixel_map.find(last_coord);
+    // 	    if ( it_old!=pixel_map.end() ) {
+    // 	      it_old->second.smax = s;
+    // 	    }
+    // 	    last_coord = pixcoord;
+    // 	  }
+    //     }
+    //     else {          
+    //       auto it = pixel_set.find( pixcoord );
+    //       if ( it==pixel_set.end() ) {
+    //         pixel_set.insert( std::pair<int,int>(col,row) );
+    //         pixel_v.push_back( std::vector<int>{col,row} );
+    //       }
+    //     }
 
-      }//end of pixel steps
+    //   }//end of pixel steps
       
-      len_traveled += segsize;
+    //   len_traveled += segsize;
       
-    }//end of trajectory point list
+    // }//end of trajectory point list
         
-    LARCV_DEBUG() << "Size of pixel_v: " << pixel_v.size() << " len-traveled=" << len_traveled << " cm" << std::endl;
+    // LARCV_DEBUG() << "Size of pixel_v: " << pixel_v.size() << " len-traveled=" << len_traveled << " cm" << std::endl;
 
-    std::chrono::steady_clock::time_point end_pixlist = std::chrono::steady_clock::now();
-    LARCV_DEBUG() << "time to make pixlist: " << std::chrono::duration_cast<std::chrono::microseconds>(end_pixlist - start_pixlist).count() << " usec" << std::endl;
+    // std::chrono::steady_clock::time_point end_pixlist = std::chrono::steady_clock::now();
+    // LARCV_DEBUG() << "time to make pixlist: " << std::chrono::duration_cast<std::chrono::microseconds>(end_pixlist - start_pixlist).count() << " usec" << std::endl;
     return pixel_v.size();
   }
   

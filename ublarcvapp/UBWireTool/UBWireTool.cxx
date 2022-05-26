@@ -396,7 +396,7 @@ namespace ublarcvapp {
     }
 
     Double_t xyz[3] = { 0, intersection[1], intersection[0] };
-    otherwire = (int)larutil::Geometry::GetME()->WireCoordinate( xyz, otherplane );;
+    otherwire = (int)larlite::larutil::Geometry::GetME()->WireCoordinate( xyz, otherplane );;
   }
 
 
@@ -555,7 +555,7 @@ namespace ublarcvapp {
       
       // get the plane coordinats
       for (size_t p=0; p<img_v.size(); p++) {
-	float wire = larutil::Geometry::GetME()->WireCoordinate( xyz, p );
+	float wire = larlite::larutil::Geometry::GetME()->WireCoordinate( xyz, p );
 	if ( wire<img_v.at(p).meta().min_x() || wire>=img_v.at(p).meta().max_x() )
 	  continue;
 	
@@ -649,7 +649,7 @@ namespace ublarcvapp {
     }
     
     for (int p=0; p<nplanes; p++) {
-      float wire = larutil::Geometry::GetME()->WireCoordinate( xyz, p );
+      float wire = larlite::larutil::Geometry::GetME()->WireCoordinate( xyz, p );
       // round wire
       //wire = std::roundf(wire);
 

@@ -189,9 +189,9 @@ namespace mctools {
     }
     else {
       // in TPC
-      double dpos[3] = { _vtx_sce_x, _vtx_sce_y, _vtx_sce_z };
+      TVector3 dpos(_vtx_sce_x, _vtx_sce_y, _vtx_sce_z );
       for (int p=0;p<3; p++) {
-        _vtx_wire[p] = larutil::Geometry::GetME()->WireCoordinate( dpos, p );
+        _vtx_wire[p] = larlite::larutil::Geometry::GetME()->WireCoordinate( dpos, p );
       }
     }
 

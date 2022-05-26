@@ -17,11 +17,11 @@ namespace mctools {
   std::vector<int> NeutrinoVertex::getImageCoords( larlite::storage_manager& ioll )
   {
     std::vector<float> pos3dt_wsce = getPos3DwSCE( ioll );
-    std::vector<double> dpos(3);
+    TVector3 dpos(0,0,0);
     for (int i=0; i<3; i++) dpos[i] = (double)pos3dt_wsce[i];
     std::vector<int> imgcoord(4,0); // U,V,Y,tick
     for (int p=0; p<3; p++ )
-      imgcoord[p] = (int)(larutil::Geometry::GetME()->WireCoordinate(dpos,p)+0.5);//0.5 for rounding
+      imgcoord[p] = (int)(larlite::larutil::Geometry::GetME()->WireCoordinate(dpos,p)+0.5);//0.5 for rounding
     imgcoord[3] = pos3dt_wsce[3];
     return imgcoord;
   }

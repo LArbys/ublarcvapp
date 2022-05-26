@@ -783,7 +783,7 @@ namespace ublarcvapp {
 
     const larcv::ImageMeta& meta = img_v.front().meta();
 #ifdef HAS_LARLITE
-    const larutil::Geometry* geo = larutil::Geometry::GetME();
+    const larlite::larutil::Geometry* geo = larlite::larutil::Geometry::GetME(larlite::geo::kMicroBooNE);
 #else
     LARCV_CRITICAL() << "Class must be compiled with LARLITE" << std::endl;
 #endif
@@ -841,112 +841,113 @@ namespace ublarcvapp {
       throw std::runtime_error( ss.str() );
     }
 
+    throw std::runtime_error("FIX ME");
 
-    // determine range for u-plane
-    // we get the min and max U-wires overlapping with the z-wire lower bound
-    Double_t xyzStart[3];
-    Double_t xyzEnd[3];
-#ifdef HAS_LARLITE
-    geo->WireEndPoints( 2, zcol0, xyzStart, xyzEnd );
-#endif
+//     // determine range for u-plane
+//     // we get the min and max U-wires overlapping with the z-wire lower bound
+//     Double_t xyzStart[3];
+//     Double_t xyzEnd[3];
+// #ifdef HAS_LARLITE
+//     geo->WireEndPoints( 2, zcol0, xyzStart, xyzEnd );
+// #endif
 
-    float z0 = xyzStart[2];
-    Double_t zupt0[3] = { 0,+116.0, z0+0.1 };
-    int ucol0 = 0;
-#ifdef HAS_LARLITE
-    try {
-      ucol0 = geo->NearestWire( zupt0, 0 );
-    }
-    catch (...) {
-      ucol0 = 0;
-    }
-    geo->WireEndPoints( 2, zcol1, xyzStart, xyzEnd );
-#endif
-    float z1 = xyzStart[2];
-    Double_t zupt1[3] = { 0,-116.0, z1-0.1 };
-    int ucol1 = 0;
-#ifdef HAS_LARLITE
-    try {
-      ucol1 = geo->NearestWire( zupt1, 0 );
-    }
-    catch (...) {
-      ucol1 = 2399;
-    }
-#endif
-    //std::cout << "  inferred u bounds: [" << ucol0 << "," << ucol1 << "]"
-    //          << " du=" << ucol1-ucol0 << std::endl;
+//     float z0 = xyzStart[2];
+//     Double_t zupt0[3] = { 0,+116.0, z0+0.1 };
+//     int ucol0 = 0;
+// #ifdef HAS_LARLITE
+//     try {
+//       ucol0 = geo->NearestWire( zupt0, 0 );
+//     }
+//     catch (...) {
+//       ucol0 = 0;
+//     }
+//     geo->WireEndPoints( 2, zcol1, xyzStart, xyzEnd );
+// #endif
+//     float z1 = xyzStart[2];
+//     Double_t zupt1[3] = { 0,-116.0, z1-0.1 };
+//     int ucol1 = 0;
+// #ifdef HAS_LARLITE
+//     try {
+//       ucol1 = geo->NearestWire( zupt1, 0 );
+//     }
+//     catch (...) {
+//       ucol1 = 2399;
+//     }
+// #endif
+//     //std::cout << "  inferred u bounds: [" << ucol0 << "," << ucol1 << "]"
+//     //          << " du=" << ucol1-ucol0 << std::endl;
 
-    // must fit in _box_pixel_width.
-    // we center around the u bounds
-    int centeru = (ucol1+ucol0)/2;
-    ucol0 = centeru-box_pixel_width/2;
-    ucol1 = ucol0+box_pixel_width;
-    // fix if out of bounds
-    if (ucol0<0) {
-      ucol0 = 0;
-      ucol1 = box_pixel_width;
-    }
-    if (ucol1>=2400) {
-      ucol1 = 2399;
-      ucol0 = ucol1-box_pixel_width;
-    }
+//     // must fit in _box_pixel_width.
+//     // we center around the u bounds
+//     int centeru = (ucol1+ucol0)/2;
+//     ucol0 = centeru-box_pixel_width/2;
+//     ucol1 = ucol0+box_pixel_width;
+//     // fix if out of bounds
+//     if (ucol0<0) {
+//       ucol0 = 0;
+//       ucol1 = box_pixel_width;
+//     }
+//     if (ucol1>=2400) {
+//       ucol1 = 2399;
+//       ucol0 = ucol1-box_pixel_width;
+//     }
 
-    // determine v-plane in the same way
-#ifdef HAS_LARLITE
-    geo->WireEndPoints( 2, zcol0, xyzStart, xyzEnd );
-#endif
-    z0 = xyzStart[2];
-    Double_t zvpt0[3] = { 0,-115.5, z0 };
-    int vcol0 = 0;
-#ifdef HAS_LARLITE
-    vcol0 = geo->NearestWire( zvpt0, 1 );
-    geo->WireEndPoints( 2, zcol1, xyzStart, xyzEnd );
-#endif
+//     // determine v-plane in the same way
+// #ifdef HAS_LARLITE
+//     geo->WireEndPoints( 2, zcol0, xyzStart, xyzEnd );
+// #endif
+//     z0 = xyzStart[2];
+//     Double_t zvpt0[3] = { 0,-115.5, z0 };
+//     int vcol0 = 0;
+// #ifdef HAS_LARLITE
+//     vcol0 = geo->NearestWire( zvpt0, 1 );
+//     geo->WireEndPoints( 2, zcol1, xyzStart, xyzEnd );
+// #endif
 
-    z1 = xyzStart[2];
-    Double_t zvpt1[3] = { 0,+117.5, z1-0.1 };
-    int vcol1 = 0;
-#ifdef HAS_LARLITE
-    try {
-      vcol1 = geo->NearestWire( zvpt1, 1 );
-    }
-    catch  (...) {
-      vcol1 = 2399;
-    }
-#endif
-    //std::cout << "  inferred v bounds: [" << vcol0 << "," << vcol1 << "]"
-    //          << " dv=" << vcol1-vcol0 << std::endl;
-    // must fit in _box_pixel_width.
-    // we center around the u bounds
-    int centerv = (vcol1+vcol0)/2;
-    vcol0 = centerv-box_pixel_width/2;
-    vcol1 = vcol0+box_pixel_width;
-    // fix if out of bounds
-    if (vcol0<0) {
-      vcol0 = 0;
-      vcol1 = box_pixel_width;
-    }
-    if (vcol1>=2400) {
-      vcol1 = 2399;
-      vcol0 = vcol1-box_pixel_width;
-    }
+//     z1 = xyzStart[2];
+//     Double_t zvpt1[3] = { 0,+117.5, z1-0.1 };
+//     int vcol1 = 0;
+// #ifdef HAS_LARLITE
+//     try {
+//       vcol1 = geo->NearestWire( zvpt1, 1 );
+//     }
+//     catch  (...) {
+//       vcol1 = 2399;
+//     }
+// #endif
+//     //std::cout << "  inferred v bounds: [" << vcol0 << "," << vcol1 << "]"
+//     //          << " dv=" << vcol1-vcol0 << std::endl;
+//     // must fit in _box_pixel_width.
+//     // we center around the u bounds
+//     int centerv = (vcol1+vcol0)/2;
+//     vcol0 = centerv-box_pixel_width/2;
+//     vcol1 = vcol0+box_pixel_width;
+//     // fix if out of bounds
+//     if (vcol0<0) {
+//       vcol0 = 0;
+//       vcol1 = box_pixel_width;
+//     }
+//     if (vcol1>=2400) {
+//       vcol1 = 2399;
+//       vcol0 = vcol1-box_pixel_width;
+//     }
 
 
-    // LARCV_DEBUG() << "Pos(Z,T)=(" << zwire << "," << tmid << ") => Crop z=[" << z0 << "," << z1 << "] zcol=[" << zcol0 << "," << zcol1 << "] "
-    // 		  << "u=[" << ucol0 << "," << ucol1 << "] du=" << ucol1-ucol0 << " "
-    // 		  << "v=[" << vcol0 << "," << vcol1 << "] dv=" << vcol1-vcol0 << " "
-    // 		  << "rows=[" << r1 << "," << r2 << "]"
-    // 		  << std::endl;
+//     // LARCV_DEBUG() << "Pos(Z,T)=(" << zwire << "," << tmid << ") => Crop z=[" << z0 << "," << z1 << "] zcol=[" << zcol0 << "," << zcol1 << "] "
+//     // 		  << "u=[" << ucol0 << "," << ucol1 << "] du=" << ucol1-ucol0 << " "
+//     // 		  << "v=[" << vcol0 << "," << vcol1 << "] dv=" << vcol1-vcol0 << " "
+//     // 		  << "rows=[" << r1 << "," << r2 << "]"
+//     // 		  << std::endl;
 
-    std::vector<int> crop_coords(8);
-    crop_coords[0] = zcol0;
-    crop_coords[1] = zcol1;
-    crop_coords[2] = ucol0;
-    crop_coords[3] = ucol1;
-    crop_coords[4] = vcol0;
-    crop_coords[5] = vcol1;
-    crop_coords[6] = r1;
-    crop_coords[7] = r2;
+    std::vector<int> crop_coords(8,0);
+    // crop_coords[0] = zcol0;
+    // crop_coords[1] = zcol1;
+    // crop_coords[2] = ucol0;
+    // crop_coords[3] = ucol1;
+    // crop_coords[4] = vcol0;
+    // crop_coords[5] = vcol1;
+    // crop_coords[6] = r1;
+    // crop_coords[7] = r2;
 
     return crop_coords;
 

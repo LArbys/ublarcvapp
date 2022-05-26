@@ -7,8 +7,8 @@ if not 'LARCV_BASEDIR' in os.environ:
 # LARLITE
 if 'LARLITE_BASEDIR' in os.environ:
     from larlite import larlite
-if 'LAROPENCV_BASEDIR' in os.environ:
-    from larocv import larocv
+#if 'LAROPENCV_BASEDIR' in os.environ:
+#    from larocv import larocv
 from larcv import larcv
 
 ublarcvapp_dir = os.environ['UBLARCVAPP_BASEDIR']+"/build/lib"
