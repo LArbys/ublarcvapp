@@ -256,6 +256,9 @@ namespace mctools {
 
     std::cout << "Ancestor ID: " << mcshower.AncestorTrackID() << std::endl;
 
+    trackID = mcshower.TrackID();
+    ancestorID = mcshower.AncestorTrackID();
+
     return tick;
 
 
@@ -285,7 +288,7 @@ namespace mctools {
       counter++;
     }
 
-    std::cout << "Element\t" << "index" << std::endl;
+    std::cout << "Before sort: " << std::endl;
     for (int i = 0; i < tickContainer.size(); i++) {
       std::cout << tickContainer[i].first << "\t"
                << tickContainer[i].second << std::endl;
@@ -294,8 +297,7 @@ namespace mctools {
 
   std::sort( tickContainer.begin(), tickContainer.end() );
 
-  std::cout << "Element\t"
-         << "index" << std::endl;
+  std::cout << "After sort: " << std::endl;
     for (int i = 0; i < tickContainer.size(); i++) {
         std::cout << tickContainer[i].first << "\t"
              << tickContainer[i].second << std::endl;
@@ -316,7 +318,7 @@ namespace mctools {
    *
    * @return Value of the closest matching opflash tick
    */
-std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector< std::pair<double, int> >  flashTicks ) {
+std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector< std::pair<double, int> > flashTicks ) {
 
     double threshold;
     if (isCosmic == 1) {
@@ -333,6 +335,10 @@ std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector
 
     auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), std::make_pair( mctrackTick, std::numeric_limits<int>::min()) );
     double b = (*(match)).first;
+
+    //std::cout << "match [iterator] is: " << match << std::endl;
+    //std::cout << "*match [dereferenced iterator, shoudl be a pair] is: " << (*(match)) << std::endl;
+    std::cout << "(*(match)).first [actual value of the tick] is: " << b << std::endl;
 
     if (match == flashTicks.begin() && fabs(b - mctrackTick) <= threshold) {
       clusterTick = mctrackTick;
