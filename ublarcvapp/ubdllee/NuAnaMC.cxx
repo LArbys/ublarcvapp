@@ -113,6 +113,10 @@ namespace ubdllee {
                                           const larlite::event_mcshower& ev_mcshower,
                                           const larcv::EventChStatus& ev_chstatus ) {
 
+    auto const geom = larlite::larutil::Geometry::GetME();
+    auto const detp = larutil::DetectorProperties::GetME();
+    auto const tsrv = larutil::TimeService::GetME(); 
+    
     // loop over interactions
     for ( auto const& mctruth : ev_mctruth) {
       LARCV_DEBUG() << "==== [interaction] ======================================" << std::endl;
@@ -135,15 +139,21 @@ namespace ubdllee {
 	  _vtx[2] =  mcpart.Trajectory().front().Z();
 	  _t      =  mcpart.Trajectory().front().T();
           std::vector<double> vtx_v = { (double)_vtx[0], (double)_vtx[1], (double)_vtx[2] };
+	  TVector3 vvtx( (double)_vtx[0], (double)_vtx[1], (double)_vtx[2] );
+
+	  // use the vertex to determine the TPC
+	  std::vector<int> ct = geom->GetContainingCryoAndTPCIDs( vvtx );
+	  int tpcid  = ct[1];
+	  int cryoid = ct[0];
 
           //double g4Ticks = detClocks->TPCG4Time2Tick( _t ) + detProperties->GetXTicksOffset(0,0,0) - detProperties->TriggerOffset();
           //double xtimeoffset = detProperties->ConvertTicksToX(g4Ticks,0,0,0);
-          double g4ticks = larutil::TimeService::GetME()->TPCG4Time2Tick(_t);
-          double xticksoffset = larutil::DetectorProperties::GetME()->GetXTicksOffset(0);
-          double trigoffset   =  larutil::DetectorProperties::GetME()->TriggerOffset();
+          double g4ticks = tsrv->TPCG4Time2Tick(_t);
+          double xticksoffset =  detp->GetXTicksOffset(0,tpcid,cryoid);
+          double trigoffset   =  detp->TriggerOffset();
           std::cout << "g4ticks=" << g4ticks << " xticksoffset=" << xticksoffset << " trigoffset=" << trigoffset << std::endl;
           double tick_offset = g4ticks;
-          double x_offset = larutil::DetectorProperties::GetME()->ConvertTicksToX( tick_offset, 0 );
+          double x_offset = detp->ConvertTicksToX( tick_offset, 0, tpcid, cryoid );
           std::cout << "tick_offset=" << tick_offset << " x_offset=" << x_offset << std::endl;
           
           std::vector<double> offsets = _sce->GetPosOffsets( vtx_v[0], vtx_v[1], vtx_v[2] );
@@ -151,7 +161,7 @@ namespace ubdllee {
           _vtx_sce[1] = _vtx[1] + offsets[1];
           _vtx_sce[2] = _vtx[2] + offsets[2];
 
-          _tick = 3200 + _vtx_sce[0]/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+          _tick = detp->ConvertXToTicks( _vtx_sce[0], tpcid, cryoid );
 
           // ---------------------------------------
           // hack: 
@@ -159,10 +169,10 @@ namespace ubdllee {
           // ---------------------------------------
           
           for ( size_t p=0; p<3; p++ ) {
-            _wid[p] = larutil::Geometry::GetME()->WireCoordinate( _vtx_sce, p );
+            _wid[p] = geom->WireCoordinate( _vtx_sce, p, tpcid, cryoid );
             auto const& chs = ev_chstatus.Status( (larcv::PlaneID_t)p );
             const std::vector<short>& status_v = chs.as_vector();
-            if ( (int)_wid[p]>=0 && (int)_wid[p]<status_v.size() ) {
+            if ( (int)_wid[p]>=0 && (int)_wid[p]<(int)status_v.size() ) {
               if ( status_v[ (int)_wid[p] ]>=4 )
                 _inbadch[p] = 0;
               else

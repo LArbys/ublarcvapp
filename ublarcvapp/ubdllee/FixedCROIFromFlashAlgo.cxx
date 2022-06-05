@@ -2,6 +2,7 @@
 
 #include "larlite/LArUtil/Geometry.h"
 #include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/LArDetectors.h"
 
 namespace ublarcvapp {
   namespace ubdllee {
@@ -67,8 +68,8 @@ namespace ublarcvapp {
           }
           
           for ( size_t p=0; p<3; p++ ) {
-            int min_col = larutil::Geometry::GetME()->NearestWire( ll, p );
-            int max_col = larutil::Geometry::GetME()->NearestWire( ur, p );
+            int min_col = larlite::larutil::Geometry::GetME()->NearestWire( ll, p );
+            int max_col = larlite::larutil::Geometry::GetME()->NearestWire( ur, p );
             // flip if needed
             if ( min_col>max_col ) {
               int tmp = min_col;

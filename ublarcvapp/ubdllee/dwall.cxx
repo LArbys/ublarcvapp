@@ -1,4 +1,5 @@
 #include "dwall.h"
+#include "larlite/LArUtil/Geometry.h"
 
 #include <cmath>
 #include <stdexcept>
@@ -14,40 +15,67 @@ namespace ublarcvapp {
   
   float dwall( const std::vector<float>& pos, int& boundary_type ) {
 
-    float dx1 = pos[0];
-    float dx2 = 258-pos[0];
-    float dy1 = 117.0-pos[1];
-    float dy2 = pos[1]+117.0;
-    float dz1 = pos[2];
-    float dz2 = 1036.0-pos[2];
+    auto const geom = larlite::larutil::Geometry::GetME();
+    
+    TVector3 vpos( pos[0], pos[1], pos[2] );
+    std::vector<int> ct = geom->GetContainingCryoAndTPCIDs( vpos );
+    int tpcid  = ct[1];
+    int cryoid = ct[0];
 
-    float dwall = 1.0e9;
+    auto const& tpcgeo   = geom->GetTPC( tpcid, cryoid );
+    TVector3 tpcdriftdir = geom->TPCDriftDir( tpcid, cryoid );
 
-    if ( dy1<dwall ) {
-      dwall = dy1;
-      boundary_type = 0; // top
+    float dedge[3][2] = {0};
+    int minboundary = -1;
+    int mindim    = -1;
+    float minboundary_dist = 1e9;
+    float dwall = 1.0e9;    
+    for (int v=0; v<3; v++) {
+      dedge[v][0] = vpos[v]-tpcgeo.fBounds[0][v];   // dist to low bound
+      dedge[v][1] = tpcgeo.fBounds[1][v] - vpos[v]; // dist to high bound
+      for (int ibound=0; ibound<2; ibound++) {
+	float dist = fabs(dedge[v][ibound]);
+	if ( dist<minboundary_dist ) {
+	  minboundary_dist = dist;
+	  mindim = v;
+	  minboundary = ibound;
+	  dwall = dedge[v][ibound];
+	}
+      }
     }
-    if ( dy2<dwall ) {
-      dwall = dy2;
-      boundary_type = 1; // bottom
-    }
-    if ( dz1<dwall ) {
-      dwall = dz1;
-      boundary_type = 2; // upstream
-    }
-    if ( dz2<dwall ) {
-      dwall = dz2;
-      boundary_type = 3; // downstream
-    }
-    if ( dx1<dwall ) {
-      dwall = dx1;
-      boundary_type = 4; // anode
-    }
-    if ( dx2<dwall ) {
-      dwall = dx2;
-      boundary_type = 5; // cathode
-    }
+    
 
+    
+    if ( mindim==1 ) {
+      if (minboundary==1)
+	boundary_type = 0; // top
+      else
+	boundary_type = 1; // botom
+    }
+    else if ( mindim==2 ) {
+      if (minboundary==0)
+	boundary_type = 2; // upstream
+      else
+	boundary_type = 3; // downstream
+    }
+    else {
+      // X-direction: or dirft dir
+      if ( tpcdriftdir[0]>0 ) {
+	// anode is high-bound
+	if ( minboundary==1 )
+	  boundary_type = 4; // anode
+	else
+	  boundary_type = 5; // cathode
+      }
+      else {
+	// anode is low-bound
+	if ( minboundary==0 )
+	  boundary_type = 4; // anode
+	else
+	  boundary_type = 5; // cathode
+      }
+    }
+    
     return dwall;
     
   }
@@ -61,37 +89,52 @@ namespace ublarcvapp {
   
   float dspecificwall( const std::vector<float>& pos, const int boundary_type ) {
 
-    float dx1 = pos[0];
-    float dx2 = 258-pos[0];
-    float dy1 = 117.0-pos[1];
-    float dy2 = pos[1]+117.0;
-    float dz1 = pos[2];
-    float dz2 = 1036.0-pos[2];
+    auto const geom = larlite::larutil::Geometry::GetME();
+    
+    TVector3 vpos( pos[0], pos[1], pos[2] );
+    std::vector<int> ct = geom->GetContainingCryoAndTPCIDs( vpos );
+    int tpcid  = ct[1];
+    int cryoid = ct[0];
 
-    float fdwall = 1.0e9;
+    auto const& tpcgeo   = geom->GetTPC( tpcid, cryoid );
+    TVector3 tpcdriftdir = geom->TPCDriftDir( tpcid, cryoid );
 
+    int dim   = -1;
+    int bound = -1;
     switch ( boundary_type ) {
-    case 0:
-      fdwall = dy1;
+    case 0://top
+      dim = 1;
+      bound = 1;
       break;
-    case 1:
-      fdwall = dy2;
+    case 1: // bottom
+      dim = 1;
+      bound = 0;
       break;
-    case 2:
-      fdwall = dz1;
+    case 2: // upstream
+      dim = 2;
+      bound = 0;
       break;
-    case 3:
-      fdwall = dz2;
+    case 3: // downstream
+      dim = 2;
+      bound = 1;
       break;
-    case 4:
-      fdwall = dx1;
+    case 4: // anode (assuming -1 drift dir)
+      dim = 1;
+      bound = (tpcdriftdir[0]<0) ? 0 : 1;
       break;
     case 5:
-      fdwall = dx2;
+      dim = 1;
+      bound = (tpcdriftdir[0]<0) ? 1 : 0;
       break;
     default:
       throw std::runtime_error("dspecifcwall: imageend boundary points undefined");
     }
+    
+    float fdwall = 1e9;
+    if ( bound==0 )
+      fdwall = vpos[dim]-tpcgeo.fBounds[0][dim];   // dist to low bound
+    else
+      fdwall = tpcgeo.fBounds[1][dim]-vpos[dim];
 
     return fdwall;
     
@@ -99,30 +142,50 @@ namespace ublarcvapp {
 
   float dwall_noAC( const std::vector<float>& pos, int& boundary_type ) {
 
-    float dy1 = 117.0-pos[1];
-    float dy2 = pos[1]+117.0;
-    float dz1 = pos[2];
-    float dz2 = 1036.0-pos[2];
+    auto const geom = larlite::larutil::Geometry::GetME();
+    
+    TVector3 vpos( pos[0], pos[1], pos[2] );
+    std::vector<int> ct = geom->GetContainingCryoAndTPCIDs( vpos );
+    int tpcid  = ct[1];
+    int cryoid = ct[0];
 
-    float dwall = 1.0e9;
+    auto const& tpcgeo   = geom->GetTPC( tpcid, cryoid );
 
-    if ( dy1<dwall ) {
-      dwall = dy1;
-      boundary_type = 0; // top
+    float dedge[3][2] = {0};
+    int minboundary = -1;
+    int mindim    = -1;
+    float minboundary_dist = 1e9;
+    float dwall = 1.0e9;    
+    for (int v=1; v<3; v++) {
+      dedge[v][0] = vpos[v]-tpcgeo.fBounds[0][v];   // dist to low bound
+      dedge[v][1] = tpcgeo.fBounds[1][v] - vpos[v]; // dist to high bound
+      for (int ibound=0; ibound<2; ibound++) {
+	float dist = fabs(dedge[v][ibound]);
+	if ( dist<minboundary_dist ) {
+	  minboundary_dist = dist;
+	  mindim = v;
+	  minboundary = ibound;
+	  dwall = dedge[v][ibound];
+	}
+      }
     }
-    if ( dy2<dwall ) {
-      dwall = dy2;
-      boundary_type = 1; // bottom
+    
+    if ( mindim==1 ) {
+      if (minboundary==1)
+	boundary_type = 0; // top
+      else
+	boundary_type = 1; // botom
     }
-    if ( dz1<dwall ) {
-      dwall = dz1;
-      boundary_type = 2; // upstream
+    else if ( mindim==2 ) {
+      if (minboundary==0)
+	boundary_type = 2; // upstream
+      else
+	boundary_type = 3; // downstream
     }
-    if ( dz2<dwall ) {
-      dwall = dz2;
-      boundary_type = 3; // downstream
+    else {
+      throw std::runtime_error("dwall_noAC: unexpected dimension with the min distance");
     }
-
+    
     return dwall;
     
   }

@@ -1,30 +1,18 @@
-set(MODULE_NAME ubdllee)
+set(MODULE_NAME RecoTools)
 
 # library name
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # Collect the headers
-set( HEADERS #FixedCROIFromFlashAlgo.h
-  #FixedCROIFromFlashConfig.h
-  dwall.h
-  NuAnaMC.h
-  DLInteraction.h
-  MergeDLInteraction.h DLMerger.h )
-
+set( HEADERS DetUtils.h )
 # Add sources
-add_library( ${LIBNAME} SHARED
-	     dwall.cxx
-	     #FixedCROIFromFlashAlgo.cxx
-	     #FixedCROIFromFlashConfig.cxx
-             NuAnaMC.cxx
-             DLInteraction.cxx
-             MergeDLInteraction.cxx DLMerger.cxx )
+add_library( ${LIBNAME} SHARED DetUtils.cxx )
 
 # larlite libraries
 set(LARLITE_LIBS_USED ${LARLITE_LIBS} )
 
 # includes for ROOT dictionary gen
-include_directories(${LARCV_INCLUDE_DIR} ${LARCV_JSON_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/ublarcvapp/${MODULE_NAME} )
+include_directories(${LARCV_INCLUDE_DIR} ${LARCV_JSON_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/ublarcvapp/${MODULE_NAME})
 
 if (HAS_LARLITE)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")

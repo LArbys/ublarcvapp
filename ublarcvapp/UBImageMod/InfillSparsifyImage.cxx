@@ -108,7 +108,7 @@ namespace ublarcvapp {
     larcv::SparseImage adc_sparse_tensor;
     larcv::SparseImage adcmasked_sparse_tensor;
 
-    for(int i =0; i<adc_image_v.size(); i++){
+    for(size_t i =0; i<adc_image_v.size(); i++){
       adc_sparse_tensor = larcv::SparseImage(adc_image_v[i],
                                             labels_image_v[i],
                                             threshold_v);
