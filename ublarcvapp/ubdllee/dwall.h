@@ -11,8 +11,8 @@ namespace ublarcvapp {
   float  dspecificwall( const std::vector<float>& pos, const int boundary_type );
   double dspecificwall( const std::vector<double>& pos, const int boundary_type );
 
-  float  dwall_noAC( const std::vector<float>& pos, int& boundary_type );
-  double dwall_noAC( const std::vector<double>& pos, int& boundary_type );  
+  float  dwall_noAC( const std::vector<float>& pos, int& boundary_type, int tpcid, int cryoid );
+  double dwall_noAC( const std::vector<double>& pos, int& boundary_type, int tpcid, int cryoid );  
 
   /**
    * @brief class to provide python binding to dwall functions
@@ -24,7 +24,7 @@ namespace ublarcvapp {
     pydwall() {};
     virtual ~pydwall() {};
     static float  dwall( const float x, const float y, const float z );
-    static float  dwall_noAC( const float x, const float y, const float z );    
+    static float  dwall_noAC( const float x, const float y, const float z, int tpcid, int cryoid  );    
   };
   
 }

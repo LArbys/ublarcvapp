@@ -52,7 +52,9 @@ namespace mctools {
     int npts = 0;
     for ( auto const& step : mct ) {
       TVector3 start = { step.Position()[0], step.Position()[1], step.Position()[2] };
-      std::vector<double> s_offset = _p_sce->GetPosOffsets(start[0],start[1],start[2]);
+      std::vector<double> s_offset = { -0.7, 0, 0 };
+      if ( _p_sce )
+	s_offset = _p_sce->GetPosOffsets(start[0],start[1],start[2]);
       TVector3 start_sce;
       start_sce[0] = start[0] - s_offset[0] + 0.7;
       start_sce[1] = start[1] + s_offset[1];
@@ -120,15 +122,20 @@ namespace mctools {
       len1 = sqrt(len1);
       len2 = sqrt(len2);
       dist1 = sqrt(dist1);
-      dist2 = sqrt(dist2);      
+      dist2 = sqrt(dist2);
+      
       if ( len2>0 )
-        s /= (len2);
+        s /= len2;
 
       float r = 1.0e9;
       if (len2>0)
         r = pointLineDistance( start, end, testpt );
 
-      LARCV_DEBUG() << "step[" << i << "] len=" << len2 << " r=" << r << " s=" << s << " vs (" << 0 << "," << len2 << ")" << std::endl;
+      LARCV_DEBUG() << "step[" << i << "] "
+		    << "(" << start[0] << "," << start[1] << "," << start[2] << ") ->"
+		    << "(" << end[0] << "," << end[1] << "," << end[2] << ")"
+		    << "len=" << len2 << " r=" << r << " s=" << s << " vs (" << 0 << "," << len2 << ")"
+		    << std::endl;
 
       // determine if along the track
       if ( len2>0 && s>0 && s<len2 ) {
@@ -153,7 +160,9 @@ namespace mctools {
 
   /**
    * @brief distance from point to single line segment
-   *
+   * 
+   * from https://mathworld.wolfram.com/Point-LineDistance3-Dimensional.html
+   * 
    * @param[in] linept1 one end of line segment
    * @param[in] linept2 other end of line segment
    * @param[in] pt  test point
@@ -171,8 +180,8 @@ namespace mctools {
     if ( linept2.size()<3 )
       throw std::runtime_error("TruthTrackSCE::pointLineDistance. linept2 length < 3");
     
-    std::vector<float> d1(3,0);
-    std::vector<float> d2(3,0);
+    std::vector<float> d1(3,0); //(x0-x1)
+    std::vector<float> d2(3,0); //(x0-x2)
 
     float len1 = 0.;
     float linelen = 0.;
@@ -180,7 +189,7 @@ namespace mctools {
       d1[i] = pt[i] - linept1[i];
       d2[i] = pt[i] - linept2[i];
       len1 += d1[i]*d1[i];
-      linelen += (linept1[i]-linept2[i])*(linept1[i]-linept2[i]);
+      linelen += (linept2[i]-linept1[i])*(linept2[i]-linept1[i]);
     }
     len1 = sqrt(len1);
     linelen = sqrt(linelen);
