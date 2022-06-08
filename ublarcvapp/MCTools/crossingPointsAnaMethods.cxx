@@ -8,7 +8,7 @@
 
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 #include "larlite/LArUtil/Geometry.h"
-#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/DetectorProperties.h"
 #include "larlite/DataFormat/mctrack.h"
 #include "larlite/DataFormat/trigger.h"
 
@@ -24,14 +24,15 @@ namespace mctools {
    *
    *
    */
-  float CrossingPointsAnaMethods::getTick( const larlite::mcstep& step, const float trig_time,
+  float CrossingPointsAnaMethods::getTick( const larlite::mcstep& step,
+					   const int tpcid, const int cryoid, const float trig_time,
                                            const larutil::SpaceChargeMicroBooNE* psce ) {
     std::vector<float> pos(4,0);
     pos[0] = step.T();
     pos[1] = step.X();
     pos[2] = step.Y();
     pos[3] = step.Z();
-    return getTick( pos, trig_time, psce );
+    return getTick( pos, tpcid, cryoid, trig_time, psce );
   }
   
 
@@ -40,7 +41,8 @@ namespace mctools {
    *
    *
    */  
-  float CrossingPointsAnaMethods::getTick( const std::vector<float>& step, const float trig_time,
+  float CrossingPointsAnaMethods::getTick( const std::vector<float>& step,
+					   const int tpcid, const int cryoid, const float trig_time,
                                            const larutil::SpaceChargeMicroBooNE* psce ) {    
     // Function returns the tick time of a MC step point
     // if SCE pointer is null, we do not correct for the space charge
@@ -54,10 +56,16 @@ namespace mctools {
       dpos[0] = step[1];
     }
     
-    const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;    
-    float tick = ( step[0]*1.0e-3 - (trig_time-4050.0) )/0.5 + dpos[0]/cm_per_tick + 3200.0;
+    // const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;    
+    // float tick = ( step[0]*1.0e-3 - (trig_time-4050.0) )/0.5 + dpos[0]/cm_per_tick + 3200.0;
+
+    // tick based on position in detector
+    float tick_pos = larutil::DetectorProperties::GetME()->ConvertXToTicks( dpos[0], 0, tpcid, cryoid );
+
+    // tick offset due to time
+    float tick_time = ( step[0]*1.0e-3 - (trig_time-4050.0) )/(larutil::DetectorProperties::GetME()->SamplingRate()*1.0e-3);
     
-    return tick;
+    return tick_pos+tick_time;
   }
 
   /**
@@ -70,8 +78,8 @@ namespace mctools {
     if ( track.size()==0 )
       return -1;
     
-    float tick_start = getTick( track.front(), trig_time, psce );
-    float tick_end   = getTick( track.back(), trig_time, psce );
+    float tick_start = getTick( track.front(), 0, 0, trig_time, psce );
+    float tick_end   = getTick( track.back(), 0, 0, trig_time, psce );
     if ( tick_start>meta.min_y() && tick_start<meta.max_y() && tick_end>meta.min_y() && tick_end<meta.max_y() )
       return 2;
 
@@ -101,7 +109,9 @@ namespace mctools {
                                                         bool verbose ) {
     
     // This function returns the (SCE-corrected) position where a MC track first is inside the image bounds
-    const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;    
+    auto const detp = larutil::DetectorProperties::GetME();
+    auto const geom = larlite::larutil::Geometry::GetME();
+
     int npts = (int)track.size();
     endpt3d.clear();
 
@@ -134,21 +144,31 @@ namespace mctools {
       float stepsize = dirnorm/float(nsteps);
       for (int istep=0; istep<nsteps; istep++) {
 	std::vector<float> pos(4,0);
-	std::vector<float> pos4v(4,0);
+	std::vector<float> pos4v(4,0);       
 	pos4v[0] = last_step.T();	
 	pos[0] = pos4v[1] = last_step.X() + stepsize*float(istep)*dir[0];
 	pos[1] = pos4v[2] = last_step.Y() + stepsize*float(istep)*dir[1];
 	pos[2] = pos4v[3] = last_step.Z() + stepsize*float(istep)*dir[2];
+	TVector3 vecpos( pos[0], pos[1], pos[2] );
+	std::vector<int> step_ct = geom->GetContainingCryoAndTPCIDs(vecpos);
+
+	if ( step_ct.size()==0 )
+	  continue; // not inside a TPC yet
+
+	int tpcid = step_ct[1];
+	int cryoid = step_ct[0];
 
 	int boundary_type = -1;        
-	float fdwall = ublarcvapp::dwall( pos, boundary_type );
+	float fdwall = ublarcvapp::dwall( pos, boundary_type, tpcid, cryoid );
         
-	std::vector<double> offset = psce->GetPosOffsets( pos[0], pos[1], pos[2] );
+	std::vector<double> offset= {0.7,0,0};
+	if ( psce )
+	  offset = psce->GetPosOffsets( pos[0], pos[1], pos[2] );
 	std::vector<float> pos_sce(3);
 	pos_sce[0] = pos[0]-(float)offset[0]+0.7;
 	pos_sce[1] = pos[1]+(float)offset[1];
 	pos_sce[2] = pos[2]+(float)offset[2];
-	float tick = getTick( pos4v, trig_time, psce );
+	float tick = getTick( pos4v, tpcid, cryoid, trig_time, psce );
         
         if ( verbose ) {
           std::cout << " [step] dwall=" << fdwall << " tick=" << tick
@@ -161,7 +181,7 @@ namespace mctools {
         if (fdwall<0.1 || (offset[0]==0.0 && offset[1]==0.0 && offset[2]==0.0 ))
           continue;        
 
-	pos_sce[0] = (tick-3200.0)*cm_per_tick;
+	pos_sce[0] = detp->ConvertTicksToX(tick, 0, tpcid, cryoid );
 	if ( tick<meta.min_y()+1.0 || tick>meta.max_y()-1.0 )
 	  continue;
         

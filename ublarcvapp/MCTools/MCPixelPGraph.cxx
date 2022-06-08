@@ -728,9 +728,9 @@ namespace mctools {
     txyz[0] = realpos4[3];
     float tick = 0.;
     if (apply_sce)
-      tick = CrossingPointsAnaMethods::getTick( txyz, 4050.0, &sce );
+      tick = CrossingPointsAnaMethods::getTick( txyz, 0, 0, 4050.0, &sce );
     else
-      tick = CrossingPointsAnaMethods::getTick( txyz, 4050.0, NULL );
+      tick = CrossingPointsAnaMethods::getTick( txyz, 0, 0, 4050.0, NULL );
     
     for (int i=0; i<3; i++) {
       imgpos4[i] = dpos[i];

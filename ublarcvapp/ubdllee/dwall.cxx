@@ -6,21 +6,18 @@
 
 namespace ublarcvapp {
 
-  double dwall( const std::vector<double>& pos, int& boundary_type ) {
+  double dwall( const std::vector<double>& pos, int& boundary_type, int tpcid, int cryoid ) {
     std::vector<float> fpos(3);
     for (int i=0; i<3; i++)
       fpos[i] = (float)pos[i];
-    return dwall( fpos, boundary_type);
+    return dwall( fpos, boundary_type, tpcid, cryoid );
   }
   
-  float dwall( const std::vector<float>& pos, int& boundary_type ) {
+  float dwall( const std::vector<float>& pos, int& boundary_type, int tpcid, int cryoid ) {
 
     auto const geom = larlite::larutil::Geometry::GetME();
     
     TVector3 vpos( pos[0], pos[1], pos[2] );
-    std::vector<int> ct = geom->GetContainingCryoAndTPCIDs( vpos );
-    int tpcid  = ct[1];
-    int cryoid = ct[0];
 
     auto const& tpcgeo   = geom->GetTPC( tpcid, cryoid );
     TVector3 tpcdriftdir = geom->TPCDriftDir( tpcid, cryoid );
@@ -198,10 +195,10 @@ namespace ublarcvapp {
    * @brief a python-friendly version of dwall
    *
    */
-  float  pydwall::dwall( const float x, const float y, const float z ) {
+  float  pydwall::dwall( const float x, const float y, const float z, int tpcid, int cryoid ) {
     std::vector<float> pos = { x, y, z };
     int boundary = 0;
-    return (float)ublarcvapp::dwall( pos, boundary );
+    return (float)ublarcvapp::dwall( pos, boundary, tpcid, cryoid );
   }
 
   /**

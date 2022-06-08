@@ -181,7 +181,7 @@ namespace ubdllee {
           }
           
           int boundary_type;
-          _dwall = ublarcvapp::dwall( vtx_v, boundary_type );
+          _dwall = ublarcvapp::dwall( vtx_v, boundary_type, tpcid, cryoid );
           
 	  // input neutrino
 	  _nu_pdg = mcpart.PdgCode();

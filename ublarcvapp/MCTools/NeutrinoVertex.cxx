@@ -41,7 +41,7 @@ namespace mctools {
 
     auto const& mctruth = ev_mctruth->at(0);
     const larlite::mcstep& start = mctruth.GetNeutrino().Nu().Trajectory().front();
-    float tick = CrossingPointsAnaMethods::getTick(start, 4050.0, nullptr);
+    float tick = CrossingPointsAnaMethods::getTick(start, 0, 0, 4050.0, nullptr);
     std::vector<float> pos3d;
     pos3d[0] = start.X();
     pos3d[1] = start.Y();
@@ -73,7 +73,7 @@ namespace mctools {
 
     auto const& mctruth = ev_mctruth->at(0);
     const larlite::mcstep& start = mctruth.GetNeutrino().Nu().Trajectory().front();
-    float tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
+    float tick = CrossingPointsAnaMethods::getTick(start, 0, 0, 4050.0, _sce);
     std::vector<float> pos3d_wtick(4,0);
     pos3d_wtick[0] = start.X();
     pos3d_wtick[1] = start.Y();

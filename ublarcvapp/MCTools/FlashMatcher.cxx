@@ -193,10 +193,10 @@ namespace mctools {
     double xPos = start.X();
     double xPos2 = mctrack.Start().X();
 
-    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
+    double tick = CrossingPointsAnaMethods::getTick(start, 0, 0, 4050.0, _sce);
     tick = tick - xPos / cm_per_tick;
 
-    double tick2 = CrossingPointsAnaMethods::getTick(mctrack.Start(), 4050.0, _sce);
+    double tick2 = CrossingPointsAnaMethods::getTick(mctrack.Start(), 0, 0, 4050.0, _sce);
     tick2 = tick2 - xPos2 / cm_per_tick;
 
     std::cout << "Tick for first mcstep in TPC: " << tick << " and tick for starting up in the sky: " << tick2 << std::endl;
@@ -246,7 +246,7 @@ namespace mctools {
     const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
     double xPos = start.X();
 
-    double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
+    double tick = CrossingPointsAnaMethods::getTick(start, 0, 0, 4050.0, _sce);
     tick = tick - xPos / cm_per_tick;
 
     // check for primaries
@@ -286,7 +286,7 @@ namespace mctools {
     }
 
     std::cout << "Element\t" << "index" << std::endl;
-    for (int i = 0; i < tickContainer.size(); i++) {
+    for (int i = 0; i < (int)tickContainer.size(); i++) {
       std::cout << tickContainer[i].first << "\t"
                << tickContainer[i].second << std::endl;
       }
@@ -296,7 +296,7 @@ namespace mctools {
 
   std::cout << "Element\t"
          << "index" << std::endl;
-    for (int i = 0; i < tickContainer.size(); i++) {
+  for (int i = 0; i < (int)tickContainer.size(); i++) {
         std::cout << tickContainer[i].first << "\t"
              << tickContainer[i].second << std::endl;
     }

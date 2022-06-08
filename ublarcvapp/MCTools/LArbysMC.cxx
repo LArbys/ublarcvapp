@@ -169,7 +169,7 @@ namespace mctools {
     _vtx_z            = nu.Nu().Trajectory().front().Z();
 
     std::vector<float> fvtx = { _vtx_x, _vtx_y, _vtx_z };
-    _vtx_dwall = ublarcvapp::dwall( fvtx, _vtx_boundary );
+    _vtx_dwall = ublarcvapp::dwall( fvtx, _vtx_boundary, 0, 0 );
 
     // SCE correction
     std::vector<double> pos_offset = _psce->GetPosOffsets( _vtx_x, _vtx_y, _vtx_z );
