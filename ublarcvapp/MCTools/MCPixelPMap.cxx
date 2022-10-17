@@ -28,7 +28,7 @@ namespace mctools {
           PixCont_t pixCont( node.pid, adc_v[p].pixel(row, col) );
           if(pixMap.count(pixLoc) == 0){
             std::vector<PixCont_t> pixCont_v{pixCont};
-            pixMap.at(pixLoc) = pixCont_v;
+            pixMap[pixLoc] = pixCont_v;
           }
           else{ pixMap[pixLoc].push_back(pixCont); }
         }
