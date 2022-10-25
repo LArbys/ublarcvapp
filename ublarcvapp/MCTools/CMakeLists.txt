@@ -11,7 +11,8 @@ set( HEADERS MCPixelPGraph.h
   NeutrinoVertex.h
   LArbysMC.h
   NeutrinoPixelFilter.h
-  FlashMatcher.h )
+  FlashMatcher.h
+  ConvertMCInfoForLArCV2.h )
 
 # Add sources
 add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
@@ -21,7 +22,8 @@ add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
   NeutrinoVertex.cxx
   LArbysMC.cxx
   NeutrinoPixelFilter.cxx
-  FlashMatcher.cxx )
+  FlashMatcher.cxx
+  ConvertMCInfoForLArCV2.cxx  )  
 
 # larlite libraries
 set(LARLITE_LIBS_USED ${LARLITE_LIBS} )
