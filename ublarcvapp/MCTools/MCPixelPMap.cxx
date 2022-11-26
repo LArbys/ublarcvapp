@@ -25,38 +25,26 @@ namespace mctools {
           int row = (node.pix_vv[p][2*iP] - 2400)/6;
           int col = node.pix_vv[p][2*iP+1];
           PixLoc_t pixLoc( (int)p, row, col );
-          PixCont_t pixCont( node.pid, adc_v[p].pixel(row, col) );
+          PixPart_t pixPart( node.nodeidx, node.tid, node.pid );
           if(pixMap.count(pixLoc) == 0){
-            std::vector<PixCont_t> pixCont_v{pixCont};
-            pixMap[pixLoc] = pixCont_v;
+            PixCont_t pixCont( adc_v[p].pixel(row, col) );
+            pixCont.particles.push_back(pixPart);
+            pixMap[pixLoc] = pixCont;
           }
-          else{ pixMap[pixLoc].push_back(pixCont); }
+          else{ pixMap[pixLoc].particles.push_back(pixPart); }
         }
       }
     }
 
   }
 
-  std::vector<MCPixelPMap::PixCont_t> MCPixelPMap::getPixContent(int plane, int row, int col){
+  MCPixelPMap::PixCont_t MCPixelPMap::getPixContent(int plane, int row, int col){
     PixLoc_t pixLoc(plane, row, col);
     if(pixMap.count(pixLoc) > 0){ return pixMap.at(pixLoc); }
     else{
-      std::vector<PixCont_t> pixCont_v;
-      return pixCont_v;
+      PixCont_t pixCont;
+      return pixCont;
     }
-  }
-
-  MCPixelPMap::PixCont_t MCPixelPMap::getPixParticle(int plane, int row, int col){
-    auto pixCont_v = getPixContent(plane, row, col);
-    PixCont_t maxPartPixCont;
-    for(const auto& pixCont: pixCont_v){
-      if(pixCont > maxPartPixCont) maxPartPixCont = pixCont;
-    }
-    return maxPartPixCont;
-  }
-
-  int MCPixelPMap::getPixParticlePDG(int plane, int row, int col){
-    return getPixParticle(plane, row, col).pdg;
   }
 
 }

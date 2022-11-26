@@ -38,11 +38,23 @@ namespace mctools {
         }
       };
 
-      struct PixCont_t {
+      struct PixPart_t {
+        int nodeidx;
+        int tid;
         int pdg;
+        PixPart_t() : nodeidx(-1), tid(-1), pdg(0) {};
+        PixPart_t(int _nodeidx, int _tid, int _pdg) : nodeidx(_nodeidx), tid(_tid), pdg(_pdg) {};
+        bool operator>(const PixPart_t& rhs) const {
+          if(nodeidx > rhs.nodeidx) return true;
+          return false;
+        }
+      };
+
+      struct PixCont_t {
         float pixI;
-        PixCont_t() : pdg(0), pixI(0.) {};
-        PixCont_t(int _pdg, float _pixI) : pdg(_pdg), pixI(_pixI) {};
+        std::vector<PixPart_t> particles;
+        PixCont_t() : pixI(0.) {};
+        PixCont_t(float _pixI) : pixI(_pixI) {};
         bool operator>(const PixCont_t& rhs) const {
           if(pixI > rhs.pixI) return true;
           return false;
@@ -52,11 +64,9 @@ namespace mctools {
       void buildmap( larcv::IOManager& iolcv, larlite::storage_manager& ioll );
       void buildmap( larcv::IOManager& iolcv, ublarcvapp::mctools::MCPixelPGraph& pixGraph );
 
-      std::vector<PixCont_t> getPixContent(int plane, int row, int col);
-      PixCont_t getPixParticle(int plane, int row, int col);
-      int getPixParticlePDG(int plane, int row, int col);
+      PixCont_t getPixContent(int plane, int row, int col);
 
-      std::map<PixLoc_t, std::vector<PixCont_t> > pixMap;
+      std::map<PixLoc_t, PixCont_t> pixMap;
       std::string adc_tree;
       void set_adc_treename( std::string name ) { adc_tree = name; };
 
