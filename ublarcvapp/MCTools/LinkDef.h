@@ -17,6 +17,7 @@
 #pragma link C++ namespace ublarcvapp+;
 #pragma link C++ namespace ublarcvapp::mctools+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPGraph+;
+#pragma link C++ class ublarcvapp::mctools::MCPixelPMap+;
 #pragma link C++ class ublarcvapp::mctools::CrossingPointsAnaMethods+;
 #pragma link C++ class ublarcvapp::mctools::NeutrinoVertex+;
 #pragma link C++ class ublarcvapp::mctools::LArbysMC+;
