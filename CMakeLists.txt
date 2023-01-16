@@ -67,6 +67,12 @@ else()
   message("DISABLING modules needing Geo2D")  
 endif()
 
+
+#---Python3/Numpy
+find_package( PythonInterp 3 REQUIRED )
+find_package( PythonLibs 3 REQUIRED )
+execute_process( COMMAND python3 -c "import numpy; print(numpy.get_include())" OUTPUT_VARIABLE NUMPY_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE )
+
 #---Eigen3
 find_package(Eigen3 REQUIRED)
 

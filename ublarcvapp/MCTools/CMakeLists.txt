@@ -11,7 +11,9 @@ set( HEADERS MCPixelPGraph.h
   NeutrinoVertex.h
   LArbysMC.h
   NeutrinoPixelFilter.h
-  FlashMatcher.h )
+  FlashMatcher.h
+  #ConvertMCInfoForLArCV2.h
+  SimChannelVoxelizer.h )
 
 # Add sources
 add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
@@ -21,13 +23,22 @@ add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
   NeutrinoVertex.cxx
   LArbysMC.cxx
   NeutrinoPixelFilter.cxx
-  FlashMatcher.cxx )
+  FlashMatcher.cxx
+  #ConvertMCInfoForLArCV2.cxx
+  SimChannelVoxelizer.cxx )  
 
 # larlite libraries
 set(LARLITE_LIBS_USED ${LARLITE_LIBS} )
 
 # includes for ROOT dictionary gen
-include_directories(${LARCV_INCLUDE_DIR} ${LARCV_JSON_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/ublarcvapp/${MODULE_NAME})
+include_directories(
+  ${PYTHON_INCLUDE_PATH}
+  ${NUMPY_INCLUDES}
+  ${LARCV_INCLUDE_DIR}
+  ${LARCV_JSON_INCLUDE_DIR}
+  ${LARLITE_INC_DIRS}
+  ${PROJECT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}/ublarcvapp/${MODULE_NAME})
 
 if (HAS_LARLITE)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")
@@ -38,12 +49,23 @@ endif()
 
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
+
 target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 
 # Generate the shared library from the sources
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
-target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${LARCV_JSON_INCLUDE_DIR} )
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor ${LARLITE_LIBS_USED})
+
+target_include_directories(${LIBNAME} PUBLIC
+  ${LARCV_INCLUDE_DIR}
+  ${LARLITE_INC_DIRS}
+  ${LARCV_JSON_INCLUDE_DIR} )
+
+target_link_libraries(${LIBNAME}
+  LArCVCoreBase
+  LArCVCoreDataFormat
+  LArCVCoreProcessor
+  ${LARLITE_LIBS_USED}
+  ${PYTHON_LIBRARIES} )
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

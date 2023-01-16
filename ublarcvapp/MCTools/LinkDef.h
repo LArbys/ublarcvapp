@@ -24,6 +24,8 @@
 #pragma link C++ class ublarcvapp::mctools::TruthTrackSCE+;
 #pragma link C++ class ublarcvapp::mctools::TruthShowerTrunkSCE+;
 #pragma link C++ class ublarcvapp::mctools::FlashMatcher+;
+#pragma link C++ class ublarcvapp::mctools::SimChannelVoxelizer+;
+#pragma link C++ struct ublarcvapp::mctools::SimChannelVoxelizer::TPCInfo+;
 #endif
 
 
