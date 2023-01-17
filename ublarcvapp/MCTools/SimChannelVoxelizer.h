@@ -29,29 +29,35 @@ namespace mctools {
   public:
 
     struct VoxelCoord_t {
-      unsigned int vx;
+      unsigned int vtick;
       unsigned int vy;
       unsigned int vz;
+      int tdc;
+      int tick;
+      
       bool operator<( const VoxelCoord_t& rhs ) const {
-	if ( vx<rhs.vx )
+	if ( vtick<rhs.vtick )
 	  return true;
-	if ( vx==rhs.vx && vy<rhs.vy )
+	if ( vtick==rhs.vtick && vy<rhs.vy )
 	  return true;
-	if ( vx==rhs.vx && vy==rhs.vy && vz<rhs.vz )
+	if ( vtick==rhs.vtick && vy==rhs.vy && vz<rhs.vz )
 	  return true;
 	return false;
       };
     };
     struct VoxelFeat_t {
       int pdg;
-      int trackid;
-      int ancestorid;
+      long trackid;
+      long ancestorid;
       float charge;
+      std::array<float,4> realpos;
+
       VoxelFeat_t()
 	: pdg(0),
 	  trackid(0),
 	  ancestorid(0),
-	  charge(0)
+	  charge(0),
+	  realpos({0,0,0,0})
       {};
     };      
     
@@ -59,6 +65,9 @@ namespace mctools {
 
       int cryoid;
       int tpcid;
+      float driftdir;
+      float realx_anode;
+      float vx_trigger;
       
       std::vector< float > _origin_cm_v;
       std::vector< float > _voxel_dim_cm_v;
@@ -73,6 +82,25 @@ namespace mctools {
 
       std::map< VoxelCoord_t, unsigned long > _voxcoord_2_index;
       std::vector< VoxelFeat_t > _voxfeat_v;
+
+      void clear_event_data()
+      {
+	_coordindex_v.data.clear();
+	_coordpos_v.data.clear();
+	_charge_v.data.clear();
+	_charge_v.data.clear();
+	_trackid_v.data.clear();
+	_ancestorid_v.data.clear();
+	_voxcoord_2_index.clear();
+	_voxfeat_v.clear();
+	
+	_coordindex_v.shape.clear();
+	_coordpos_v.shape.clear();
+	_charge_v.shape.clear();
+	_charge_v.shape.clear();
+	_trackid_v.shape.clear();
+	_ancestorid_v.shape.clear();
+      };
       
     };
     
@@ -80,7 +108,7 @@ namespace mctools {
     SimChannelVoxelizer();
     virtual ~SimChannelVoxelizer() {};
 
-
+    void clear();
     void process( larlite::storage_manager& ioll );
     void process( const larlite::event_simch& ev_simch,
 		  const larlite::event_mctrack& mctrack,

@@ -35,21 +35,23 @@ trackid_v  = std.vector("larcv::NumpyArrayInt")()
 ancestor_v  = std.vector("larcv::NumpyArrayInt")()
 pdg_v  = std.vector("larcv::NumpyArrayInt")()
 charge_v = std.vector("larcv::NumpyArrayFloat")()
+truepos_v = std.vector("larcv::NumpyArrayFloat")()
 out.Branch( "coordindex_v", index_v )
 out.Branch( "index_v", index_v )
 out.Branch( "trackid_v", trackid_v )
 out.Branch( "ancestor_v", ancestor_v )
 out.Branch( "pdg_v", pdg_v )
 out.Branch( "charge_v", charge_v )
+out.Branch( "truepos_v", truepos_v )
 
 
 print("Create the sim channel voxelizer.")
-input()
+#input()
 
 simchvoxer = ublarcvapp.mctools.SimChannelVoxelizer()
 
 print("run the event loop")
-input()
+#input()
 
 for ientry in range( nentries ):
 
@@ -58,6 +60,7 @@ for ientry in range( nentries ):
     ancestor_v.clear()
     trackid_v.clear()
     pdg_v.clear()
+    truepos_v.clear()
     
     print() 
     print("==========================")
@@ -75,11 +78,14 @@ for ientry in range( nentries ):
         index_v.push_back( tpcinfo._coordindex_v )
         trackid_v.push_back( tpcinfo._trackid_v )
         ancestor_v.push_back( tpcinfo._ancestorid_v )
-        pdg_v.push_back( tpcinfo._pdg_v )        
+        pdg_v.push_back( tpcinfo._pdg_v )
+        truepos_v.push_back( tpcinfo._coordpos_v )
     
     out.Fill()
     print("[enter to continue]")
-    input()    
+    #input()
+    if ientry>1:
+        break
 
 tmp.cd()
 out.Write()
