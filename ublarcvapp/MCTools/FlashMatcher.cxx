@@ -105,7 +105,7 @@ namespace mctools {
   int FlashMatcher::trackAncestorID() {
 
     if (!ancestorID)
-      return -999;
+      return -9999;
 
     return ancestorID;
 
@@ -114,7 +114,7 @@ namespace mctools {
   int FlashMatcher::getTrackID() {
 
     if (!trackID)
-      return -999;
+      return -9999;
 
     return trackID;
 
@@ -123,7 +123,7 @@ namespace mctools {
   int FlashMatcher::trackOrigin() {
 
     if (!origin)
-      return -999;
+      return -9999;
 
     return origin;
 
@@ -160,6 +160,9 @@ namespace mctools {
 
     auto const& mctrack = ev_mctrack->at(i);
 
+    trackID = mctrack.TrackID();
+    ancestorID = mctrack.AncestorTrackID();
+
     std::cout << "TrackID is: " << mctrack.TrackID() << std::endl;
     std::cout << "Mother TrackID is: " << mctrack.MotherTrackID() << std::endl;
     std::cout << "PDG is: " << mctrack.PdgCode() << std::endl;
@@ -179,7 +182,7 @@ namespace mctools {
 
     if ( mctrack.size() == 0 ) {
       std::cout << "Empty vector of mcsteps (probably a cosmic that didn't cross the TPC)" << std::endl;
-      return -999.998;
+      return -9999.998;
     }
 
     //const larlite::mcstep& start = mctrack.Start();
@@ -203,13 +206,10 @@ namespace mctools {
 
     // check for primaries
     if ( mctrack.TrackID() != mctrack.MotherTrackID() ) {
-      return -999.997;
+      return -9999.997;
     }
 
     std::cout << "Ancestor ID: " << mctrack.AncestorTrackID() << std::endl;
-
-    trackID = mctrack.TrackID();
-    ancestorID = mctrack.AncestorTrackID();
 
     return tick;
 
@@ -249,15 +249,17 @@ namespace mctools {
     double tick = CrossingPointsAnaMethods::getTick(start, 4050.0, _sce);
     tick = tick - xPos / cm_per_tick;
 
+    trackID = mcshower.TrackID();
+    ancestorID = mcshower.AncestorTrackID();
+
     // check for primaries
     if ( mcshower.TrackID() != mcshower.MotherTrackID() ) {
-      return -999.997;
+      return -9999.997;
     }
 
     std::cout << "Ancestor ID: " << mcshower.AncestorTrackID() << std::endl;
 
-    trackID = mcshower.TrackID();
-    ancestorID = mcshower.AncestorTrackID();
+
 
     return tick;
 
@@ -309,7 +311,7 @@ namespace mctools {
 
   /*
    * matches mctrack tick to opflash tick
-   * for cosmics, will return -999.999 if there is no opflash found within the threshold
+   * for cosmics, will return -9999.999 if there is no opflash found within the threshold
    * for beam tracks, will find the closest matching opflash
    *
    * @param[in] mctrackTick Time in ticks for the mctrack to be matched to
@@ -329,8 +331,8 @@ std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector
 
     if (flashTicks.empty() == 1) {
       clusterTick = mctrackTick;
-      flashTick = 999.999;
-      return std::make_pair(999.999,999);
+      flashTick = 9999.999;
+      return std::make_pair(9999.999,9999);
     }
 
     auto match = std::lower_bound( flashTicks.begin(), flashTicks.end(), std::make_pair( mctrackTick, std::numeric_limits<int>::min()) );
@@ -360,7 +362,7 @@ std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector
       return flashTicks[ match - flashTicks.begin() ];
     }
 
-    return std::make_pair(-999.999,999);
+    return std::make_pair(-9999.999,9999);
 
   }
 
