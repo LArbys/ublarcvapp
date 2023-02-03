@@ -12,6 +12,7 @@
 #include "larlite/DataFormat/mctruth.h"
 #include "larlite/LArUtil/LArProperties.h"
 #include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/DetectorProperties.h"
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 #include "crossingPointsAnaMethods.h"
@@ -124,7 +125,10 @@ namespace mctools {
     node_v.emplace_back( std::move(neutrino) );
 
     // load spacechargemicroboone
+    bool apply_sce = false;
     larutil::SpaceChargeMicroBooNE sce;
+    if ( larutil::LArUtilConfig::Detector()==larlite::geo::kMicroBooNE )
+      apply_sce = true;
 
     for (int vidx=0; vidx<(int)track_v.size(); vidx++ ) {
       const larlite::mctrack& mct = track_v[vidx];
@@ -157,7 +161,7 @@ namespace mctools {
       tracknode.start[1] = mct.Start().Y();
       tracknode.start[2] = mct.Start().Z();
       tracknode.start[3] = mct.Start().T();
-      _get_imgpos( tracknode.start, tracknode.imgpos4, sce );
+      _get_imgpos( tracknode.start, tracknode.imgpos4, sce, apply_sce );
       
       
       node_v.emplace_back( std::move(tracknode) );
@@ -259,7 +263,6 @@ namespace mctools {
       
     }//end of node loop
 
-    
     //printAllNodeInfo();
     //printGraph();
   }
@@ -726,19 +729,42 @@ namespace mctools {
       txyz[1+i] = realpos4[i];
     }
     txyz[0] = realpos4[3];
-    float tick = 0.;
-    if (apply_sce)
-      tick = CrossingPointsAnaMethods::getTick( txyz, 0, 0, 4050.0, &sce );
+
+    // convert geant4 time (ns) to clock tick
+    double trigger_g4_time = 0.;
+    if ( larutil::LArUtilConfig::Detector()==larlite::geo::kMicroBooNE )
+      trigger_g4_time = 4050.0;
     else
-      tick = CrossingPointsAnaMethods::getTick( txyz, 0, 0, 4050.0, NULL );
+      trigger_g4_time = 0.0;
+    
+    float tick_pos  = 0.; // image tick position due to real drift distance from annode
+    float tick_time = 0.; // image tick shift due to t0 offset (time of energy deposit relative to readout trigger)
+    float x_sce = 0.;
+    int tpcid = 0;
+    int cryoid = 0;
+    if (apply_sce) {
+      // SCE correction still a MicroBooNE only correction that we know how to do.
+      std::vector<double> pos_offset = sce.GetPosOffsets( txyz[1], txyz[2], txyz[3] );
+      x_sce = txyz[1] - pos_offset[0] + 0.7;
+      tick_pos = larutil::DetectorProperties::GetME()->ConvertXToTicks( x_sce, 0, tpcid, cryoid );
+    }
+    else {
+      // No SCE correction
+      tick_pos = larutil::DetectorProperties::GetME()->ConvertXToTicks( txyz[1], 0, tpcid, cryoid );
+      x_sce = txyz[1];
+    }
+
+    tick_time = ( txyz[0]*1.0e-3 - trigger_g4_time )/(larutil::DetectorProperties::GetME()->SamplingRate()*1.0e-3);
+
+    float tick = tick_pos + tick_time;
     
     for (int i=0; i<3; i++) {
-      imgpos4[i] = dpos[i];
+      imgpos4[i] = txyz[1+i];
     }
     imgpos4[3] = tick;
 
     // now make x an apparent x
-    imgpos4[0] = (tick-3200)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
+    imgpos4[0] = larutil::DetectorProperties::GetME()->ConvertTicksToX( x_sce, 0, tpcid, cryoid );
     
   }
 

@@ -7,16 +7,45 @@
 namespace ublarcvapp {
 namespace mctools {
 
+  /**
+   * @brief default constructor
+   */
   SimChannelVoxelizer::SimChannelVoxelizer()
+    : _global_voxel_dim_v{ 1.0, 0.3, 0.3 } // (1.0 tick, 0.3 cm, 0.3 cm)
   {
+    defineTPCVoxels( _global_voxel_dim_v );
+  }
+  
+  /**
+   * @brief constructor with specified voxel dims
+   */
+  SimChannelVoxelizer::SimChannelVoxelizer( const std::vector<float>& voxel_dims )
+  {
+    if ( voxel_dims.size()!=3 ) {
+      throw std::runtime_error("Need 3 values for the voxel dimension (tick,y in cm,z in cm)");
+    }
+    defineTPCVoxels( _global_voxel_dim_v );
+  }
+
+  /**
+   * @brief reset and define tpc voxel definitions
+   *
+   * Uses larlite geometry to create a definition.
+   *
+   */
+  void SimChannelVoxelizer::defineTPCVoxels( const std::vector<float>& voxel_dims )
+  {
+    _global_voxel_dim_v = voxel_dims;
+    _tpcdata_v.clear();
+    _id2index_v.clear();
     auto const& geo  = *(larlite::larutil::Geometry::GetME());
     for (int icryo=0; icryo<(int)geo.Ncryostats(); icryo++) {
       for (int itpc=0; itpc<(int)geo.NTPCs(icryo); itpc++) {
-	makeDefaultTPCVoxels( icryo, itpc );
+	makeTPCVoxels( icryo, itpc, _global_voxel_dim_v );
       }
-    }
+    }    
   }
-
+  
   /**
    * @brief clear data memebers that store event data
    *
@@ -26,11 +55,12 @@ namespace mctools {
     for ( auto& tpcinfo : _tpcdata_v ) {
       tpcinfo.clear_event_data();
     }
-      
   }
 
-  void SimChannelVoxelizer::makeDefaultTPCVoxels( int cryoid, int tpcid )
+  void SimChannelVoxelizer::makeTPCVoxels( const int cryoid, const int tpcid,
+					   const std::vector<float>& voxel_dims )
   {
+
     auto const& geo  = *(larlite::larutil::Geometry::GetME());
     //auto const& detp = *(larutil::DetectorProperties::GetME());
     auto const& tpcgeo = geo.GetTPC( tpcid, cryoid );
@@ -41,12 +71,12 @@ namespace mctools {
     info.driftdir = geo.TPCDriftDir( tpcid, cryoid )[0];
 
     // default voxel dimensions
-    info._voxel_dim_cm_v.resize(3,0.3);
+    info._voxel_dim_v.resize(3,0.3);
 
     // replace first dim as tick width
-    int dtick = info._voxel_dim_cm_v[0]/larutil::DetectorProperties::GetME()->GetXTicksCoefficient();
-    info._voxel_dim_cm_v[0] = dtick;
-    info._voxel_dim_cm_v[0] = 1;    
+    //int dtick = info._voxel_dim_cm_v[0]/larutil::DetectorProperties::GetME()->GetXTicksCoefficient();
+    //info._voxel_dim_cm_v[0] = dtick;
+    //info._voxel_dim_cm_v[0] = 1;    
 
     // define drift direction (always x?)
     // define readout tick bounds and effect x-axis
@@ -69,10 +99,10 @@ namespace mctools {
     else
       info.realx_anode = tpcgeo.fBounds[0][0]; // e- moves in -x direction, so x-min is anode
 
-    info.vx_trigger = float(getReadoutTriggerOffset( larutil::LArUtilConfig::Detector() ))/info._voxel_dim_cm_v[0];
+    info.vx_trigger = float(getReadoutTriggerOffset( larutil::LArUtilConfig::Detector() ))/info._voxel_dim_v[0];
     
     // chop into 3 mm blocks
-    long nx = fabs(tickmax-tickmin)/info._voxel_dim_cm_v[0]+1;
+    long nx = fabs(tickmax-tickmin)/info._voxel_dim_v[0]+1;
     long ny = fabs(ymax-ymin)/0.3+1;
     long nz = fabs(zmax-zmin)/0.3+1;
     
@@ -82,9 +112,9 @@ namespace mctools {
     // std::cout << "NX: " << nx << std::endl;
     // std::cout << "NY: " << ny << std::endl;
     // std::cout << "NZ: " << nz << std::endl;
-    // std::cout << "dtick: " << info._voxel_dim_cm_v[0] << " tpc tick" << std::endl;
-    // std::cout << "dy: " << info._voxel_dim_cm_v[1] << " cm" << std::endl;
-    // std::cout << "dz: " << info._voxel_dim_cm_v[2] << " cm" << std::endl;    
+    // std::cout << "dtick: " << info._voxel_dim_v[0] << " tpc tick" << std::endl;
+    // std::cout << "dy: " << info._voxel_dim_v[1] << " cm" << std::endl;
+    // std::cout << "dz: " << info._voxel_dim_v[2] << " cm" << std::endl;    
     // std::cout << "tick-min=" << tickmin << " tick-max=" << tickmax << " driftdir=" << info.driftdir << std::endl;
     // std::cout << "y-min=" << ymin << " y-max=" << ymax << std::endl;
     // std::cout << "z-min=" << zmin << " z-max=" << zmax << std::endl;
@@ -144,7 +174,9 @@ namespace mctools {
     // std::cout << "[SimChannelVoxelizer] start process()" << std::endl;
     // std::cout << " mctrack.size()=" << mctrack.size() << std::endl;
     // std::cout << " mcshower.size()=" << mcshower.size() << std::endl;
-    // std::cout << " mctruth.size()=" << mctruth.size() << std::endl;    
+    // std::cout << " mctruth.size()=" << mctruth.size() << std::endl;
+
+    clear();
     
     _scan_IDEs( ev_simch );
 
@@ -157,9 +189,9 @@ namespace mctools {
   {
 
     size_t nbadide = 0;
-    size_t ninvalid = 0;
+    //size_t ninvalid = 0;
     size_t notpc = 0;
-    size_t nvalid = 0;
+    //size_t nvalid = 0;
     for ( auto const& xsimch : ev_simch ) {
 
       unsigned short chid = xsimch.Channel();
@@ -182,7 +214,7 @@ namespace mctools {
 	  // determine the voxel to populate
 	  TVector3 pos( xide.x, xide.y, xide.z );
 	  std::pair<int,int> ctid_pair( cryoid, tpcid );
-
+	  
 	  auto it_tpc = _id2index_v.find( ctid_pair );
 	  if ( it_tpc==_id2index_v.end() ) {
 	    //std::cout << "No corresponding TPC?" << std::endl;
@@ -196,56 +228,44 @@ namespace mctools {
 	  //std::cout << " tpc[" << tpcinfo.cryoid << "," << tpcinfo.tpcid << "]" << std::endl;
 
 	  std::vector<int> voxel(3,0);
-	  bool valid = true;
 	  for (int i=1; i<3; i++) {
-	    voxel[i] = (pos[i]-tpcinfo._origin_cm_v[i])/tpcinfo._voxel_dim_cm_v[i];
-	    if ( voxel[i]<0 || voxel[i]>=tpcinfo._num_voxels_v[i] )
-	      valid = true;
+	    voxel[i] = (pos[i]-tpcinfo._origin_cm_v[i])/tpcinfo._voxel_dim_v[i];
 	  }
 
 	  int tdc = it->first;
-	  float tick = tdc-3000;
-	  voxel[0] = tick/tpcinfo._voxel_dim_cm_v[0];
-	  if ( voxel[0]<0 || voxel[0]>=tpcinfo._num_voxels_v[0] )
-	    valid = true;
+	  // need to mimic GlobalTDC to TPC Tick
+	  float tick = tdc-3000; ///< need to move this conversion in via larutil
+	  voxel[0] = tick/tpcinfo._voxel_dim_v[0];
 
 	  // std::cout << "IDE TDC=" << it->first << " TID=" << abs(xide.trackID)
 	  // 	    << " CH[" << chid << "] cryo=" << cryoid << " tpc=" << tpcid
 	  // 	    << " valid=" << valid << " voxel[0]=" << voxel[0]
 	  // 	    << std::endl;
 	  
-	  if ( valid ) {
-	    //auto const& dim = tpcinfo._charge_v.shape;
-	    //int voxindex = voxel[0]*dim[1]*dim[2] + voxel[1]*dim[2] + voxel[2];
-	    VoxelCoord_t vcoord;
-	    vcoord.vtick = voxel[0];
-	    vcoord.vy = voxel[1];
-	    vcoord.vz = voxel[2];
-	    vcoord.tdc = it->first;
-	    //std::cout << "  fill valid voxel: (" << voxel[0] << "," << voxel[1] << "," << voxel[2] << ")" << std::endl;
-	    auto it_vox = tpcinfo._voxcoord_2_index.find( vcoord );
-	    if ( it_vox==tpcinfo._voxcoord_2_index.end() ) {
-	      tpcinfo._voxcoord_2_index[vcoord] = tpcinfo._voxfeat_v.size();
-	      it_vox = tpcinfo._voxcoord_2_index.find( vcoord );
-	      VoxelFeat_t newfeat;
-	      tpcinfo._voxfeat_v.push_back(newfeat);
-	    }
-	    //std::cout << "  feature index=" << it_vox->second << std::endl;
-	    auto& feat = tpcinfo._voxfeat_v.at( it_vox->second );
-	    if ( feat.charge<xide.energy ) {
-	      feat.charge = xide.energy;
-	      feat.trackid = abs(xide.trackID);
-	      feat.realpos[0] = xide.x;
-	      feat.realpos[1] = xide.y;
-	      feat.realpos[2] = xide.z;
-	      feat.realpos[3] = 0.0;
-	    }
-	    //tpcinfo._charge_v.data[voxindex] = xide.energy;
-	    nvalid++;
+	  //auto const& dim = tpcinfo._charge_v.shape;
+	  //int voxindex = voxel[0]*dim[1]*dim[2] + voxel[1]*dim[2] + voxel[2];
+
+	  VoxelCoord_t vcoord = makeVoxelCoord( tick, pos[1], pos[2], tdc, tpcinfo );
+	  
+	  //std::cout << "  fill valid voxel: (" << voxel[0] << "," << voxel[1] << "," << voxel[2] << ")" << std::endl;
+	  auto it_vox = tpcinfo._voxcoord_2_index.find( vcoord );
+	  if ( it_vox==tpcinfo._voxcoord_2_index.end() ) {
+	    tpcinfo._voxcoord_2_index[vcoord] = tpcinfo._voxfeat_v.size();
+	    it_vox = tpcinfo._voxcoord_2_index.find( vcoord );
+	    VoxelFeat_t newfeat;
+	    tpcinfo._voxfeat_v.push_back(newfeat);
 	  }
-	  else {
-	    ninvalid++;
+	  //std::cout << "  feature index=" << it_vox->second << std::endl;
+	  auto& feat = tpcinfo._voxfeat_v.at( it_vox->second );
+	  if ( feat.charge<xide.energy ) {
+	    feat.charge = xide.energy;
+	    feat.trackid = abs(xide.trackID);
+	    feat.realpos[0] = xide.x;
+	    feat.realpos[1] = xide.y;
+	    feat.realpos[2] = xide.z;
+	    feat.realpos[3] = 0.0;
 	  }
+	  //tpcinfo._charge_v.data[voxindex] = xide.energy;
 	  
 	}//end of loop over ide
       }//end of loop over IDE map
@@ -326,7 +346,14 @@ namespace mctools {
     MCPixelPGraph mcpg;
     //mcpg.set_verbosity(::larcv::msg::kDEBUG);
     mcpg.buildgraphonly( mcshower, mctrack, mctruth );
-    //mcpg.printGraph( nullptr, false );
+    mcpg.printGraph( nullptr, false );
+
+    for ( auto& node : mcpg.node_v ) {
+      if ( node.tid==node.aid ) {
+	std::cout << "ANCESTOR[" << node.aid << "] t=" << node.start[3] << std::endl;
+      }
+    }
+    
     size_t no_ancestor = 0;
     for ( auto& tpcinfo : _tpcdata_v ) {
 
@@ -357,5 +384,95 @@ namespace mctools {
 
     std::cout << "[SimChannelVoxelizer::_pdg_labels] number w/ no ancestor: " << no_ancestor << std::endl;
   }
+
+  SimChannelVoxelizer::TPCInfo& SimChannelVoxelizer::getTPCInfo( const int cryoid, const int tpcid )
+  {
+    auto it=_id2index_v.find( std::pair<int,int>(cryoid,tpcid) );
+    if ( it!=_id2index_v.end() )
+      return _tpcdata_v.at( it->second );
+
+    throw std::runtime_error( "[SimChannelVoxelizer::getTPCInfo(cryoid,tpcid)] Invalid (cryoid,tpcid)" );
+  }
+
+
+  SimChannelVoxelizer::VoxelCoord_t
+  SimChannelVoxelizer::makeVoxelCoord( const float tick, const float y, const float z, const int tdc,
+				       SimChannelVoxelizer::TPCInfo& tpcinfo )
+  {
+
+    std::vector<float> pos = { tick, y, z };
+    std::vector<long> voxel(3,0);
+    for (int i=1; i<3; i++) {
+      voxel[i] = (long)( (pos[i]-tpcinfo._origin_cm_v[i])/tpcinfo._voxel_dim_v[i] );
+    }    
+    voxel[0] = (long)(tick/tpcinfo._voxel_dim_v[0]);
+
+    VoxelCoord_t vcoord;
+    // set the indices in the tensor
+    vcoord.vtick = voxel[0];
+    vcoord.vy    = voxel[1];
+    vcoord.vz    = voxel[2];
+    vcoord.tdc   = tdc;
+    // association of coordinates to voxel
+    vcoord.xyz.resize(3,0.0);
+    for (int i=0; i<3; i++) {
+      vcoord.xyz[i] = tpcinfo._origin_cm_v[i] + vcoord.vy*tpcinfo._voxel_dim_v[i];
+    }
+    // convert tick coordinate pos to a "non-t0-corrected" x-position (coordinate along the drift direction)
+    vcoord.xyz[0] = larutil::DetectorProperties::GetME()->ConvertTicksToX(vcoord.xyz[0],0,tpcinfo.tpcid,tpcinfo.cryoid);
+
+    return vcoord;
+  }
+
+  /**
+   * @brief convenience function for above, but repeats map look-up
+   *
+   */
+  SimChannelVoxelizer::VoxelCoord_t
+  SimChannelVoxelizer::makeVoxelCoord( const float tick, const float y, const float z, const int tdc,
+				       const int cryoid, const int tpcid )
+  {
+    SimChannelVoxelizer::TPCInfo& tpcinfo = getTPCInfo( cryoid, tpcid );
+    return makeVoxelCoord( tick, y, z, tdc, tpcinfo );
+  }
+
+  /**
+   * @brief index query without returning any internal structures
+   *
+   */
+  bool SimChannelVoxelizer::getVoxelIndex( const float tick, const float y, const float z,
+					   const int cryoid, const int tpcid,
+					   std::vector<long>& indices )
+  {
+    SimChannelVoxelizer::TPCInfo& tpcinfo = getTPCInfo( cryoid, tpcid );
+    return getVoxelIndexWithTPCInfo( tick, y, z, tpcinfo, indices );
+  }
+
+  /**
+   * @brief index query without returning internal VoxelCoord_t struct, while using tpcinfo to avoid repeated map lookup
+   *
+   */
+  bool SimChannelVoxelizer::getVoxelIndexWithTPCInfo( const float tick, const float y, const float z,
+						      SimChannelVoxelizer::TPCInfo& tpc,
+						      std::vector<long>& indices )
+  {
+    
+    VoxelCoord_t voxcoord = makeVoxelCoord( tick, y, z, 0, tpc );
+    indices.resize(3,-1);
+    indices[0] = voxcoord.vtick;
+    indices[1] = voxcoord.vy;
+    indices[2] = voxcoord.vz;
+    bool inbounds = true;
+    for (int i=0; i<3; i++) {
+      if ( indices[i]<0 || indices[i]>=tpc._num_voxels_v[i] ) {
+	inbounds = false;
+	break;
+      }
+    }
+    
+    return inbounds;
+  }
+  
+  
 }
 }

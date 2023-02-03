@@ -28,12 +28,14 @@ namespace mctools {
   class SimChannelVoxelizer {
   public:
 
+    // The coordinates of a voxel
     struct VoxelCoord_t {
-      unsigned int vtick;
-      unsigned int vy;
-      unsigned int vz;
-      int tdc;
-      int tick;
+      unsigned int vtick; ///< voxel index in the tick dim
+      unsigned int vy;    ///< voxel index in the y dim
+      unsigned int vz;    ///< voxel index in the z dim
+      int tdc;            ///< Discritized Global Simulation Time
+      int tick;           ///< Tick of the TPC clock
+      std::vector<float> xyz; ///< coordinate associated with this voxel
       
       bool operator<( const VoxelCoord_t& rhs ) const {
 	if ( vtick<rhs.vtick )
@@ -45,6 +47,8 @@ namespace mctools {
 	return false;
       };
     };
+    
+    // Features associated to a voxel
     struct VoxelFeat_t {
       int pdg;
       long trackid;
@@ -70,7 +74,7 @@ namespace mctools {
       float vx_trigger;
       
       std::vector< float > _origin_cm_v;
-      std::vector< float > _voxel_dim_cm_v;
+      std::vector< float > _voxel_dim_v;
       std::vector< int >   _num_voxels_v;
 
       larcv::NumpyArrayInt   _coordindex_v;
@@ -105,7 +109,9 @@ namespace mctools {
     };
     
   public:
+    
     SimChannelVoxelizer();
+    SimChannelVoxelizer( const std::vector<float>& voxel_dims );
     virtual ~SimChannelVoxelizer() {};
 
     void clear();
@@ -118,16 +124,30 @@ namespace mctools {
     // void setOrigin( const std::vector<float>& origin_cm ) { _origin_cm_v=origin_cm; };
     // void setVoxelDimensions( float x_cm, float y_cm, float x_cm );
     // void setNumVoxels( int n_x, int n_y, int n_z );
-    void makeDefaultTPCVoxels( int cryoid, int tpcid );
+
+    VoxelCoord_t makeVoxelCoord( const float tick, const float y, const float z, const int tdc,
+				 TPCInfo& tpcinfo );
+    VoxelCoord_t makeVoxelCoord( const float tick, const float y, const float z, const int tdc,
+				 const int cryoid, const int tpcid );
+    void defineTPCVoxels( const std::vector<float>& voxel_dims );
+    void makeTPCVoxels( const int cryoid, const int tpcid, const std::vector<float>& voxel_dims );
     int getReadoutNumSamples( larlite::geo::DetId_t geoid );
     int getReadoutTriggerOffset( larlite::geo::DetId_t geoid );
     int getReadoutFirstTick( larlite::geo::DetId_t geoid );
-    
+
   public:
 
+    std::vector< float > _global_voxel_dim_v;
     std::vector< TPCInfo > _tpcdata_v;
     std::map< std::pair<int,int>, int >   _id2index_v; ///< map from (cryoid,tpcid) to index in _tpcdata_v;
-
+    TPCInfo& getTPCInfo( const int cryoid, const int tpcid );
+    bool getVoxelIndex( const float tick, const float y, const float z,
+			const int cryoid, const int tpcid,
+			std::vector<long>& indices );
+    bool getVoxelIndexWithTPCInfo( const float tick, const float y, const float z,
+				   TPCInfo& tpcdata, std::vector<long>& indices );
+    
+    
   protected:
 
     void _scan_IDEs( const larlite::event_simch& ev_simch);
