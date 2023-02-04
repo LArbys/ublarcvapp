@@ -62,7 +62,7 @@ namespace mctools {
   {
 
     auto const& geo  = *(larlite::larutil::Geometry::GetME());
-    //auto const& detp = *(larutil::DetectorProperties::GetME());
+    auto const& detp = *(larutil::DetectorProperties::GetME());
     auto const& tpcgeo = geo.GetTPC( tpcid, cryoid );
 
     TPCInfo info;
@@ -71,7 +71,7 @@ namespace mctools {
     info.driftdir = geo.TPCDriftDir( tpcid, cryoid )[0];
 
     // default voxel dimensions
-    info._voxel_dim_v.resize(3,0.3);
+    info._voxel_dim_v = voxel_dims;
 
     // replace first dim as tick width
     //int dtick = info._voxel_dim_cm_v[0]/larutil::DetectorProperties::GetME()->GetXTicksCoefficient();
@@ -80,12 +80,13 @@ namespace mctools {
 
     // define drift direction (always x?)
     // define readout tick bounds and effect x-axis
-    float tickmin = 0;
-    float tickmax = getReadoutNumSamples( larutil::LArUtilConfig::Detector() );
+    float tickmin = detp.GetXTicksOffset(0,tpcid,cryoid)-detp.TriggerOffset();
+    float tickmax = tickmin + getReadoutNumSamples( larutil::LArUtilConfig::Detector() );
     float ymin = tpcgeo.fBounds[0][1];
     float ymax = tpcgeo.fBounds[1][1];    
     float zmin = tpcgeo.fBounds[0][2];
     float zmax = tpcgeo.fBounds[1][2];
+    std::cout << "SimChannelVoxelizer: tickmin=" << tickmin << " tickmax=" << tickmax << "  dtick=" << info._voxel_dim_v[0] << std::endl;
 
     // set origin
     info._origin_cm_v.resize(3,0);
