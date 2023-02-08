@@ -6,6 +6,7 @@
 #include "larcv/core/DataFormat/Particle.h"
 #include "larlite/DataFormat/mctrack.h"
 #include "larlite/DataFormat/mcshower.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -23,13 +24,23 @@ namespace mctools {
     
   public:
     ConvertMCInfoForLArCV2()
-    : larcv::larcv_base("ConvertMCInfoForLArCV2")
+      : larcv::larcv_base("ConvertMCInfoForLArCV2"),
+	kApplySCE(false),
+	kApplyT0drift(false),
+	_psce(nullptr)
     {};
-    ~ConvertMCInfoForLArCV2() {};
+    virtual ~ConvertMCInfoForLArCV2();
 
     std::vector<larcv::Particle> convert( const std::vector<larlite::mctrack>& mctrack,
 					  const std::vector<larlite::mcshower>& mcshower  );
-    
+
+    bool kApplySCE; ///< if true, we apply Space charge corrections
+    bool kApplyT0drift; ///< if true, we use the time of the event releative to the trigger to shift the position of the event.
+    void doApplySCE( bool doit ) { kApplySCE=doit; };
+    void doApplyT0drift( bool doit ) { kApplyT0drift=doit; };
+    std::vector<double> preparePosition( double x, double y, double z, double t );
+
+    larutil::SpaceChargeMicroBooNE* _psce;
   };
 
 }

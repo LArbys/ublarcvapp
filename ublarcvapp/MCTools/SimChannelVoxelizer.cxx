@@ -403,10 +403,9 @@ namespace mctools {
 
     std::vector<float> pos = { tick, y, z };
     std::vector<long> voxel(3,0);
-    for (int i=1; i<3; i++) {
+    for (int i=0; i<3; i++) {
       voxel[i] = (long)( (pos[i]-tpcinfo._origin_cm_v[i])/tpcinfo._voxel_dim_v[i] );
     }    
-    voxel[0] = (long)(tick/tpcinfo._voxel_dim_v[0]);
 
     VoxelCoord_t vcoord;
     // set the indices in the tensor

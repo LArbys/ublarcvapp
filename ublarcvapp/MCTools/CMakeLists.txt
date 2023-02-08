@@ -12,7 +12,7 @@ set( HEADERS MCPixelPGraph.h
   LArbysMC.h
   NeutrinoPixelFilter.h
   FlashMatcher.h
-  #ConvertMCInfoForLArCV2.h
+  ConvertMCInfoForLArCV2.h
   SimChannelVoxelizer.h )
 
 # Add sources
@@ -24,7 +24,7 @@ add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
   LArbysMC.cxx
   NeutrinoPixelFilter.cxx
   FlashMatcher.cxx
-  #ConvertMCInfoForLArCV2.cxx
+  ConvertMCInfoForLArCV2.cxx
   SimChannelVoxelizer.cxx )  
 
 # larlite libraries
