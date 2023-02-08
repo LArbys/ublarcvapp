@@ -18,7 +18,10 @@ namespace mctools {
 				   const std::vector<larlite::mcshower>& mcshower_v  )
   {
 
+    LARCV_DEBUG() << "convert " << mctrack_v.size() << " tracks and " << mcshower_v.size() << " showers" << std::endl;
+    
     if ( kApplySCE && _psce==nullptr ) {
+      LARCV_DEBUG() << "Load Space Charge Module" << std::endl;
       _psce = new larutil::SpaceChargeMicroBooNE();
     }
     
@@ -26,14 +29,26 @@ namespace mctools {
 
     // convert track objects
     for ( auto const& mcpart : mctrack_v ) {
+
+      if ( mcpart.size()<2 )
+	continue;
       
       larcv::Particle lcvparticle( larcv::kShapeTrack );
 
       // PPN minimal info needed
       lcvparticle.id( mcpart.TrackID() );
-      lcvparticle.track_id( mcpart.TrackID() );
+      lcvparticle.track_id( (unsigned int)mcpart.TrackID() );
       lcvparticle.pdg_code( mcpart.PdgCode() );
       lcvparticle.creation_process( mcpart.Process() );
+      lcvparticle.momentum( mcpart.front().Px(), mcpart.front().Py(), mcpart.front().Pz() );
+      lcvparticle.energy_init( mcpart.front().E() );
+      lcvparticle.parent_track_id( (unsigned int)mcpart.MotherTrackID() );
+      lcvparticle.parent_pdg_code( mcpart.MotherPdgCode() );
+      lcvparticle.parent_creation_process( mcpart.MotherProcess() );            
+      lcvparticle.ancestor_track_id( (unsigned int)mcpart.AncestorTrackID() );      
+      lcvparticle.ancestor_pdg_code( mcpart.AncestorPdgCode() );
+      lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );            
+      
       float edep = 0.0; // total energy deposited. could use mcstep or mcpart.fdEdx vector if filled
       int nvoxel = 0;
       if ( mcpart.dEdx().size()>0 ) {
@@ -50,21 +65,34 @@ namespace mctools {
 
       std::vector<double> first_step = preparePosition( mcpart.front().X(), mcpart.front().Y(), mcpart.front().Z(), mcpart.front().T() );
       std::vector<double> last_step  = preparePosition( mcpart.back().X(), mcpart.back().Y(), mcpart.back().Z(), mcpart.back().T() );
+      lcvparticle.position( first_step[0], first_step[1], first_step[2], first_step[3] );
       lcvparticle.first_step( first_step[0], first_step[1], first_step[2], first_step[3] );
       lcvparticle.last_step(  last_step[0], last_step[1], last_step[2], last_step[3] );
+
+      LARCV_DEBUG() << "Converted track: id=" << mcpart.TrackID() << std::endl;
+      LARCV_DEBUG() << lcvparticle.dump() << std::endl;
       
       particle_v.emplace_back( std::move(lcvparticle) );
     }
 
     // convert shower objects
     for ( auto const& mcpart : mcshower_v ) {
-      
+
       larcv::Particle lcvparticle( larcv::kShapeShower );
 
       // PPN minimal info needed
       lcvparticle.pdg_code( mcpart.PdgCode() );
+      lcvparticle.track_id( (unsigned int)mcpart.TrackID() );
       lcvparticle.creation_process( mcpart.Process() );
-
+      lcvparticle.momentum( mcpart.DetProfile().Px(), mcpart.DetProfile().Py(), mcpart.DetProfile().Pz() );
+      lcvparticle.energy_init( mcpart.DetProfile().E() );      
+      lcvparticle.parent_track_id( (unsigned int)mcpart.MotherTrackID() );
+      lcvparticle.parent_pdg_code( mcpart.MotherPdgCode() );
+      lcvparticle.parent_creation_process( mcpart.MotherProcess() );            
+      lcvparticle.ancestor_track_id( (unsigned int)mcpart.AncestorTrackID() );      
+      lcvparticle.ancestor_pdg_code( mcpart.AncestorPdgCode() );
+      lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );            
+      
       // check the content of the DetProfile momentum
       bool in_tpc = true;
       auto const& detprofmom = mcpart.DetProfile().Momentum().Vect();
@@ -77,18 +105,23 @@ namespace mctools {
 	edep = mcpart.DetProfile().E(); // total energy deposited. could use mcstep or mcpart.fdEdx vector if filled
 	// set first step as place that shower first starts to deposit energy in TPC
 	std::vector<double> first_step = preparePosition( mcpart.DetProfile().X(), mcpart.DetProfile().Y(), mcpart.DetProfile().Z(), mcpart.DetProfile().T() );
+	lcvparticle.position( first_step[0], first_step[1], first_step[2], first_step[3] );	
 	lcvparticle.first_step( first_step[0], first_step[1], first_step[2], first_step[3] );
 	lcvparticle.last_step( 0, 0, 0, 0 );
       }
       else {
 	edep = 0.;
 	// set first step as creation point
+	lcvparticle.position( mcpart.Start().X(), mcpart.Start().Y(), mcpart.Start().Z(), mcpart.Start().T() );	
 	lcvparticle.first_step( mcpart.Start().X(), mcpart.Start().Y(), mcpart.Start().Z(), mcpart.Start().T() );
 	lcvparticle.last_step( 0, 0, 0, 0 );	
       }
       lcvparticle.energy_deposit( edep );
       lcvparticle.num_voxels( nvoxel ); // not filled in this context
 
+      LARCV_DEBUG() << "Converted track: id=" << mcpart.TrackID() << std::endl;      
+      LARCV_DEBUG() << lcvparticle.dump() << std::endl;
+      
       particle_v.emplace_back( std::move(lcvparticle) );
     }
 
@@ -99,7 +132,8 @@ namespace mctools {
   {
     std::vector<double> step = { x, y, z, t };
 
-    if ( kApplySCE ) {
+
+    if ( kApplySCE && _psce ) {
       std::vector<double> offsets = _psce->GetPosOffsets( step[0], step[1], step[2] );
       step[0] = step[0]+0.7-offsets[0];
       step[1] = step[1]+offsets[1];
