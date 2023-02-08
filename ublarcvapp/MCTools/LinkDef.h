@@ -26,6 +26,7 @@
 #pragma link C++ class ublarcvapp::mctools::FlashMatcher+;
 #pragma link C++ class ublarcvapp::mctools::SimChannelVoxelizer+;
 #pragma link C++ struct ublarcvapp::mctools::SimChannelVoxelizer::TPCInfo+;
+#pragma link C++ class ublarcvapp::mctools::ConvertMCInfoForLArCV2+;
 #endif
 
 
