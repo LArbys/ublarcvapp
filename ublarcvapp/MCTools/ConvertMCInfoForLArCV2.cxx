@@ -51,13 +51,14 @@ namespace mctools {
       
       float edep = 0.0; // total energy deposited. could use mcstep or mcpart.fdEdx vector if filled
       int nvoxel = 0;
-      if ( mcpart.dEdx().size()>0 ) {
-	for ( auto const& dedx : mcpart.dEdx() )
-	  edep += (float)dedx;
-      }
-      else {
-	// sum the energy loss over mcsteps
-	edep = mcpart.front().E()-mcpart.back().E();
+      float last_E = 0.0;
+      int istep=0;
+      for (auto const& step : mcpart ) {
+	if ( istep>0 ) {
+	  edep += (last_E-step.E());
+	}
+	last_E = step.E();
+	istep++;
       }
       
       lcvparticle.energy_deposit( edep );
