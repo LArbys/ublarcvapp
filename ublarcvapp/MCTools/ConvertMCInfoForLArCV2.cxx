@@ -92,7 +92,17 @@ namespace mctools {
       lcvparticle.parent_creation_process( mcpart.MotherProcess() );            
       lcvparticle.ancestor_track_id( (unsigned int)mcpart.AncestorTrackID() );      
       lcvparticle.ancestor_pdg_code( mcpart.AncestorPdgCode() );
-      lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );            
+      lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );
+
+      // refine shape definition for type of shower
+      if ( mcpart.Process()=="muIoni" || mcpart.Process()=="hIoni" ) {
+	lcvparticle.shape( larcv::kShapeDelta );
+      }
+      else if ( mcpart.Process()=="muMinusCaptureAtRest"
+		|| mcpart.Process()=="muPlusCaptureAtRest"
+		|| mcpart.Process()=="Decay" ) {
+	lcvparticle.shape( larcv::kShapeMichel );
+      }
       
       // check the content of the DetProfile momentum
       bool in_tpc = true;
