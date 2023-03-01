@@ -737,26 +737,17 @@ namespace mctools {
     else
       trigger_g4_time = 0.0;
     
-    float tick_pos  = 0.; // image tick position due to real drift distance from annode
-    float tick_time = 0.; // image tick shift due to t0 offset (time of energy deposit relative to readout trigger)
-    float x_sce = 0.;
     int tpcid = 0;
     int cryoid = 0;
     if (apply_sce) {
       // SCE correction still a MicroBooNE only correction that we know how to do.
       std::vector<double> pos_offset = sce.GetPosOffsets( txyz[1], txyz[2], txyz[3] );
-      x_sce = txyz[1] - pos_offset[0] + 0.7;
-      tick_pos = larutil::DetectorProperties::GetME()->ConvertXToTicks( x_sce, 0, tpcid, cryoid );
-    }
-    else {
-      // No SCE correction
-      tick_pos = larutil::DetectorProperties::GetME()->ConvertXToTicks( txyz[1], 0, tpcid, cryoid );
-      x_sce = txyz[1];
+      txyz[1] = txyz[1] - pos_offset[0] + 0.7;
+      txyz[2] = txyz[2] + pos_offset[1];
+      txyz[3] = txyz[3] + pos_offset[2];      
     }
 
-    tick_time = ( txyz[0]*1.0e-3 - trigger_g4_time )/(larutil::DetectorProperties::GetME()->SamplingRate()*1.0e-3);
-
-    float tick = tick_pos + tick_time;
+    float tick = ublarcvapp::mctools::CrossingPointsAnaMethods::getTick( txyz, tpcid, cryoid, trigger_g4_time, &sce );
     
     for (int i=0; i<3; i++) {
       imgpos4[i] = txyz[1+i];
@@ -764,7 +755,7 @@ namespace mctools {
     imgpos4[3] = tick;
 
     // now make x an apparent x
-    imgpos4[0] = larutil::DetectorProperties::GetME()->ConvertTicksToX( x_sce, 0, tpcid, cryoid );
+    imgpos4[0] = larutil::DetectorProperties::GetME()->ConvertTicksToX( tick, 0, tpcid, cryoid );
     
   }
 

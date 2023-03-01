@@ -47,7 +47,10 @@ namespace mctools {
       lcvparticle.parent_creation_process( mcpart.MotherProcess() );            
       lcvparticle.ancestor_track_id( (unsigned int)mcpart.AncestorTrackID() );      
       lcvparticle.ancestor_pdg_code( mcpart.AncestorPdgCode() );
-      lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );            
+      lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );
+
+      // generator type
+      lcvparticle.interaction_id( (unsigned int)mcpart.Origin() );      
       
       float edep = 0.0; // total energy deposited. could use mcstep or mcpart.fdEdx vector if filled
       int nvoxel = 0;
@@ -93,6 +96,9 @@ namespace mctools {
       lcvparticle.ancestor_track_id( (unsigned int)mcpart.AncestorTrackID() );      
       lcvparticle.ancestor_pdg_code( mcpart.AncestorPdgCode() );
       lcvparticle.ancestor_creation_process( mcpart.AncestorProcess() );
+
+      // generator type
+      lcvparticle.interaction_id( (unsigned int)mcpart.Origin() );
 
       // refine shape definition for type of shower
       if ( mcpart.Process()=="muIoni" || mcpart.Process()=="hIoni" ) {
