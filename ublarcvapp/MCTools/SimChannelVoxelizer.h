@@ -83,9 +83,11 @@ namespace mctools {
       larcv::NumpyArrayInt   _pdg_v;
       larcv::NumpyArrayInt   _trackid_v;
       larcv::NumpyArrayInt   _ancestorid_v;
+      std::vector< larcv::NumpyArrayFloat > _simch_img_v;
 
       std::map< VoxelCoord_t, unsigned long > _voxcoord_2_index;
       std::vector< VoxelFeat_t > _voxfeat_v;
+      std::map< VoxelCoord_t, unsigned long > _voxcoord_2_sparsearrayindex;
 
       void clear_event_data()
       {
@@ -95,15 +97,20 @@ namespace mctools {
 	_charge_v.data.clear();
 	_trackid_v.data.clear();
 	_ancestorid_v.data.clear();
+
+	_simch_img_v.clear();
+	
 	_voxcoord_2_index.clear();
 	_voxfeat_v.clear();
-	
+	_voxcoord_2_sparsearrayindex.clear();
+		
 	_coordindex_v.shape.clear();
 	_coordpos_v.shape.clear();
 	_charge_v.shape.clear();
 	_charge_v.shape.clear();
 	_trackid_v.shape.clear();
 	_ancestorid_v.shape.clear();
+
       };
       
     };
@@ -113,6 +120,8 @@ namespace mctools {
     SimChannelVoxelizer();
     SimChannelVoxelizer( const std::vector<float>& voxel_dims );
     virtual ~SimChannelVoxelizer() {};
+
+    void set_simch_treename( std::string treename ) { _simch_tree_name=treename; };
 
     void clear();
     void process( larlite::storage_manager& ioll );
@@ -150,11 +159,14 @@ namespace mctools {
     
   protected:
 
+    std::string _simch_tree_name;
+    
     void _scan_IDEs( const larlite::event_simch& ev_simch);
     void _make_tensors();
     void _pdg_labels( const larlite::event_mctrack& mctrack,
 		      const larlite::event_mcshower& mcshower,
 		      const larlite::event_mctruth& mctruth);
+    void _fill_simch_images( const larlite::event_simch& ev_simch );
       
 
     

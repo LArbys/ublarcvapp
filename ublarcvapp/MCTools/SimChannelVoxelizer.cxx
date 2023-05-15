@@ -11,7 +11,8 @@ namespace mctools {
    * @brief default constructor
    */
   SimChannelVoxelizer::SimChannelVoxelizer()
-    : _global_voxel_dim_v{ 1.0, 0.3, 0.3 } // (1.0 tick, 0.3 cm, 0.3 cm)
+    : _global_voxel_dim_v{ 1.0, 0.3, 0.3 },// (1.0 tick, 0.3 cm, 0.3 cm)
+      _simch_tree_name("largeant") 
   {
     defineTPCVoxels( _global_voxel_dim_v );
   }
@@ -20,6 +21,7 @@ namespace mctools {
    * @brief constructor with specified voxel dims
    */
   SimChannelVoxelizer::SimChannelVoxelizer( const std::vector<float>& voxel_dims )
+    : _simch_tree_name("largeant")     
   {
     if ( voxel_dims.size()!=3 ) {
       throw std::runtime_error("Need 3 values for the voxel dimension (tick,y in cm,z in cm)");
@@ -156,7 +158,14 @@ namespace mctools {
   void SimChannelVoxelizer::process( larlite::storage_manager& ioll )
   {
     larlite::event_simch* ev_simch
-      = (larlite::event_simch*)ioll.get_data( larlite::data::kSimChannel, "simdrift" );
+      = (larlite::event_simch*)ioll.get_data( larlite::data::kSimChannel, _simch_tree_name );
+
+    if ( !ev_simch ) {
+      std::cout << "Bad simch data from tree-name=" << _simch_tree_name << std::endl;
+      throw std::runtime_error("bad simch data");
+      return;
+    }
+    
     larlite::event_mctrack* ev_mctrack
       = (larlite::event_mctrack*)ioll.get_data( larlite::data::kMCTrack, "mcreco" );
     larlite::event_mcshower* ev_mcshower
@@ -184,31 +193,44 @@ namespace mctools {
     _pdg_labels( mctrack, mcshower, mctruth );
     
     _make_tensors();
+
+    _fill_simch_images( ev_simch );
+    
   }
 
   void SimChannelVoxelizer::_scan_IDEs( const larlite::event_simch& ev_simch )
   {
 
+    std::cout << "Number of ev_simch objects:  " << ev_simch.size() << std::endl;
+    
     size_t nbadide = 0;
-    //size_t ninvalid = 0;
+    size_t ninvalid = 0;
     size_t notpc = 0;
-    //size_t nvalid = 0;
+    size_t nvalid = 0;
+    
     for ( auto const& xsimch : ev_simch ) {
 
       unsigned short chid = xsimch.Channel();
       auto wid = larlite::larutil::Geometry::GetME()->ChannelToWireID( chid );
       int cryoid = wid.Cryostat;
       int tpcid  = wid.TPC;
-	
+
+      std::cout << "SimCh[Ch=" << chid << "] cryoid=" << cryoid << " tpcid=" << tpcid << " nentries=" << xsimch.TDCIDEMap().size() << std::endl;
+      
       for ( auto it = xsimch.TDCIDEMap().begin(); it!=xsimch.TDCIDEMap().end(); it++ ) {
 	//unsigned short tick = it->first;
 	const std::vector<larlite::ide>& idc_v = it->second;
-	//std::cout << "IDE len=" << idc_v.size() << std::endl;
+	std::cout << "IDE len=" << idc_v.size() << std::endl;
 	
 	for ( auto const& xide : idc_v ) {
-	  //std::cout << "IDE pos=(" << xide.x << "," << xide.y << "," << xide.z << ")" << std::endl;
+	  std::cout << "IDE pos=(" << xide.x << "," << xide.y << "," << xide.z << ")"
+		    << " TDC=" << it->first << " trackid=" << xide.trackID
+		    << " energy=" << xide.energy << " origin=" << xide.originID
+		    << " ne-=" << xide.numElectrons
+		    << std::endl;
+	  
 	  if ( fabs(xide.x)>1e100 || fabs(xide.y)>1e100 || fabs(xide.z)>1e100 ) {
-	    //std::cout << " bad IDE" << std::endl;
+	    std::cout << " bad IDE" << std::endl;
 	    nbadide++;
 	    continue;
 	  }
@@ -218,15 +240,15 @@ namespace mctools {
 	  
 	  auto it_tpc = _id2index_v.find( ctid_pair );
 	  if ( it_tpc==_id2index_v.end() ) {
-	    //std::cout << "No corresponding TPC?" << std::endl;
+	    std::cout << "No corresponding TPC?" << std::endl;
 	    notpc++;
 	    continue;
 	  }
-	  //std::cout << "  Found info for TPC: index=" << it_tpc->second << std::endl;
+	  std::cout << "  Found info for TPC: index=" << it_tpc->second << std::endl;
 	  // if ( xide.trackID!=xide.originID )
 
 	  auto& tpcinfo = _tpcdata_v.at( it_tpc->second );
-	  //std::cout << " tpc[" << tpcinfo.cryoid << "," << tpcinfo.tpcid << "]" << std::endl;
+	  std::cout << " tpc[" << tpcinfo.cryoid << "," << tpcinfo.tpcid << "]" << std::endl;
 
 	  std::vector<int> voxel(3,0);
 	  for (int i=1; i<3; i++) {
@@ -235,20 +257,20 @@ namespace mctools {
 
 	  int tdc = it->first;
 	  // need to mimic GlobalTDC to TPC Tick
-	  float tick = tdc-3000; ///< need to move this conversion in via larutil
+	  float tick = tdc-4900; ///< need to move this conversion in via larutil
 	  voxel[0] = tick/tpcinfo._voxel_dim_v[0];
 
-	  // std::cout << "IDE TDC=" << it->first << " TID=" << abs(xide.trackID)
-	  // 	    << " CH[" << chid << "] cryo=" << cryoid << " tpc=" << tpcid
-	  // 	    << " valid=" << valid << " voxel[0]=" << voxel[0]
-	  // 	    << std::endl;
+	  std::cout << "IDE TDC=" << it->first << " TID=" << abs(xide.trackID)
+		    << " CH[" << chid << "] cryo=" << cryoid << " tpc=" << tpcid
+		    << " valid=" << nvalid << " voxel[0]=" << voxel[0]
+		    << std::endl;
 	  
 	  //auto const& dim = tpcinfo._charge_v.shape;
 	  //int voxindex = voxel[0]*dim[1]*dim[2] + voxel[1]*dim[2] + voxel[2];
 
 	  VoxelCoord_t vcoord = makeVoxelCoord( tick, pos[1], pos[2], tdc, tpcinfo );
 	  
-	  //std::cout << "  fill valid voxel: (" << voxel[0] << "," << voxel[1] << "," << voxel[2] << ")" << std::endl;
+	  std::cout << "  fill valid voxel: (" << voxel[0] << "," << voxel[1] << "," << voxel[2] << ")" << std::endl;
 	  auto it_vox = tpcinfo._voxcoord_2_index.find( vcoord );
 	  if ( it_vox==tpcinfo._voxcoord_2_index.end() ) {
 	    tpcinfo._voxcoord_2_index[vcoord] = tpcinfo._voxfeat_v.size();
@@ -256,11 +278,12 @@ namespace mctools {
 	    VoxelFeat_t newfeat;
 	    tpcinfo._voxfeat_v.push_back(newfeat);
 	  }
-	  //std::cout << "  feature index=" << it_vox->second << std::endl;
+	  std::cout << "  feature index=" << it_vox->second << std::endl;
 	  auto& feat = tpcinfo._voxfeat_v.at( it_vox->second );
 	  if ( feat.charge<xide.energy ) {
 	    feat.charge = xide.energy;
 	    feat.trackid = abs(xide.trackID);
+	    //feat.ancestorid = abs(xide.ancestorid);
 	    feat.realpos[0] = xide.x;
 	    feat.realpos[1] = xide.y;
 	    feat.realpos[2] = xide.z;
@@ -272,10 +295,10 @@ namespace mctools {
       }//end of loop over IDE map
     }//end of loop over simch
 
-    // std::cout << "Number of valid IDE: " <<  nvalid << std::endl;
-    // std::cout << "Number of bad IDE: " << nbadide << std::endl;
-    // std::cout << "Number of Invalid IDE: " << ninvalid << std::endl;
-    // std::cout << "Number not in TPC: " << notpc << std::endl;
+    std::cout << "Number of valid IDE: " <<  nvalid << std::endl;
+    std::cout << "Number of bad IDE: " << nbadide << std::endl;
+    std::cout << "Number of Invalid IDE: " << ninvalid << std::endl;
+    std::cout << "Number not in TPC: " << notpc << std::endl;
 
     return;
   }
@@ -328,7 +351,9 @@ namespace mctools {
 	tpcinfo._charge_v.data[index]  = tpcinfo._voxfeat_v.at( it->second ).charge;
 	tpcinfo._trackid_v.data[index] = tpcinfo._voxfeat_v.at( it->second ).trackid;
 	tpcinfo._ancestorid_v.data[index] = tpcinfo._voxfeat_v.at( it->second ).ancestorid;
-	tpcinfo._pdg_v.data[index] = tpcinfo._voxfeat_v.at( it->second ).pdg;		
+	tpcinfo._pdg_v.data[index] = tpcinfo._voxfeat_v.at( it->second ).pdg;
+	tpcinfo._voxcoord_2_sparsearrayindex[ it->first ] = (unsigned long)index;
+	std::cout << "voxelcoord[" << it->first.vtick << "," << it->first.vy << "," << it->first.vz << "] mapped to sparse index=" << index << std::endl;
 	index++;
       }
       
@@ -473,6 +498,98 @@ namespace mctools {
     return inbounds;
   }
   
+  void SimChannelVoxelizer::_fill_simch_images( const larlite::event_simch& ev_simch )
+  {
+
+    std::cout << "Number of ev_simch objects:  " << ev_simch.size() << std::endl;
+
+    auto const geo = larlite::larutil::Geometry::GetME();
+    
+    size_t nbadide = 0;
+    size_t ninvalid = 0;
+    size_t notpc = 0;
+    size_t nvalid = 0;
+
+    std::cout << "MAKE simch img arrays" << std::endl;
+
+    for ( auto& tpcinfo : _tpcdata_v ) {
+      int cryoid = tpcinfo.cryoid;
+      int tpcid  = tpcinfo.tpcid;
+      int nplanes = geo->Nplanes( tpcid, cryoid );
+      
+      for (int iplane=0; iplane<nplanes; iplane++) {
+	int nwires = geo->Nwires( iplane, tpcid, cryoid );
+	larcv::NumpyArrayFloat img;
+	img.ndims = 2;
+	img.shape = {nwires,1500};
+	img.data.resize( nwires*1500, 0.0 );
+	std::cout << "(" << cryoid << "," << tpcid << "," << iplane << ") shape=[" << img.shape[0] << "," << img.shape[1] << "]" << std::endl;
+	tpcinfo._simch_img_v.emplace_back(img);	
+      }
+    }
+
+    std::cout << "FILL simch img arrays" << std::endl;
+    
+    for ( auto const& xsimch : ev_simch ) {
+
+      unsigned short chid = xsimch.Channel();
+      auto wid = larlite::larutil::Geometry::GetME()->ChannelToWireID( chid );
+      int cryoid = wid.Cryostat;
+      int tpcid  = wid.TPC;
+      int planeid = wid.Plane;
+      int wireid  = wid.Wire;
+
+      // get the relevant tpc info struct
+      auto it_tpcdata = _id2index_v.find( std::pair<int,int>(cryoid,tpcid) );
+      auto& tpcdata   = _tpcdata_v.at( it_tpcdata->second );
+
+      if ( tpcdata.cryoid!=cryoid || tpcdata.tpcid!=tpcid ) {
+	std::cout << "wrong tpcdata struct!" << std::endl;
+	std::cout << "  " << tpcdata.cryoid << " vs " << cryoid << std::endl;
+	std::cout << "  " << tpcdata.tpcid << " vs " << tpcid << std::endl;
+	continue;
+      }
+      
+      // get the plane data
+      auto& planearray = tpcdata._simch_img_v.at(planeid);
+
+      std::cout << "(" << cryoid << "," << tpcid << "," << planeid << ",wired=" << wireid << ",ch=" << chid << ")" << std::endl;
+
+      for ( auto it = xsimch.TDCIDEMap().begin(); it!=xsimch.TDCIDEMap().end(); it++ ) {
+	//unsigned short tick = it->first;
+	const std::vector<larlite::ide>& idc_v = it->second;
+	
+	for ( auto const& xide : idc_v ) {
+	  
+	  if ( fabs(xide.x)>1e100 || fabs(xide.y)>1e100 || fabs(xide.z)>1e100 ) {
+	    nbadide++;
+	    continue;
+	  }
+
+	  // fill image tdc
+	  int tdc = it->first;
+	  int row = tdc/10;
+
+	  // wire is col, tick is row
+
+	  long index = planearray.shape[1]*row + wireid;
+	  if ( index<0 || index>planearray.data.size() ) {
+	    std::cout << "index out of range: " << index << std::endl;
+	    continue;
+	  }
+	  planearray.data[index] += 1.0;
+	  
+	}//end of loop over ide
+      }//end of loop over IDE map
+    }//end of loop over simch
+
+    std::cout << "Number of valid IDE: " <<  nvalid << std::endl;
+    std::cout << "Number of bad IDE: " << nbadide << std::endl;
+    std::cout << "Number of Invalid IDE: " << ninvalid << std::endl;
+    std::cout << "Number not in TPC: " << notpc << std::endl;
+
+    return;
+  }
   
 }
 }
