@@ -16,7 +16,7 @@ namespace mctools {
     _fm_tree = new TTree("fmtree","Flashmatched Tree");
     bindAnaVariables(_fm_tree);
 
-    std::cout << "Made tree and bound vars" << std::endl;
+    std::cout << "FLASHMATCHER: Made tree and bound vars" << std::endl;
 
     //_voxelTree = new TTree("voxtree","Voxeldata Tree");
     //_voxelTree = mgr.CloneTree()
@@ -156,18 +156,18 @@ namespace mctools {
     larlite::event_mctrack* ev_mctrack
       = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
 
-    std::cout << "Number of tracks in event: " << ev_mctrack->size() << std::endl;
+    ///std::cout << "Number of tracks in event: " << ev_mctrack->size() << std::endl;
 
     auto const& mctrack = ev_mctrack->at(i);
 
     trackID = mctrack.TrackID();
     ancestorID = mctrack.AncestorTrackID();
 
-    std::cout << "TrackID is: " << mctrack.TrackID() << std::endl;
-    std::cout << "Mother TrackID is: " << mctrack.MotherTrackID() << std::endl;
-    std::cout << "PDG is: " << mctrack.PdgCode() << std::endl;
+    ///std::cout << "TrackID is: " << mctrack.TrackID() << std::endl;
+    ///std::cout << "Mother TrackID is: " << mctrack.MotherTrackID() << std::endl;
+    ///std::cout << "PDG is: " << mctrack.PdgCode() << std::endl;
 
-    std::cout << "Origin: " << mctrack.Origin() << std::endl;
+    ///std::cout << "Origin: " << mctrack.Origin() << std::endl;
     origin = mctrack.Origin();
 
     if ( mctrack.Origin() == 1 ) {
@@ -178,17 +178,17 @@ namespace mctools {
       isCosmic = 1;
     }
 
-    std::cout << "mctrack.size() = " << mctrack.size() << std::endl;
+    ///std::cout << "mctrack.size() = " << mctrack.size() << std::endl;
 
     if ( mctrack.size() == 0 ) {
-      std::cout << "Empty vector of mcsteps (probably a cosmic that didn't cross the TPC)" << std::endl;
+      ///std::cout << "Empty vector of mcsteps (probably a cosmic that didn't cross the TPC)" << std::endl;
       return -9999.998;
     }
 
     //const larlite::mcstep& start = mctrack.Start();
     const larlite::mcstep& start = mctrack.at(0);
 
-    std::cout << "First mcstep X positiom is " << start.X() << " while the track started at: " << mctrack.Start().X() << std::endl;
+    ///std::cout << "First mcstep X positiom is " << start.X() << " while the track started at: " << mctrack.Start().X() << std::endl;
 
     larutil::SpaceChargeMicroBooNE* _sce = nullptr;
 
@@ -202,14 +202,14 @@ namespace mctools {
     double tick2 = CrossingPointsAnaMethods::getTick(mctrack.Start(), 4050.0, _sce);
     tick2 = tick2 - xPos2 / cm_per_tick;
 
-    std::cout << "Tick for first mcstep in TPC: " << tick << " and tick for starting up in the sky: " << tick2 << std::endl;
+    ///std::cout << "Tick for first mcstep in TPC: " << tick << " and tick for starting up in the sky: " << tick2 << std::endl;
 
     // check for primaries
     if ( mctrack.TrackID() != mctrack.MotherTrackID() ) {
       return -9999.997;
     }
 
-    std::cout << "Ancestor ID: " << mctrack.AncestorTrackID() << std::endl;
+    ///std::cout << "Ancestor ID: " << mctrack.AncestorTrackID() << std::endl;
 
     return tick;
 
@@ -220,15 +220,15 @@ namespace mctools {
     larlite::event_mcshower* ev_mcshower
       = (larlite::event_mcshower*)ioll.get_data(larlite::data::kMCShower,"mcreco");
 
-    std::cout << "Number of showers in event: " << ev_mcshower->size() << std::endl;
+    ///std::cout << "Number of showers in event: " << ev_mcshower->size() << std::endl;
 
     auto const& mcshower = ev_mcshower->at(i);
 
-    std::cout << "TrackID is: " << mcshower.TrackID() << std::endl;
-    std::cout << "Mother TrackID is: " << mcshower.MotherTrackID() << std::endl;
-    std::cout << "PDG is: " << mcshower.PdgCode() << std::endl;
+    ///std::cout << "TrackID is: " << mcshower.TrackID() << std::endl;
+    ///std::cout << "Mother TrackID is: " << mcshower.MotherTrackID() << std::endl;
+    ///std::cout << "PDG is: " << mcshower.PdgCode() << std::endl;
 
-    std::cout << "Origin: " << mcshower.Origin() << std::endl;
+    ///std::cout << "Origin: " << mcshower.Origin() << std::endl;
     origin = mcshower.Origin();
 
     if ( mcshower.Origin() == 1 ) {
@@ -257,9 +257,7 @@ namespace mctools {
       return -9999.997;
     }
 
-    std::cout << "Ancestor ID: " << mcshower.AncestorTrackID() << std::endl;
-
-
+    ///std::cout << "Ancestor ID: " << mcshower.AncestorTrackID() << std::endl;
 
     return tick;
 
@@ -290,20 +288,25 @@ namespace mctools {
       counter++;
     }
 
+    /*
     std::cout << "Before sort: " << std::endl;
     for (int i = 0; i < tickContainer.size(); i++) {
       std::cout << tickContainer[i].first << "\t"
                << tickContainer[i].second << std::endl;
       }
+    */
   //std::cout << "Tick container: " << tickContainer << std::endl;
 
   std::sort( tickContainer.begin(), tickContainer.end() );
 
+  /*
   std::cout << "After sort: " << std::endl;
     for (int i = 0; i < tickContainer.size(); i++) {
         std::cout << tickContainer[i].first << "\t"
              << tickContainer[i].second << std::endl;
     }
+  */
+
   //std::cout << "Tick container: " << tickContainer << std::endl;
 
   return tickContainer;
@@ -340,7 +343,7 @@ std::pair<double, int> FlashMatcher::matchTicks( double mctrackTick, std::vector
 
     //std::cout << "match [iterator] is: " << match << std::endl;
     //std::cout << "*match [dereferenced iterator, shoudl be a pair] is: " << (*(match)) << std::endl;
-    std::cout << "(*(match)).first [actual value of the tick] is: " << b << std::endl;
+    ///std::cout << "(*(match)).first [actual value of the tick] is: " << b << std::endl;
 
     if (match == flashTicks.begin() && fabs(b - mctrackTick) <= threshold) {
       clusterTick = mctrackTick;

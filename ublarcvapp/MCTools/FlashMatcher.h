@@ -17,15 +17,19 @@ namespace mctools {
   class FlashMatcher {
   public:
 
-    FlashMatcher() {
-
-        isCosmic = 0;
-        if (_fm_tree)
-          delete _fm_tree;
-        _fm_tree = nullptr;
-
+    FlashMatcher() 
+    : isCosmic(0),
+    _fm_tree(nullptr)
+    {
+      Clear();
     };
-    virtual ~FlashMatcher() {};
+
+    virtual ~FlashMatcher() {
+      if (_fm_tree) {
+        delete _fm_tree;
+        _fm_tree = nullptr;
+      }
+    };
 
     void initialize();
     void bindAnaVariables( TTree* );
