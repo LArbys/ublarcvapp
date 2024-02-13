@@ -61,6 +61,30 @@ namespace mctools {
   }
 
   /**
+   * @brief get TPC tick from MC step info. do not apply drift time.
+   *
+   */  
+  float CrossingPointsAnaMethods::getTrueTick( const std::vector<float>& step, const float trig_time,
+					       const larutil::SpaceChargeMicroBooNE* psce ) {    
+    // Function returns the tick time of a MC step point
+    // if SCE pointer is null, we do not correct for the space charge
+    
+    std::vector<double> dpos(3,0);
+    if ( psce ) {
+      std::vector<double> pos_offset = psce->GetPosOffsets( step[1], step[2], step[3] );
+      dpos[0] = step[1] - pos_offset[0] + 0.7;
+    }
+    else {
+      dpos[0] = step[1];
+    }
+    
+    const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;    
+    float tick = ( step[0]*1.0e-3 - (trig_time-4050.0) )/0.5 + 3200.0;
+    
+    return tick;
+  }
+  
+  /**
    * doesTrackCrossImageBoundary
    *
    *
