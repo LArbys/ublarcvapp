@@ -52,6 +52,14 @@ namespace mctools {
     };
     
     std::set<int> trackid_v; // geant track ids
+
+    std::vector<int> trackid_list() const {
+      std::vector<int> out_v;
+      for ( auto const& tid : trackid_v ) {
+	out_v.push_back(tid);
+      }
+      return out_v;
+    };
     
   };
 
