@@ -9,6 +9,7 @@
 
 // ublarcvapp/mctools
 #include "crossingPointsAnaMethods.h"
+#include "MCPos2ImageUtils.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -24,9 +25,12 @@ namespace mctools {
     // match truth tracks to flashes
     matchTracksAndFlashes( mgr );
 
+
     // list results
-    if ( _verbose_level>=1 )
+    if ( _verbose_level>=1 ) {
       printMatches();
+      printFiltered();
+    }
 
 
     return true;
@@ -171,6 +175,7 @@ namespace mctools {
 
     // clear flash pools
     recoflash_v.clear();
+    filtered_v.clear();
     
     std::vector<std::string> producer_v = {"simpleFlashBeam","simpleFlashCosmic"} ;
     
@@ -190,7 +195,7 @@ namespace mctools {
 	flash.producerid = iproducer;
 	flash.index = iflash;
 	flash.used = 0;
-	flash.time_us = dataflash.Time();
+	flash.time_us = dataflash.Time(); // time relative to optical clock t=0, which is at TPC trigger (tick=3200)
 	flash.tick    = dataflash.Time()/0.5 + 3200; // assuming optical time origin set at TPC clock tick 3200
 	recoflash_v.emplace_back( std::move(flash) );
       };
@@ -201,7 +206,7 @@ namespace mctools {
     if ( _verbose_level>=1 )
       std::cout << "Number of reco flashes in the (truth) matching pool: " << recoflash_v.size() << std::endl;
     
-  };
+  }
 
   /**
    * @brief match flashes and to MC tracks
@@ -217,6 +222,15 @@ namespace mctools {
 
     associateTruthTrackIDs2recoFlashes( ioll, mcpg );
     buildNullFlashesToTrackIDs( ioll, mcpg );
+
+    // tag flashes with matched truth mc track trajectories that
+    // cross the image boundary
+    larlite::event_mctrack* ev_mctrack
+      = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
+    tagTracksThatCrossImageBoundary( mcpg, *ev_mctrack );
+
+    // filter matches
+    filterMatches();
 
     std::sort( recoflash_v.begin(), recoflash_v.end() );
     
@@ -235,6 +249,7 @@ namespace mctools {
 
     // get the primary list
     auto node_v = mcpg.getPrimaryParticles();
+    
 
     // loop over the primary nodes: these are the recorded list of primary particles
     // defined as trackid=ancestorid
@@ -276,10 +291,12 @@ namespace mctools {
 	  else if (flash.ancestorid>=0 && flash.ancestorid!=node->aid) {
 	    std::cout << "  WARNING: flash already matched to node with another ancestorid! old=" << flash.ancestorid << std::endl;
 	  }
+	  matched_ancestor_ids.insert( node->aid );
 	}
 	else if (node->origin==1 ) {
 	  // neutrino origin track, set the flash as neutrino origin
 	  flash.ancestorid = 0;
+	  matched_ancestor_ids.insert( node->tid );
 	}
 	flash.trackid_v.insert( node->tid );
 	
@@ -309,7 +326,6 @@ namespace mctools {
   {
 
     // we need a list of ancestor ids where we've already matched
-    std::set< int > matched_ancestor_ids;
     for ( auto const& recoflash : recoflash_v ) {
       if ( recoflash.ancestorid>0 ) {
 	matched_ancestor_ids.insert( recoflash.ancestorid );
@@ -336,6 +352,9 @@ namespace mctools {
       // not in the list, make a null flash and associate
       std::vector<float> txyz = { node->start[3] , node->start[0], node->start[1], node->start[2] };
       float tpctick_nodrift = CrossingPointsAnaMethods::getTrueTick( txyz, 4050.0, NULL );
+      
+      if (std::isinf(tpctick_nodrift))
+	continue;
       
       RecoFlash_t nullflash;
       nullflash.producerid = -1;
@@ -393,6 +412,128 @@ namespace mctools {
       std::cout << flashinfo.str() << std::endl;
     }
     std::cout << "==================================" << std::endl;
+  }
+
+  void FlashMatcherV2::printFiltered() {
+    
+    std::cout << "=================================" << std::endl;
+    std::cout << " FlashMatcherV2::printFiltered" << std::endl;
+    
+    for (int iflash=0; iflash<(int)filtered_v.size(); iflash++) {
+      auto const& flash = filtered_v.at(iflash);
+      std::stringstream flashinfo;
+      flashinfo << " flash[" << iflash << "]"
+		<< " producer[" << flash.producerid << "]"
+		<< " time_us=" << flash.time_us
+		<< " tick=" << flash.tick
+		<< " aid=" << flash.ancestorid
+		<< " matched={ ";
+      for ( auto const& tid : flash.trackid_v ) {
+	flashinfo << tid << " ";
+      }
+      flashinfo << "}";
+      std::cout << flashinfo.str() << std::endl;
+    }
+    std::cout << "==================================" << std::endl;
+  }
+  
+  /**
+   * @brief look for tracks with incomplete charge
+   *
+   * this is usually due to tracks crossing the image boundary, so
+   * reconstruction spacepoints in the TPC are missing.
+   *
+   */
+  void FlashMatcherV2::tagTracksThatCrossImageBoundary( ublarcvapp::mctools::MCPixelPGraph& mcpg,
+							const std::vector< larlite::mctrack >& track_v )
+  {
+
+    for (auto& recoflash : recoflash_v ) {
+      // for each flash, we loop over the mc truth of the matched particle
+      // tracks.  for track-objects, we check if they cross the image boundary
+      // and look for missing charge.
+      if (_verbose_level>=2) {
+	std::cout << "[check flash] aid=" << recoflash.ancestorid << " tick=" << recoflash.tick << " time_us=" << recoflash.time_us << std::endl;
+      }
+      for (auto& trackid : recoflash.trackid_v ) {
+
+	// we get info about this track already parsed by the pgraph class
+	auto pnode = mcpg.findTrackID(trackid); // returns pointer to MCPixelPGraph::Node_t struct
+	if ( pnode->type==0 ) {
+	  // is a track
+
+	  // used the stored vector index to get larlite::mctrack object
+	  auto const& mctrackinfo = track_v.at( pnode->vidx );
+
+	  // convert track trajectory to list of points
+	  std::vector< std::vector<float> > reco_traj
+	    = MCPos2ImageUtils::Get()->getRecoSpacepoints( mctrackinfo );
+
+	  for (size_t i=0; i<mctrackinfo.size(); i++) {
+	    auto const& truth_step = mctrackinfo.at(i);
+	    auto const& reco_step  = reco_traj.at(i);
+	    if ( reco_step[3]<=2400.0 || reco_step[3]>=8448.0 ) {
+	      recoflash.within_image_bounds = false;
+	      if ( _verbose_level>=1 )
+		std::cout << "  [ out of image bounds ]" << std::endl;
+	      if ( _verbose_level>=2 ) {
+		std::cout << " [step " << i << "] reco=("
+			  << reco_step[0] << ","
+			  << reco_step[1] << ","
+			  << reco_step[2] << ","
+			  << " tick=" << reco_step[3] << ") "
+			  << " true=("
+			  << truth_step.X() << ","
+			  << truth_step.Y() << ","
+			  << truth_step.Z() << ","
+			  << " t=" << truth_step.T()*1.0e-3 << " us)"
+			  << std::endl;
+	      }
+	      break;
+	    }
+	  }// end of loop over reco traj points
+	  
+	}// if node is track-type
+	
+      }//end of loop over track ids in reco flash
+      
+    }//end of loop over reco flashes
+
+    return;
+  }
+
+  /** 
+   * @brief filter out matches
+   *
+   * moves filtered flash-track matches out of recoflash_v
+   * and into filtered_v member container.
+   */
+  void FlashMatcherV2::filterMatches() {
+
+    filtered_v.clear();
+
+    std::vector<RecoFlash_t> passes_v;
+    int nbefore_filter = recoflash_v.size();
+
+    for ( auto& recoflash : recoflash_v ) {
+      // apply cuts (truth-only based)
+      if ( recoflash.within_image_bounds ) {
+	passes_v.emplace_back( std::move(recoflash) );
+      }
+      else {
+	filtered_v.emplace_back( std::move(recoflash) );
+      }
+    }
+
+    std::swap( recoflash_v, passes_v );
+    
+    
+    std::cout << "[FlashMatcherV2::filterMatches] "
+	      << " before filter=" << nbefore_filter 
+	      << " num passing=" << recoflash_v.size()
+	      << " num filtered=" << filtered_v.size()
+	      << std::endl;
+    
   }
 
 

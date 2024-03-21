@@ -16,6 +16,7 @@
 
 #pragma link C++ namespace ublarcvapp+;
 #pragma link C++ namespace ublarcvapp::mctools+;
+#pragma link C++ class ublarcvapp::mctools::MCPos2ImageUtils+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPGraph+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPMap+;
 #pragma link C++ class ublarcvapp::mctools::CrossingPointsAnaMethods+;
@@ -27,6 +28,7 @@
 #pragma link C++ class ublarcvapp::mctools::RecoFlash_t+;
 #pragma link C++ class ublarcvapp::mctools::FlashMatcher+;
 #pragma link C++ class ublarcvapp::mctools::FlashMatcherV2+;
+
 #endif
 
 

@@ -4,7 +4,8 @@ set(MODULE_NAME MCTools)
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # Collect the headers
-set( HEADERS MCPixelPGraph.h
+set( HEADERS MCPos2ImageUtils.h
+  MCPixelPGraph.h
   TruthTrackSCE.h
   TruthShowerTrunkSCE.h
   crossingPointsAnaMethods.h
@@ -16,7 +17,8 @@ set( HEADERS MCPixelPGraph.h
   MCPixelPMap.h )
 
 # Add sources
-add_library( ${LIBNAME} SHARED MCPixelPGraph.cxx
+add_library( ${LIBNAME} SHARED MCPos2ImageUtils.cxx
+  MCPixelPGraph.cxx
   TruthTrackSCE.cxx
   TruthShowerTrunkSCE.cxx
   crossingPointsAnaMethods.cxx

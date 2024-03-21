@@ -24,9 +24,9 @@ namespace dltagger {
   public:
     AStarMaskCombo()
       : larcv::larcv_base("AStarMaskCombo"),
-      pEndpoint(nullptr),
       astar_completed(0),
-      used_astar(false)
+	used_astar(false),
+	pEndpoint(nullptr)
     {};
     virtual ~AStarMaskCombo() {};
 

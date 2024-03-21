@@ -33,7 +33,9 @@ namespace mctools {
 	index(-1),
 	used(0),
 	ancestorid(-1),
-	time_us(0.0)
+	time_us(0.0),
+	tick(0.0),
+	within_image_bounds(true)
     {
       trackid_v.clear();
     };
@@ -45,6 +47,7 @@ namespace mctools {
     int ancestorid;  ///< truth-matched ancestor ID of the particle cascade that made the flash
     float time_us;   ///< relative to optical system trigger
     float tick;      ///< TPC clock tick
+    bool within_image_bounds;
     
     float operator<( const RecoFlash_t& rhs ) const {
       if ( time_us < rhs.time_us ) return true;
@@ -84,6 +87,7 @@ namespace mctools {
 
     bool process(larlite::storage_manager& mgr);
     void printMatches();
+    void printFiltered();
 
     int numTracks( larlite::storage_manager& ioll );
     int numShowers( larlite::storage_manager& ioll );    
@@ -97,6 +101,11 @@ namespace mctools {
     
     void setVerboseLevel( int level ) { _verbose_level=level; };
 
+    void tagTracksThatCrossImageBoundary( ublarcvapp::mctools::MCPixelPGraph& mcpg,
+					  const std::vector< larlite::mctrack >& track_v );					  
+    
+    void filterMatches();
+
   protected:
 
     float _dtick_threshold; ///< absolute time difference between flash and mc track object to match
@@ -104,9 +113,12 @@ namespace mctools {
 
   public:
 
-
+    // track ancestor ids
+    std::set< int > matched_ancestor_ids;
+    
     // container with matches
     std::vector<RecoFlash_t> recoflash_v;
+    std::vector<RecoFlash_t> filtered_v;
     
   };
 
