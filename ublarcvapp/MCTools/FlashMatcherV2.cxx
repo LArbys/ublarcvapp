@@ -25,6 +25,10 @@ namespace mctools {
     // match truth tracks to flashes
     matchTracksAndFlashes( mgr );
 
+    // filter matches
+    filterMatches();
+
+    std::sort( recoflash_v.begin(), recoflash_v.end() );
 
     // list results
     if ( _verbose_level>=1 ) {
@@ -217,7 +221,7 @@ namespace mctools {
   {
 
     // use the mc particle graph tool
-    MCPixelPGraph mcpg;
+    mcpg.clear();
     mcpg.buildgraphonly( ioll );
 
     associateTruthTrackIDs2recoFlashes( ioll, mcpg );
@@ -228,11 +232,6 @@ namespace mctools {
     larlite::event_mctrack* ev_mctrack
       = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
     tagTracksThatCrossImageBoundary( mcpg, *ev_mctrack );
-
-    // filter matches
-    filterMatches();
-
-    std::sort( recoflash_v.begin(), recoflash_v.end() );
     
   }
 
@@ -241,7 +240,7 @@ namespace mctools {
    *
    */
   void FlashMatcherV2::associateTruthTrackIDs2recoFlashes( larlite::storage_manager& ioll,
-							 ublarcvapp::mctools::MCPixelPGraph& mcpg )
+							   ublarcvapp::mctools::MCPixelPGraph& mcpg )
   {
     
     if ( _verbose_level>=2 ) 
@@ -391,6 +390,31 @@ namespace mctools {
       
   }
 
+  std::string FlashMatcherV2::strRecoMatchInfo( const RecoFlash_t& flash, int iflash ) const
+  {
+    std::stringstream flashinfo;
+    if ( iflash>=0 )
+      flashinfo << "flash[" << iflash << "] index=" << flash.index;
+    else
+      flashinfo << "flash[index=" << flash.index << "] ";
+    
+    flashinfo << " producer[" << flash.producerid << "]"
+	      << " time_us=" << flash.time_us
+	      << " tick=" << flash.tick
+	      << " aid=" << flash.ancestorid
+	      << " matched={ ";
+    for ( auto const& tid : flash.trackid_v ) {
+      flashinfo << tid << " ";
+    }
+    flashinfo << "}";
+    return flashinfo.str();
+  }
+  
+  void FlashMatcherV2::printRecoMatchInfo( const RecoFlash_t& flash, int iflash ) const
+  {
+    std::cout << strRecoMatchInfo( flash, iflash ) << std::endl;
+  }
+  
   void FlashMatcherV2::printMatches() {
     
     std::cout << "=================================" << std::endl;
@@ -398,18 +422,7 @@ namespace mctools {
     
     for (int iflash=0; iflash<(int)recoflash_v.size(); iflash++) {
       auto const& flash = recoflash_v.at(iflash);
-      std::stringstream flashinfo;
-      flashinfo << " flash[" << iflash << "]"
-		<< " producer[" << flash.producerid << "]"
-		<< " time_us=" << flash.time_us
-		<< " tick=" << flash.tick
-		<< " aid=" << flash.ancestorid
-		<< " matched={ ";
-      for ( auto const& tid : flash.trackid_v ) {
-	flashinfo << tid << " ";
-      }
-      flashinfo << "}";
-      std::cout << flashinfo.str() << std::endl;
+      std::cout << " " << strRecoMatchInfo(flash, iflash) << std::endl;
     }
     std::cout << "==================================" << std::endl;
   }
@@ -421,18 +434,7 @@ namespace mctools {
     
     for (int iflash=0; iflash<(int)filtered_v.size(); iflash++) {
       auto const& flash = filtered_v.at(iflash);
-      std::stringstream flashinfo;
-      flashinfo << " flash[" << iflash << "]"
-		<< " producer[" << flash.producerid << "]"
-		<< " time_us=" << flash.time_us
-		<< " tick=" << flash.tick
-		<< " aid=" << flash.ancestorid
-		<< " matched={ ";
-      for ( auto const& tid : flash.trackid_v ) {
-	flashinfo << tid << " ";
-      }
-      flashinfo << "}";
-      std::cout << flashinfo.str() << std::endl;
+      std::cout << strRecoMatchInfo( flash, iflash ) << std::endl;
     }
     std::cout << "==================================" << std::endl;
   }

@@ -141,6 +141,9 @@ namespace mctools {
     std::vector<Node_t*> getPrimaryParticles( bool exclude_neutrons=true );
     std::vector<Node_t*> getNeutrinoPrimaryParticles( bool exclude_neutrons=true );    
     std::vector<Node_t*> getNeutrinoParticles( bool exclude_neutrons=true );
+
+    // clear the state
+    void clear();
     
   protected:
     

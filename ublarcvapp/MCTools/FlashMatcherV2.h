@@ -88,6 +88,8 @@ namespace mctools {
     bool process(larlite::storage_manager& mgr);
     void printMatches();
     void printFiltered();
+    std::string strRecoMatchInfo( const RecoFlash_t& flash, int iflash=-1 ) const;
+    void printRecoMatchInfo( const RecoFlash_t& flash, int iflash=-1 ) const;    
 
     int numTracks( larlite::storage_manager& ioll );
     int numShowers( larlite::storage_manager& ioll );    
@@ -111,6 +113,8 @@ namespace mctools {
     float _dtick_threshold; ///< absolute time difference between flash and mc track object to match
     int _verbose_level; ///< control output to stdout. [0] quiet (default), [1] info, [2] debug
 
+    MCPixelPGraph mcpg;
+    
   public:
 
     // track ancestor ids

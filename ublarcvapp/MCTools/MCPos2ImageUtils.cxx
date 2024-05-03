@@ -58,6 +58,7 @@ namespace mctools {
     // append the tick the charge should appear at
     //float tick = larutil::DetectorProperties::GetME()->ConvertXToTicks( reco_pos[0], 0 ); // this is busted
     float tickx = reco_pos[0]/v_cm_per_us*ticks_per_us + 3200.0;
+
     //std::cout << "tick=" << tick << " vs " << tickx << std::endl; 
     reco_pos.push_back( tickx );
 

@@ -759,6 +759,15 @@ namespace mctools {
     }
     LARCV_INFO() << "Num entries in daughter2mother map: " << _shower_daughter2mother.size() << std::endl;
   }
+
+  void MCPixelPGraph::clear()
+  {
+    
+    node_v.clear();
+    _unassigned_pixels_vv.clear();
+    _shower_daughter2mother.clear();
+    
+  };
   
 }
 }
