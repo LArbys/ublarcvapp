@@ -108,6 +108,8 @@ namespace mctools {
     
     void filterMatches();
 
+    virtual void clear();
+
   protected:
 
     float _dtick_threshold; ///< absolute time difference between flash and mc track object to match

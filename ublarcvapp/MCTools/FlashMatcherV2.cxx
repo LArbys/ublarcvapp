@@ -61,6 +61,14 @@ namespace mctools {
     return numShowers;
 
   }
+  
+  void FlashMatcherV2::clear()
+  {
+    mcpg.clear();
+    matched_ancestor_ids.clear();
+    recoflash_v.clear();
+    filtered_v.clear();
+  }
 
   // /*
   //  * grab time coordinate from mctrack mcstep -> convert to tick
@@ -248,7 +256,9 @@ namespace mctools {
 
     // get the primary list
     auto node_v = mcpg.getPrimaryParticles();
-    
+
+    int nwarnings = 0;
+    int warning_limit = 100;
 
     // loop over the primary nodes: these are the recorded list of primary particles
     // defined as trackid=ancestorid
@@ -289,6 +299,13 @@ namespace mctools {
 	  }
 	  else if (flash.ancestorid>=0 && flash.ancestorid!=node->aid) {
 	    std::cout << "  WARNING: flash already matched to node with another ancestorid! old=" << flash.ancestorid << std::endl;
+	    nwarnings++;
+
+	    if ( nwarnings>warning_limit ) {
+	      std::stringstream msg;
+	      msg << "[FlashMatcherV2::associateTruthTrackIDs2recoFlashes] too many missing ID warnings. Stopping" << std::endl;
+	      throw std::runtime_error(msg.str());
+	    }
 	  }
 	  matched_ancestor_ids.insert( node->aid );
 	}

@@ -767,7 +767,7 @@ namespace mctools {
     _unassigned_pixels_vv.clear();
     _shower_daughter2mother.clear();
     
-  };
+  }
   
 }
 }
