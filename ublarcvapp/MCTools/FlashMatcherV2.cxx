@@ -290,12 +290,16 @@ namespace mctools {
 
 	// get the reco flash that best matched to the primary
 	auto& flash = recoflash_v[closest_flashidx];
+	
+	bool added_primary = false;
 
 	// assign this track ID to the flash
 	if ( node->origin==2 ) {
 	  // cosmic origin track
 	  if ( flash.ancestorid<0 ) {
 	    flash.ancestorid = node->aid;
+	    flash.trackid_v.insert( node->tid );
+	    added_primary = true;
 	  }
 	  else if (flash.ancestorid>=0 && flash.ancestorid!=node->aid) {
 	    std::cout << "  WARNING: flash already matched to node with another ancestorid! old=" << flash.ancestorid << std::endl;
@@ -313,18 +317,21 @@ namespace mctools {
 	  // neutrino origin track, set the flash as neutrino origin
 	  flash.ancestorid = 0;
 	  matched_ancestor_ids.insert( node->tid );
+	  flash.trackid_v.insert( node->tid );
+	  added_primary = true;	  
 	}
-	flash.trackid_v.insert( node->tid );
-	
-	// get all the descendent particle records matched to this primary
-	auto node_et_daughters = mcpg.getNodeAndDescendentsFromTrackID( node->tid );
-	int nadded = 0;
-	for ( auto& dnode : node_et_daughters ) {
-	  flash.trackid_v.insert( dnode->tid );
-	  nadded++;
+
+	if ( added_primary ) {
+	  // get all the descendent particle records matched to this primary
+	  auto node_et_daughters = mcpg.getNodeAndDescendentsFromTrackID( node->tid );
+	  int nadded = 0;
+	  for ( auto& dnode : node_et_daughters ) {
+	    flash.trackid_v.insert( dnode->tid );
+	    nadded++;
+	  }
+	  if ( _verbose_level>=2 )
+	    std::cout << "  inserted " << nadded << " trackids to flash. Flash len(track_id)=" << flash.trackid_v.size() << std::endl;
 	}
-	if ( _verbose_level>=2 )
-	  std::cout << "  inserted " << nadded << " trackids to flash. Flash len(track_id)=" << flash.trackid_v.size() << std::endl;
 	
       }//end of if tick difference is below max threshold
       
@@ -338,7 +345,7 @@ namespace mctools {
    * 
    */
   void FlashMatcherV2::buildNullFlashesToTrackIDs( larlite::storage_manager& ioll,
-						 ublarcvapp::mctools::MCPixelPGraph& mcpg )
+						   ublarcvapp::mctools::MCPixelPGraph& mcpg )
   {
 
     // we need a list of ancestor ids where we've already matched

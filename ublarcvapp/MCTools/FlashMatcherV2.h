@@ -114,10 +114,10 @@ namespace mctools {
 
     float _dtick_threshold; ///< absolute time difference between flash and mc track object to match
     int _verbose_level; ///< control output to stdout. [0] quiet (default), [1] info, [2] debug
-
-    MCPixelPGraph mcpg;
     
   public:
+
+    MCPixelPGraph mcpg;    
 
     // track ancestor ids
     std::set< int > matched_ancestor_ids;

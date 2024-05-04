@@ -15,6 +15,7 @@
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 #include "crossingPointsAnaMethods.h"
+#include "MCPos2ImageUtils.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -110,6 +111,11 @@ namespace mctools {
     // Create ROOT node
     Node_t neutrino ( node_v.size(), -1, 0, 0, -1 );
 
+
+    float tpc_x = larutil::Geometry::GetME()->DetHalfWidth()*2.0;
+    float tpc_y = larutil::Geometry::GetME()->DetHalfHeight();
+    float tpc_z = larutil::Geometry::GetME()->DetLength();
+
     // if there is a neutrino, then we add the start position
     if ( mctruth_v.size()>0 ) {
       const larlite::mctruth& mct = mctruth_v.front();
@@ -153,13 +159,45 @@ namespace mctools {
 
       // real position, time
       tracknode.start.resize(4);
-      tracknode.start[0] = mct.Start().X();
-      tracknode.start[1] = mct.Start().Y();
-      tracknode.start[2] = mct.Start().Z();
-      tracknode.start[3] = mct.Start().T();
-      _get_imgpos( tracknode.start, tracknode.imgpos4, sce );
+
+      // set start position.
+      // try to move it into the tpc first
+      if ( mct.size()<1 ) {
+	tracknode.start[0] = mct.Start().X();
+	tracknode.start[1] = mct.Start().Y();
+	tracknode.start[2] = mct.Start().Z();
+	tracknode.start[3] = mct.Start().T();
+      }
+      else {
+	tracknode.start[0] = mct[0].X();
+	tracknode.start[1] = mct[0].Y();
+	tracknode.start[2] = mct[0].Z();
+	tracknode.start[3] = mct[0].T();
+      }
+
+      // first image point
+      std::vector<float> xyz(4,0);
+      bool intpc = false;
+      for (auto const& step : mct ) {
+	xyz[0] = (float)step.X();
+	xyz[1] = (float)step.Y();
+	xyz[2] = (float)step.Z();
+	xyz[3] = (float)step.T();
+	if ( ( xyz[0]>0.0 && xyz[0]<tpc_x )
+	     && ( fabs(xyz[1])<tpc_y )
+	     && ( xyz[2]>0 && xyz[2]<tpc_z ) ) {
+	  intpc = true;
+	  break;
+	}
+      }
       
+      std::vector<float> recopos(4,0);
       
+      if ( intpc ) {
+	recopos = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_recopos( xyz[0], xyz[1], xyz[2], xyz[3] );
+      }
+      tracknode.imgpos4 = recopos;
+      //_get_imgpos( tracknode.start, tracknode.imgpos4, sce );
       node_v.emplace_back( std::move(tracknode) );
     }
 
@@ -182,7 +220,7 @@ namespace mctools {
       showernode.origin = mcsh.Origin();      
       showernode.start.resize(4);
       showernode.aid  = mcsh.AncestorTrackID();
-      showernode.mtid = mcsh.MotherTrackID();      
+      showernode.mtid = mcsh.MotherTrackID();
       showernode.start[0] = mcsh.DetProfile().X();
       showernode.start[1] = mcsh.DetProfile().Y();
       showernode.start[2] = mcsh.DetProfile().Z();
@@ -327,8 +365,9 @@ namespace mctools {
        << " aid=" << node.aid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
-      //<< " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3] << ")"
-       << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << ")"
+      //<< " xyzt=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3]*1.0e-3 << " us)"
+       << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << " tick)"
+       << " tusec=" << node.start[3]*1.0e-3 << " us"
       //<< " (mid,mother)=(" << node.mid << "," << node.mother << ") "
       //<< " (mid,mother)=(" << node.mid << ") "
        << " ndaughters=" << node.daughter_v.size()
@@ -712,6 +751,7 @@ namespace mctools {
       dpos[i]   = realpos4[i];
     }
 
+    
 
     std::vector<float>  txyz(4,0);
     if ( apply_sce ) {
