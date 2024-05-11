@@ -16,6 +16,7 @@
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 #include "crossingPointsAnaMethods.h"
+#include "MCPos2ImageUtils.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -130,7 +131,11 @@ namespace mctools {
     // Create ROOT node
     Node_t neutrino ( node_v.size(), -1, 0, 0, -1 );
 
+
     std::set<int> tid_list;
+    float tpc_x = larutil::Geometry::GetME()->DetHalfWidth()*2.0;
+    float tpc_y = larutil::Geometry::GetME()->DetHalfHeight();
+    float tpc_z = larutil::Geometry::GetME()->DetLength();
 
     // if there is a neutrino, then we add the start position
     if ( mctruth_v.size()>0 ) {
@@ -184,14 +189,16 @@ namespace mctools {
       else if ( abs(mct.PdgCode())==211 )  tracknode.E_MeV -= 135.;
       tracknode.origin = mct.Origin();
 
+      tid_list.insert( tracknode.tid );
+      
       // real position, time
       tracknode.start.resize(4);
       tracknode.start[0] = mct.Start().X();
       tracknode.start[1] = mct.Start().Y();
       tracknode.start[2] = mct.Start().Z();
       tracknode.start[3] = mct.Start().T();
-      _get_imgpos( tracknode.start, tracknode.imgpos4, sce );
 
+      
       if ( tracknode.origin==1 ) {
 	// store nu particle
 	NuPart_t nuparticle;
@@ -202,7 +209,51 @@ namespace mctools {
 	nu_part_v.push_back( nuparticle );
       }
       
-      tid_list.insert( tracknode.tid );
+
+
+      // set start position.
+      // try to move it into the tpc first
+      tracknode.imgpos4 = std::vector<float>(4,0);      
+      tracknode.first_edep_pos = std::vector<float>(4,0);
+      tracknode.first_tpc_pos = std::vector<float>(4,0);
+      tracknode.first_img_pos = std::vector<float>(4,0);
+
+      if ( mct.size()>=1 ) {
+	tracknode.first_edep_pos[0] = mct[0].X();
+	tracknode.first_edep_pos[1] = mct[0].Y();
+	tracknode.first_edep_pos[2] = mct[0].Z();
+	tracknode.first_edep_pos[3] = mct[0].T();
+      
+	// first TPC point
+	std::vector<float> recopos(4,0);	
+	std::vector<float> xyz(4,0);
+	bool intpc = false;
+	for (auto const& step : mct ) {
+	  xyz[0] = (float)step.X();
+	  xyz[1] = (float)step.Y();
+	  xyz[2] = (float)step.Z();
+	  xyz[3] = (float)step.T();
+	  if ( ( xyz[0]>0.0 && xyz[0]<tpc_x )
+	       && ( fabs(xyz[1])<tpc_y )
+	       && ( xyz[2]>0 && xyz[2]<tpc_z ) ) {
+
+	    if ( intpc==false ) {
+	      intpc = true;
+	      tracknode.first_tpc_pos = xyz;
+	    }
+
+	    recopos = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_recopos( xyz[0], xyz[1], xyz[2], xyz[3], true, true );
+	    float tick = recopos[3];
+	    
+	    if ( tick>2400 && tick<3200+1008) {
+	      tracknode.first_img_pos = xyz;
+	      tracknode.imgpos4 = recopos;
+	      break;
+	    }
+	  }
+	}//end of mcstep loop
+      }//end of if more than 0 mcsteps
+
       node_v.emplace_back( std::move(tracknode) );
     }
 
@@ -224,20 +275,22 @@ namespace mctools {
       showernode.E_MeV = mcsh.Start().E();
       showernode.process = mcsh.Process();
       showernode.origin = mcsh.Origin();      
-      showernode.start.resize(4);
+      showernode.start = std::vector<float>{ (float)mcsh.Start().X(), (float)mcsh.Start().Y(), (float)mcsh.Start().Z(), (float)mcsh.Start().T() };
       showernode.aid  = mcsh.AncestorTrackID();
-      showernode.mtid = mcsh.MotherTrackID();      
-      showernode.start[0] = mcsh.DetProfile().X();
-      showernode.start[1] = mcsh.DetProfile().Y();
-      showernode.start[2] = mcsh.DetProfile().Z();
-      showernode.start[3] = mcsh.DetProfile().T(); 
-      // showernode.start[0] = mcsh.Start().X();
-      // showernode.start[1] = mcsh.Start().Y();
-      // showernode.start[2] = mcsh.Start().Z();
-      // showernode.start[3] = mcsh.Start().T();
-      _get_imgpos( showernode.start, showernode.imgpos4, sce, false );
-      //showernode.imgpos4 = showernode.start;
-      //showernode.imgpos4[3] = 3200 + mcsh.DetProfile().X()/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+      showernode.mtid = mcsh.MotherTrackID();
+
+      showernode.first_edep_pos = std::vector<float>(4,0);
+      showernode.first_tpc_pos  = std::vector<float>(4,0);
+      showernode.first_img_pos  = std::vector<float>(4,0);
+      showernode.imgpos4 = std::vector<float>(4,0);
+
+      if ( !std::isinf( mcsh.DetProfile().X() ) && !std::isnan( mcsh.DetProfile().X() ) ) {
+	std::vector<float> detprofile = { (float)mcsh.DetProfile().X(), (float)mcsh.DetProfile().Y(), (float)mcsh.DetProfile().Z(), (float)mcsh.DetProfile().T() };
+	showernode.first_edep_pos = detprofile;
+	showernode.first_tpc_pos  = detprofile;
+	showernode.first_img_pos  = detprofile;
+	_get_imgpos( detprofile, showernode.imgpos4, sce, false );
+      }
 
       if ( showernode.origin==1 ) {
 	// store nu particle
@@ -252,7 +305,7 @@ namespace mctools {
       tid_list.insert( showernode.tid );      
       node_v.emplace_back( std::move(showernode) );
     }
-
+    
     // find the geant4 trackid offset for the neutrinos
     long smallest_nu_tid = -1;
     for ( auto& node : node_v ) {
@@ -575,8 +628,9 @@ namespace mctools {
        << " aid=" << node.aid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
-      //<< " start=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3] << ")"
-       << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << ")"
+      //<< " xyzt=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3]*1.0e-3 << " us)"
+       << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << " tick)"
+       << " tusec=" << node.start[3]*1.0e-3 << " us"
       //<< " (mid,mother)=(" << node.mid << "," << node.mother << ") "
       //<< " (mid,mother)=(" << node.mid << ") "
        << " hasmother=" << hasmother
@@ -962,6 +1016,7 @@ namespace mctools {
       dpos[i]   = realpos4[i];
     }
 
+    
 
     std::vector<float>  txyz(4,0);
     if ( apply_sce ) {
