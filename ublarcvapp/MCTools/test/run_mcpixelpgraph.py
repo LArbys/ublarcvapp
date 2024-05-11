@@ -21,6 +21,9 @@ test script that demos the MCPixelPGraph class.
 rt.gStyle.SetOptStat(0)
 
 ioll = larlite.storage_manager( larlite.storage_manager.kREAD )
+ioll.set_data_to_read( larlite.data.kMCTrack,  "mcreco" )
+ioll.set_data_to_read( larlite.data.kMCShower, "mcreco" )
+ioll.set_data_to_read( larlite.data.kMCTruth,  "generator" )
 ioll.add_in_filename(  args.input_larlite )
 ioll.open()
 
@@ -44,16 +47,24 @@ print("Number of entries: ",nentries)
 print("Start loop.")
 
 mcpg = ublarcvapp.mctools.MCPixelPGraph()
+mcpg_nu = ublarcvapp.mctools.MCPixelPGraph()
 if args.debug:
     mcpg.set_verbosity( larcv.msg.kDEBUG )
+    mcpg_nu.set_verbosity( larcv.msg.kDEBUG )    
 else:
     mcpg.set_verbosity( larcv.msg.kINFO )
-mcpg.set_adc_treename( args.adc )
+    mcpg_nu.set_verbosity( larcv.msg.kINFO )    
 
-tmp = rt.TFile("temp.root","recreate")
+if HAS_LARCV:
+    mcpg.set_adc_treename( args.adc )
 
-c = rt.TCanvas("c","c",1200,1800)
-c.Divide(1,3)
+if HAS_LARCV:
+    tmp = rt.TFile("temp.root","recreate")
+    c = rt.TCanvas("c","c",1200,1800)
+    c.Divide(1,3)
+
+print("[ENTER to Start")
+input()
 
 for ientry in range( nentries ):
 
@@ -61,6 +72,12 @@ for ientry in range( nentries ):
     print("==========================")
     print("===[ EVENT ",ientry," ]===")
     ioll.go_to(ientry)
+
+    mcpg.clear()
+    mcpg_nu.clear()
+    mcpg.set_cluster_neutrino_particles(False)
+    mcpg_nu.set_cluster_neutrino_particles(True)
+    
     if HAS_LARCV:
         iolcv.read_entry(ientry)
         ev_adc = iolcv.get_data( larcv.kProductImage2D, args.adc )
@@ -78,10 +95,31 @@ for ientry in range( nentries ):
         mcpg.buildgraph( iolcv, ioll )
     else:
         mcpg.buildgraphonly( ioll )
-        
-    mcpg.printAllNodeInfo()
-    #mcpg.printGraph()
-    sys.exit(0)
+        mcpg_nu.buildgraphonly( ioll )
+
+    if args.debug:
+        print("ALL NODE INFO [NO NU]======================================")
+        mcpg.printAllNodeInfo()
+        print("====================================================")
+        print("CONSTRUCTED PARTICLE GRAPH [NO NU]")
+        mcpg.printGraph(0,False)
+        print("====================================================")
+        print("====================================================")
+        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
+        print("====================================================")
+    
+    print("====================================================")
+    print("ALL NODE INFO [WITH NU VERTEX GROUPING]======================================")
+    mcpg_nu.printAllNodeInfo()
+    print("====================================================")
+    print("CONSTRUCTED PARTICLE GRAPH [WITH NU VERTEX GROUPING]")
+    mcpg_nu.printGraph(0,False)
+    print("====================================================")
+    
+    print("[ENTER] to continue")
+    input()
+    if True:
+        continue
 
     #primaries = mcpg.getPrimaryParticles()
     primaries = mcpg.node_v

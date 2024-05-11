@@ -1,6 +1,7 @@
 #include "MCPixelPGraph.h"
 
 #include <sstream>
+#include <set>
 
 // larcv
 #include "larcv/core/DataFormat/EventImage2D.h"
@@ -63,6 +64,8 @@ namespace mctools {
     larlite::event_mctruth*  ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
 
     buildgraphonly( *ev_mcshower, *ev_mctrack, *ev_mctruth );
+
+    
   }
 
   /**
@@ -104,11 +107,30 @@ namespace mctools {
     // (3) (optional) get depth of each node by doing breath-first traversal
     // (4) sort vector pointers by depth (necessary?)
 
+    // dump mctruth info
+    // LARCV_DEBUG() << "MCTruth Dump" << std::endl;
+    // int imctruth=0;
+    // for ( auto& mctruth : mctruth_v ) {
+    //   LARCV_DEBUG() << "MCTRUTH[" << imctruth << "] --------------" << std::endl;
+    //   int imcpart = 0;
+    //   for ( auto& part : mctruth.GetParticles() ) {
+    // 	LARCV_DEBUG() << " mcpart[" << imcpart << "] -------" << std::endl;
+    // 	LARCV_DEBUG() << "   status=" << part.StatusCode() << std::endl;
+    // 	LARCV_DEBUG() << "   trackid=" << part.TrackId() << std::endl;
+    // 	LARCV_DEBUG() << "   pdg=" << part.PdgCode() << std::endl;
+    // 	LARCV_DEBUG() << "   motherid=" << part.Mother() << std::endl;
+    // 	LARCV_DEBUG() << "   process=" << part.Process() << " endprocess=" << part.EndProcess() << std::endl;
+    // 	LARCV_DEBUG() << "   num daughters=" << part.Daughters().size() << std::endl;
+    //   }
+    // }
+
     node_v.clear();
     node_v.reserve( shower_v.size()+track_v.size() );
 
     // Create ROOT node
     Node_t neutrino ( node_v.size(), -1, 0, 0, -1 );
+
+    std::set<int> tid_list;
 
     // if there is a neutrino, then we add the start position
     if ( mctruth_v.size()>0 ) {
@@ -120,12 +142,23 @@ namespace mctools {
       neutrino.start[2] = mct.GetNeutrino().Nu().Trajectory().front().Z();
       neutrino.start[3] = mct.GetNeutrino().Nu().Trajectory().front().T();
     }
-    
     node_v.emplace_back( std::move(neutrino) );
+    _eventRootNode = &node_v[0];
 
     // load spacechargemicroboone
     larutil::SpaceChargeMicroBooNE sce;
 
+    struct NuPart_t {
+
+      int geantid;
+      int pdg;
+      float E_MeV;
+      std::vector<float> pos;
+    };
+
+    std::vector< NuPart_t > nu_part_v;
+
+    // collect from mcreco tracks
     for (int vidx=0; vidx<(int)track_v.size(); vidx++ ) {
       const larlite::mctrack& mct = track_v[vidx];
       LARCV_DEBUG() << "track[" << vidx << "] origin=" << mct.Origin()
@@ -158,11 +191,22 @@ namespace mctools {
       tracknode.start[2] = mct.Start().Z();
       tracknode.start[3] = mct.Start().T();
       _get_imgpos( tracknode.start, tracknode.imgpos4, sce );
+
+      if ( tracknode.origin==1 ) {
+	// store nu particle
+	NuPart_t nuparticle;
+	nuparticle.geantid = tracknode.tid;
+	nuparticle.pdg = tracknode.pid;
+	nuparticle.E_MeV = mct.Start().E();
+	nuparticle.pos = tracknode.start;
+	nu_part_v.push_back( nuparticle );
+      }
       
-      
+      tid_list.insert( tracknode.tid );
       node_v.emplace_back( std::move(tracknode) );
     }
 
+    // collect from mcshowers
     for (int vidx=0; vidx<(int)shower_v.size(); vidx++ ) {
       const larlite::mcshower& mcsh = shower_v[vidx];
 
@@ -194,9 +238,129 @@ namespace mctools {
       _get_imgpos( showernode.start, showernode.imgpos4, sce, false );
       //showernode.imgpos4 = showernode.start;
       //showernode.imgpos4[3] = 3200 + mcsh.DetProfile().X()/larutil::LArProperties::GetME()->DriftVelocity()/0.5;
+
+      if ( showernode.origin==1 ) {
+	// store nu particle
+	NuPart_t nuparticle;
+	nuparticle.geantid = showernode.tid;
+	nuparticle.pdg = showernode.pid;
+	nuparticle.E_MeV = mcsh.Start().E();
+	nuparticle.pos = std::vector<float>{ (float)mcsh.Start().X(), (float)mcsh.Start().Y(), (float)mcsh.Start().Z(), (float)mcsh.Start().T() };
+	nu_part_v.push_back( nuparticle );
+      }
       
+      tid_list.insert( showernode.tid );      
       node_v.emplace_back( std::move(showernode) );
     }
+
+    // find the geant4 trackid offset for the neutrinos
+    long smallest_nu_tid = -1;
+    for ( auto& node : node_v ) {
+      if ( node.origin==1 ) {
+	if (smallest_nu_tid<0 || node.tid < smallest_nu_tid ) {
+	  smallest_nu_tid = node.tid;
+	}
+      }
+    }
+    LARCV_DEBUG() << "Smallest neutrino Geant4 Track ID: " << smallest_nu_tid << std::endl;
+    
+    // collect from mctruth
+    // we need to match the earliest track or shower object to
+    // a genie final state particle to get offset
+    int ifs_1 = 0;
+    int matched_fs = -1;
+    int matched_geant_id = -1;
+    for ( auto& mctruth : mctruth_v ) {
+      for ( auto& part : mctruth.GetParticles() ) {
+	if ( part.StatusCode()==1 ) {
+	  ifs_1 += 1;
+	  // does ginal state particel match any of the geant4 particles?
+	  for (auto& nupart : nu_part_v) {
+	    
+	    // match pdg
+	    if ( nupart.pdg!=part.PdgCode() )
+	      continue;
+
+	    // match energy
+	    float dE_MeV = std::fabs(nupart.E_MeV-part.Momentum(0)[3]*1000.0);
+	    LARCV_DEBUG() << "mctruth part: " << dE_MeV << std::endl;
+	    if ( dE_MeV > 10.0 )
+	      continue;
+
+	    matched_fs = ifs_1;
+	    matched_geant_id = nupart.geantid;
+	    LARCV_DEBUG() << "have first match. genie finalstate id=" << matched_fs << " geantid=" << matched_geant_id << std::endl;
+	    break;
+	  }
+	  
+	}//end of if status code
+	if (matched_fs>=0)
+	  break;
+      }//end of mcpart loop
+      if (matched_fs>=0)
+	break;
+    }//end of mctruth loop
+
+    int geantid_offset = smallest_nu_tid  - (matched_fs-1);
+    LARCV_INFO() << "geantid offset: " << geantid_offset << " smallest_nu_tid=" << smallest_nu_tid << std::endl;
+    LARCV_INFO() << " matched_fs=" << matched_fs << " matched_geant4=" << matched_geant_id << std::endl;
+	
+    int imctruth=0;
+    int ifs = 0;
+    for ( auto& mctruth : mctruth_v ) {
+      int imcpart = 0;
+      for ( auto& part : mctruth.GetParticles() ) {
+	LARCV_DEBUG() << " mcpart[" << imctruth << "," << imcpart << "] -------" << std::endl;
+	LARCV_DEBUG() << "   status=" << part.StatusCode() << std::endl;
+	LARCV_DEBUG() << "   trackid=" << part.TrackId() << std::endl;
+	LARCV_DEBUG() << "   pdg=" << part.PdgCode() << std::endl;
+	LARCV_DEBUG() << "   motherid=" << part.Mother() << std::endl;
+	LARCV_DEBUG() << "   process=" << part.Process() << " endprocess=" << part.EndProcess() << std::endl;
+	LARCV_DEBUG() << "   num daughters=" << part.Daughters().size() << std::endl;
+	
+	if ( part.StatusCode()==1 ) {
+	  int geant_trackid = geantid_offset + ifs;
+	  LARCV_DEBUG() << "  Stable Final State. Implied Geant4 ID = " << geant_trackid << std::endl;
+	  ifs++;
+	  
+	  auto it_tid = tid_list.find(geant_trackid);
+	  if (it_tid==tid_list.end() ) {
+	    int nodeidx = node_v.size();
+	    int type = 3; // genie-final-state
+	    int tid  = geant_trackid;
+	    int vidx = imcpart;
+	    int pid = part.PdgCode();
+	    Node_t* mother = nullptr;
+	    int mid = -1;
+	    float energy = part.Momentum(0)[3]*1e3 - part.Mass()*1.0e3; // in GeV, convert to MeV
+	    std::vector<float> start { (float)part.Position(0)[0],
+	      (float)part.Position(0)[1],
+	      (float)part.Position(0)[2],
+	      (float)part.Position(0)[3]};
+	    std::vector<float> imgpos4(4,0);
+	    _get_imgpos( start, imgpos4, sce, true );
+	    
+	    //LARCV_DEBUG() << "Creating Mother node from GENIE final states: tid=" << tid << " type=" << 3 << std::endl;
+	    Node_t fsnode( nodeidx, type, tid, vidx, pid, mother, mid, energy, "primary" );
+	    fsnode.start = start;
+	    fsnode.imgpos4 = imgpos4;
+	    fsnode.mtid = tid;
+	    fsnode.aid  = tid;
+	    fsnode.origin = 1; // neutrino origin (from genie)
+	    LARCV_DEBUG() << "Add Genie Final State Particle to initial List: tid=" << tid << " pdg=" << pid << std::endl;	    
+	    node_v.emplace_back( std::move(fsnode) );
+	  }
+	  else {
+	    LARCV_DEBUG() << "Genie Final State Partial [tid=" << geant_trackid << "] Already in MCReco List" << std::endl;
+	  }
+	}
+	imcpart++;	
+      }
+      imctruth++;
+    }
+    
+    // try to connect primary neutrino origin nodes to mctruth info
+    //_adoptNeutrinoOrphans( &mctruth_v );
 
     // sort Node_t object by geant track ID, relabel node IDs
     std::sort( node_v.begin(), node_v.end() );
@@ -247,6 +411,14 @@ namespace mctools {
           }
         }
       }
+      else if (node.type==3) {
+	// genie fs nodes
+	// connet to ROOT node as they are primary by definition
+	mothernode = &(node_v[0]);
+      }      
+      else {
+	continue;
+      }
 
       if (mothernode) {
         // found mother, connect
@@ -259,11 +431,84 @@ namespace mctools {
       
     }//end of node loop
 
+    if ( _cluster_neutrino_particles ) {
+      int nnu = _define_neutrino_interaction_nodes( track_v, shower_v );
+      LARCV_INFO() << "Rearranged graph to include neutrino vertex nodes. Number of Nu Interactions: " << nnu << std::endl;
+    }
     
     //printAllNodeInfo();
     //printGraph();
   }
 
+  /**
+   * @brief wrapper function to retrieve Node's corresponding mctrack object from larlite container
+   */
+  const larlite::mctrack&  MCPixelPGraph::_retrieve_mctrackobject( const Node_t* node,
+								   const larlite::event_mctrack& ev_track_v )
+  {
+    try {
+      const larlite::mctrack& x = ev_track_v.at(node->vidx);
+      // to do: check that truth info matches?
+      return x;
+    }
+    catch ( std::exception& ex ) {
+      std::stringstream err;
+      err << "Error accessing event_mctrack container at index=" << node->vidx << " for node[idx]=nodeidx" << std::endl;
+      err << "Node info: " << std::endl;
+      err << strNodeInfo( *node ) << std::endl;
+      err << "Exception: " << ex.what() << std::endl;
+      throw std::runtime_error( err.str() );
+    }
+  }
+
+  /**
+   * @brief wrapper function to retrieve Node's corresponding mcshower object from larlite container
+   */
+  const larlite::mcshower&  MCPixelPGraph::_retrieve_mcshowerobject( const Node_t* node,
+								     const larlite::event_mcshower& ev_shower_v )
+  {
+    try {
+      const larlite::mcshower& x = ev_shower_v.at(node->vidx);
+      // to do: check that truth info matches?
+      return x;
+    }
+    catch ( std::exception& ex ) {
+      std::stringstream err;
+      err << "Error accessing event_mcshower container at index=" << node->vidx << " for node[idx]=nodeidx" << std::endl;
+      err << "Node info: " << std::endl;
+      err << strNodeInfo( *node ) << std::endl;
+      err << "Exception: " << ex.what() << std::endl;
+      throw std::runtime_error( err.str() );
+    }
+  }
+
+  /**
+   * @brief convenience function to retrieve Node's corresponding mctrack object from larlite top-level io interface
+   */
+  const larlite::mctrack&  MCPixelPGraph::_retrieve_mctrackobject( const Node_t* node,
+								   larlite::storage_manager& ioll,
+								   std::string producername )
+  {
+    const larlite::event_mctrack* ev_mctrack
+      = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack, producername );
+
+    return _retrieve_mctrackobject( node, *ev_mctrack );
+  }
+
+  /**
+   * @brief convenience function to retrieve Node's corresponding mcshower object from larlite top-level io interface
+   */
+  const larlite::mcshower&  MCPixelPGraph::_retrieve_mcshowerobject( const Node_t* node,
+								     larlite::storage_manager& ioll,
+								     std::string producername )
+  {
+    const larlite::event_mcshower* ev_mcshower
+      = (larlite::event_mcshower*)ioll.get_data(larlite::data::kMCShower, producername );
+
+    return _retrieve_mcshowerobject( node, *ev_mcshower );
+  }
+  
+  
   /**
    * locate Node_t in node_v using trackid (from geant4)
    *
@@ -316,6 +561,9 @@ namespace mctools {
    *
    */
   std::string MCPixelPGraph::strNodeInfo( const Node_t& node ) {
+
+    int hasmother = ( node.mother ) ? 1 : 0;
+    
     std::stringstream ss;
     //ss << "node[" << node.nodeidx << "," << &node << "] "
     ss << "node[" << node.nodeidx << "] "
@@ -323,7 +571,7 @@ namespace mctools {
        << " origin=" << node.origin
        << " p=" << node.process
        << " tid=" << node.tid
-       << " mid=" << node.mtid      
+       << " mtid=" << node.mtid      
        << " aid=" << node.aid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
@@ -331,6 +579,7 @@ namespace mctools {
        << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << ")"
       //<< " (mid,mother)=(" << node.mid << "," << node.mother << ") "
       //<< " (mid,mother)=(" << node.mid << ") "
+       << " hasmother=" << hasmother
        << " ndaughters=" << node.daughter_v.size()
        << " npixs=(";
     for ( size_t i=0; i<node.pix_vv.size(); i++ ) {
@@ -379,6 +628,7 @@ namespace mctools {
       branch += " |";
     if ( depth>0 ) 
       branch += "-- ";
+      
     if ( visible_only ) {
       int nvis = 0;
       for ( auto const& pix_v : node->pix_vv )
@@ -760,14 +1010,383 @@ namespace mctools {
     LARCV_INFO() << "Num entries in daughter2mother map: " << _shower_daughter2mother.size() << std::endl;
   }
 
+  int MCPixelPGraph::_define_neutrino_interaction_nodes( larlite::storage_manager& ioll )
+  {
+    larlite::event_mctrack* ev_mctrack
+      = (larlite::event_mctrack*)ioll.get_data(larlite::data::kMCTrack,"mcreco");
+    larlite::event_mcshower* ev_mcshower
+      = (larlite::event_mcshower*)ioll.get_data(larlite::data::kMCShower,"mcreco");
+    
+    return _define_neutrino_interaction_nodes( *ev_mctrack, *ev_mcshower );
+  }
+  
+  int MCPixelPGraph::_define_neutrino_interaction_nodes( const larlite::event_mctrack& ev_mctrack,
+							 const larlite::event_mcshower& ev_mcshower )
+  {
+    // first we collect nodes with neutrino origin
+    bool exclude_neutrons = false;
+    std::vector< Node_t* > _nu_primary_v = getNeutrinoPrimaryParticles( exclude_neutrons );
+    LARCV_DEBUG() << "Number of nu primaries returned: " << _nu_primary_v.size() << std::endl;
+
+    // if we have access to MCTruth info, we should use it to define vertex locations.
+    // otherwise we use some distance threshold. 0.3 mm, the pitch length?
+    std::map< int, std::set<int> > _nu_collected_primaries_v;
+    _nu_vertices_v.clear();
+
+    
+    for ( auto& pnode : _nu_primary_v ) {
+      // we test the vertex for every primary
+      LARCV_DEBUG() << "Considering Nu Primary node[" << pnode->nodeidx << "] tid=" << pnode->tid << std::endl;
+
+      std::vector<float> start = {0,0,0,0};
+
+      if ( pnode->isTrackObject() ) {
+	auto const& track = _retrieve_mctrackobject( pnode, ev_mctrack );
+	for (int i=0; i<4; i++) {
+	  start[i] = track.Start().Position()[i];
+	}
+      }
+      else if (pnode->isShowerObject()) {
+	auto const& shower = _retrieve_mcshowerobject( pnode, ev_mcshower );
+	for (int i=0; i<4; i++) {
+	  start[i] = shower.Start().Position()[i]; // creation point in geant4, for photon, not the same as conversion point where visible EM cascade begins
+	}
+      }
+      else if (pnode->isGenieFinalStateObject()) {
+	start = pnode->start;
+      }
+      else {
+        LARCV_DEBUG() << "Node Primary neither a shower nor track object: " << pnode->nodeidx << std::endl;
+	LARCV_DEBUG() << "node: " << strNodeInfo( *pnode ) << std::endl;
+	continue;
+      }
+
+      bool found_vertex_match = false;
+      int idx_matched_vertex = -1;
+      float closest_match = 1e9;
+      std::vector<float> pos = start;
+      
+      LARCV_DEBUG() << "Nu primary start: " << pos[0] << " " << pos[1] << " " << pos[2] << " " << pos[3] << std::endl;      
+      
+      for ( int idx_vertex=0; idx_vertex<(int)_nu_vertices_v.size(); idx_vertex++ ) {
+	
+	auto& vertex = _nu_vertices_v.at(idx_vertex);
+	
+	// distance to existing vertex
+	float dist = 0.;
+	for (int i=0; i<3; i++) {
+	  dist += ( pos[i]-vertex[i] )*( pos[i]-vertex[i] );
+	}
+	dist = sqrt(dist);
+
+	// update closest match
+	if ( dist < closest_match ) {
+	  idx_matched_vertex = idx_vertex;
+	  closest_match = dist;
+
+	  // qualifies as found?
+	  if ( dist < _kNuVertexDistCutoff_cm ) {
+	    found_vertex_match = true;
+	    idx_matched_vertex = idx_vertex;
+	  }
+	}
+
+      }//end of loop over established nu vertices
+      LARCV_DEBUG() << "result of vertex search: closest=" << closest_match << " idx_matched=" << idx_matched_vertex << " found_match=" << found_vertex_match << std::endl;
+
+      if ( !found_vertex_match ) {
+	// new neutrino vertex defined using position
+	LARCV_DEBUG() << "New vertex defined." << std::endl;
+	std::vector<float> new_vertex = { (float)pos[0], (float)pos[1], (float)pos[2], (float)pos[3] };
+	_nu_vertices_v.push_back( new_vertex );
+
+	int nu_vertex_id = (int)_nu_vertices_v.size()-1; // using position in _nu_vertices as an id number (should use a struct I know)
+	std::set<int> nu_primary_set;
+	nu_primary_set.insert( pnode->nodeidx ); // add node index
+	_nu_collected_primaries_v[ nu_vertex_id ] = nu_primary_set;
+      }
+      else {
+	// found match
+	LARCV_DEBUG() << "Matched primary to existing vertex. IDX=" << idx_matched_vertex << std::endl;
+	auto it=_nu_collected_primaries_v.find( idx_matched_vertex );
+	it->second.insert( pnode->nodeidx );
+      }
+	
+    }//end of loop over neutrino primaries
+
+    LARCV_DEBUG() << "Number of vertices defined: " << _nu_vertices_v.size() << std::endl;
+
+    if ( _nu_vertices_v.size()==0 )
+      return 0;
+
+    // now that we have nu vertices, we need to define a new neutrino ancestor ID, then relabel ancestor IDs for daughters
+    long max_geant4_trackid = -1;
+    if ( _nu_vertices_v.size()>0 ) {
+      for (auto pnode : node_v) {
+	if ( pnode.tid>max_geant4_trackid ) {
+	  max_geant4_trackid = pnode.tid;
+	}
+      }
+    }
+    LARCV_DEBUG() << "Starting with max trackid=" << max_geant4_trackid << " to assign nu vertex nodes" << std::endl;
+    std::set<int> nu_attached_v; // gather list of indices that have been attached to neutrinos
+    std::vector< Node_t* > nu_pnode_v;
+
+    for (int inuvtx=0; inuvtx<(int)_nu_vertices_v.size(); inuvtx++) {
+      
+      LARCV_DEBUG() << "Build nu vertex node and assign daughters. [NU VTX IDX=" << inuvtx << "]" << std::endl;
+      
+      // get the next node index
+      int nu_node_idx = (int)node_v.size();
+      // need an acceptable fake trackID
+      long fake_trackid = max_geant4_trackid+1;
+      max_geant4_trackid++;
+      int type_id = 2;
+      int pid = -1;
+      int mtid = fake_trackid;
+      float energy = 0.0;
+      std::string proc = "nuvertex";
+      Node_t nu_node( nu_node_idx, type_id, fake_trackid, inuvtx,
+		      pid, _eventRootNode,
+		      mtid, energy, proc );
+
+      nu_node.origin = 1;
+      nu_node.aid = fake_trackid;
+      nu_node.mtid = -1;
+
+      // insert into node vector
+      node_v.emplace_back( std::move(nu_node) );
+
+      // get pointer
+      Node_t* pnu_node = &(node_v.at(nu_node_idx));
+      nu_pnode_v.push_back( pnu_node );
+
+      // now we need to
+      // (1) change the nu primaries associated to this interaction
+      //     to list their mother node to this node representing the neutrino interaction
+      // (2) relabel the ancestor ID of all primary neutrinos to this ID
+      auto it_prim = _nu_collected_primaries_v.find( inuvtx );
+      if ( it_prim==_nu_collected_primaries_v.end() )
+	continue;
+      
+      for ( auto& nodeidx : it_prim->second ) {
+
+	LARCV_DEBUG() << "Add primary, node=" << nodeidx << ", to nu vertex[" << inuvtx << "]" << std::endl;
+
+	LARCV_DEBUG() << "  reassign mother to nu vertex pnode=" << pnu_node << std::endl;
+	Node_t* pnode_nuprim = &(node_v.at(nodeidx));
+	pnode_nuprim->mother = pnu_node;
+
+	// collect daughters
+	std::vector<Node_t*> prim_daughters = getNodeAndDescendentsFromTrackID( pnode_nuprim->tid );
+	LARCV_DEBUG() << "Collect descendents of nu  primary node[ " << nodeidx << "] ndaughters=" << (int)prim_daughters.size()-1 << std::endl;	
+
+	// reset the ancestor id of all of these nodes to the new fake track ID for nu interaction
+	// note: the function above returns the node of the starting track id
+	for ( auto& pdnode : prim_daughters ) {
+	  pdnode->aid = (int)fake_trackid;
+	}
+	
+	// add this primary to the daughter list of the nu node
+	pnu_node->daughter_idx_v.push_back( pnode_nuprim->nodeidx );
+	pnu_node->daughter_v.push_back( pnode_nuprim );
+	LARCV_DEBUG() << "Add to NuVertex node list of daughters: now " << pnu_node->daughter_v.size() << std::endl;
+	nu_attached_v.insert( pnode_nuprim->nodeidx );
+	
+	// add its E
+	pnu_node->E_MeV += pnode_nuprim->E_MeV;
+	LARCV_DEBUG() << "Add to NuVertex energy: now " << pnu_node->E_MeV << " MeV" << std::endl;
+      }//end of loop over primary node
+
+      nu_attached_v.insert( nu_node_idx );
+
+    }//end of loop over newly creatd neutrino vertices
+
+    // now we have to redefine the root node's connections
+    _eventRootNode = &(node_v[0]);
+    std::vector<Node_t*> all_prim_v = getPrimaryParticles(exclude_neutrons);
+
+    _eventRootNode->daughter_idx_v.clear();
+    _eventRootNode->daughter_v.clear();
+    
+    
+    for (auto& pnode : all_prim_v ) {
+      auto it_attached = nu_attached_v.find( pnode->nodeidx );
+      if ( it_attached==nu_attached_v.end() ) {
+	// not attached to neutrino vertex, so add to root node
+	_eventRootNode->daughter_idx_v.push_back( pnode->nodeidx );
+	_eventRootNode->daughter_v.push_back( pnode );
+      }
+    }
+
+    // attach the nu vertex nodes
+    for (auto& pnode : nu_pnode_v ) {
+      _eventRootNode->daughter_idx_v.push_back( pnode->nodeidx );
+      _eventRootNode->daughter_v.push_back( pnode );
+    }
+    
+    return _nu_vertices_v.size();
+  }
+
   void MCPixelPGraph::clear()
   {
-    
+
+    _unassigned_pixels_vv.clear();    
     node_v.clear();
-    _unassigned_pixels_vv.clear();
+    
+    _eventRootNode = nullptr;    
+    _nu_vertices_v.clear();
     _shower_daughter2mother.clear();
+    //_map_trackid_to_nu_ancestor_v.clear();
     
   }
+
+  void MCPixelPGraph::_adoptNeutrinoOrphans( const larlite::event_mctruth* ev_mctruth )
+  {
+    // we scan our nodes without mother nodes that come from neutrinos (origin=1)
+    // if we have mctruth, we look to find mother. then we make new mother node and finish graph
+
+    std::map<int,std::vector<int> > final_state_map;
+    int ifs = 0;
+    if ( ev_mctruth ) {
+      int imctruth=0;
+      for ( auto const& mctruth : *ev_mctruth ) {
+	//LARCV_DEBUG() << "MCTRUTH[" << imctruth << "] --------------" << std::endl;
+	int imcpart = 0;
+	for ( auto& part : mctruth.GetParticles() ) {
+	  if ( part.StatusCode()==1 ) {
+	    int geant_trackid = ifs+1;
+	    ifs++;
+	    std::vector<int> index = {imctruth,imcpart};
+	    final_state_map[geant_trackid] = index;
+	  }
+	  imcpart++;	  
+	}
+	imctruth++;
+      }//end of mctruth map
+    }//end of if have mctruth
+
+    std::set<int> tid_list;
+    for ( auto& node : node_v )
+      tid_list.insert(node.tid);
+
+    std::map< int, int > newmom_tid_to_nodeidx;
+    
+    for ( auto& node : node_v ) {
+      // has mother or is good neutrino mother
+      if ( node.origin!=1 ) {
+	continue;
+      }
+
+      // check if the mother node is not already in the node list
+      auto it_tid = tid_list.find( node.mtid );
+      if ( it_tid!=tid_list.end() ) {
+	// has a mother in the list, no need to gather one from the mctruth or create one
+	continue;
+      }
+
+      // check if we might have a mother now
+      auto it_newmom = newmom_tid_to_nodeidx.find( node.mtid );
+      if ( it_newmom==newmom_tid_to_nodeidx.end() ) {
+	// try ancestor id
+	it_newmom = newmom_tid_to_nodeidx.find( node.aid );
+      }
+
+      if ( it_newmom!=newmom_tid_to_nodeidx.end() ) {
+	// connected to a new mom!
+	//int momtid = it_newmom->first;	
+	int momidx = it_newmom->second;
+	auto& momnode = node_v.at(momidx);
+	//momnode.daughter_v.push_back( &node );
+	//momnode.daughter_idx_v.push_back( node.nodeidx );
+	//node.mother = &momnode;
+	LARCV_DEBUG() << "Connected primary orphan to a newly created mom! New mom tid=" << momnode.tid << std::endl;
+	continue;
+      }
+
+      LARCV_DEBUG() << "node[" << node.nodeidx << "] with mtid=" << node.mtid << " looking to find mom or create it" << std::endl;
+
+      bool created_mother = false;
+      if ( ev_mctruth ) {
+	// if we have the mctruth, try to look for missing mother id
+	std::vector<int> momindex;
+	int mom_tid = -1;
+	
+	auto it_fs = final_state_map.find( node.mtid );
+	if ( it_fs!=final_state_map.end() ) {
+	  // has mother, create a node
+	  momindex = it_fs->second;
+	  mom_tid = node.mid;
+	}
+	else {
+	  // try using ancestor
+	  auto it_fsa = final_state_map.find( node.aid );
+	  auto it_tid2 = tid_list.find( node.aid );
+	  // create a mother if (1) found in final state list AND (2) not found in tid_list (i.e. existing node list)
+	  if ( it_fsa!=final_state_map.end() && it_tid2==tid_list.end() ) {
+	    momindex = it_fsa->second;
+	    mom_tid = node.aid;
+	  }
+	}
+
+	if ( mom_tid<1 )
+	  continue;
+
+	LARCV_DEBUG() << "Creating mother node from Genie FSI info. mom_tid=" << mom_tid << std::endl;
+	std::cin.get();
+
+	if ( momindex.size()==2 ) {
+	  // create a mother node from mcparticle info
+	  const larlite::mcpart& part = ev_mctruth->at(momindex[0]).GetParticle( momindex[1] );
+	  int nodeidx = node_v.size();
+	  int type = 3; // genie-final-state
+	  int tid  = mom_tid;	  
+	  int vidx = momindex[1];
+	  int pid = part.PdgCode();
+	  Node_t* mother = &(node_v[0]); // the root node
+	  int mid = 0;
+	  int energy = part.Momentum(0)[3];
+	  std::vector<float> start { (float)part.Position(0)[0],
+	    (float)part.Position(0)[1],
+	    (float)part.Position(0)[2],
+	    (float)part.Position(0)[3]};
+	  LARCV_DEBUG() << "Creating Mother node from GENIE final states: tid=" << tid << " type=" << 3 << std::endl;
+	  Node_t momnode( nodeidx, type, tid, vidx, pid, mother, mid, energy, "primary" );
+	  momnode.start = start;
+	  momnode.imgpos4 = start;
+	  momnode.mtid = tid;
+	  momnode.aid  = tid;
+	  momnode.origin = 1; // neutrino origin (from genie)
+	  
+	  //momnode.daughter_v.push_back( &node );
+	  //momnode.daughter_idx_v.push_back( node.nodeidx );
+
+	  newmom_tid_to_nodeidx[momnode.tid] = momnode.nodeidx;
+	  tid_list.insert(tid);
+				
+	  node_v.push_back( std::move(momnode) );
+	  
+	  //node.mother = &(node_v.back());
+
+	  // add new mom to root node
+	  //Node_t& rootnode = node_v.front();
+	  //rootnode.daughter_v.push_back( &(node_v.back())  );
+	  //rootnode.daughter_idx_v.push_back( node_v.back().nodeidx );
+	  
+	  created_mother = true;
+	  
+	}
+	else {
+	  LARCV_DEBUG() << "No mother created for this." << std::endl;
+	}
+      }//end of if has ev_mctruth
+
+      if ( created_mother )
+	continue;
+      
+    }//end of loop over nodes
+    
+  }//end of adopt orphans
   
 }
 }

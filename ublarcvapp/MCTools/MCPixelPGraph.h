@@ -28,7 +28,15 @@ namespace mctools {
 
     MCPixelPGraph()
       : larcv::larcv_base("MCPixelPGraph"),
-      adc_tree("wire")
+	node_v(),
+	_unassigned_pixels_vv(),
+	_eventRootNode(nullptr),
+	_nplanes(3),
+	_kNuVertexDistCutoff_cm(0.3),
+	_nu_vertices_v(),
+	_cluster_neutrino_particles(false),
+	_shower_daughter2mother(),
+	adc_tree("wire")
       {};
     virtual ~MCPixelPGraph() {};
 
@@ -46,12 +54,14 @@ namespace mctools {
     void buildgraphonly( const larlite::event_mcshower& shower_v,
                          const larlite::event_mctrack&  track_v,
                          const larlite::event_mctruth&  mctruth_v );
+
+    void set_cluster_neutrino_particles( bool doit ) { _cluster_neutrino_particles=doit; };
     
 
 
     struct Node_t {
       int nodeidx;    // position in node_v
-      int type;       // track=0, shower=1
+      int type;       // track=0, shower=1, nu-vertex=2, genie_fs=3
       int vidx;       // position in mcshower or mctrack vector
       int tid;        // geant4 track-ID
       int aid;        // ancestor geant4 trackid
@@ -64,10 +74,13 @@ namespace mctools {
       std::vector<int>      daughter_idx_v; // daughter node indices in node_v
       std::vector<Node_t*>  daughter_v;     // pointer to daughters 
       std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (tick,wire) coordinates
-      std::vector<float> start;   //< (x,y,z,t) before sce
-      std::vector<float> imgpos4; //< (x,y,z,tick) after sce
+      std::vector<float> start;   //< (x,y,z,t) before sce, true start of particle
+      std::vector<float> first_edep_pos; //< (x,y,z,t) before sce, first step that leaves edep in cryostat
+      std::vector<float> first_tpc_pos;  //< (x,y,z,t) before sce, first step inside the TPC, visible in the image
+      std::vector<float> first_img_pos;  //< (x,y,z,t) before sce, first step inside the TPC, visible in the image      
+      std::vector<float> imgpos4; //< (x,y,z,tick) after sce // the image position corresponding to first_tpc_pos
       std::vector< std::vector<float> > plane_bbox_twHW_vv; /// bounding box for pixels in each plane
-      int origin;
+      int origin; // 1=neutrino, 2=cosmic, 0=unassigned, -1=unassigned
 
       Node_t()
       : nodeidx(-1),
@@ -81,10 +94,15 @@ namespace mctools {
         mid(-1),
         E_MeV(-1.0),
 	process("null"),
-        start({0,0,0}),
+        start({0,0,0,0}),
+        first_edep_pos({0,0,0,0}),	
+        first_tpc_pos({0,0,0,0}),
+        first_img_pos({0,0,0,0}),		
         imgpos4({0,0,0,0}),	
         origin(-1)
-      {};
+      {
+	daughter_v.clear();
+      };
         
       Node_t(int _nodeidx, int _type, int _tid, int _vidx,
 	     int _pid,
@@ -104,6 +122,9 @@ namespace mctools {
         E_MeV(_energy),
 	process(proc),
         start({0,0,0,0}),
+        first_edep_pos({0,0,0,0}),	
+        first_tpc_pos({0,0,0,0}),
+        first_img_pos({0,0,0,0}),	
         imgpos4({0,0,0,0}),
         origin(-1)
       {};
@@ -112,11 +133,37 @@ namespace mctools {
         if ( tid < rhs.tid ) return true;
         return false;
       };
+
+      bool isTrackObject() const {
+	if ( type==0 )
+	  return true;
+	return false;
+      };
+
+      bool isShowerObject() const {
+	if (type==1)
+	  return true;
+	return false;
+      };
+
+      bool isNuVertexObject() const {
+	if (type==2)
+	  return true;
+	return false;
+      };
+
+      bool isGenieFinalStateObject() const {
+	if (type==3)
+	  return true;
+	return false;
+      };            
+
     };
 
     // list of nodes
     std::vector< Node_t > node_v;
     std::vector< std::vector<int> > _unassigned_pixels_vv;
+    Node_t* _eventRootNode;
 
     // number of planes
     size_t _nplanes; // set when _scanPixelData is run
@@ -142,6 +189,7 @@ namespace mctools {
     std::vector<Node_t*> getNeutrinoPrimaryParticles( bool exclude_neutrons=true );    
     std::vector<Node_t*> getNeutrinoParticles( bool exclude_neutrons=true );
 
+
     // clear the state
     void clear();
     
@@ -157,11 +205,28 @@ namespace mctools {
                       std::vector<float>& imgpos4,
                       larutil::SpaceChargeMicroBooNE& sce,
 		      bool apply_sce=true );
+
+    void _adoptNeutrinoOrphans( const larlite::event_mctruth* ev_mctruth );    
+
+    virtual const larlite::mctrack&  _retrieve_mctrackobject( const Node_t* node,  const larlite::event_mctrack&  ev_track_v );
+    virtual const larlite::mcshower& _retrieve_mcshowerobject( const Node_t* node, const larlite::event_mcshower& ev_shower_v );    
+    virtual const larlite::mctrack&  _retrieve_mctrackobject( const Node_t* node,  larlite::storage_manager& ioll, std::string producername="mcreco" );
+    virtual const larlite::mcshower& _retrieve_mcshowerobject( const Node_t* node, larlite::storage_manager& ioll, std::string producername="mcreco" );
+
+    float _kNuVertexDistCutoff_cm;
+    std::vector< std::vector<float> > _nu_vertices_v;
+
+    //std::map< int, int > _map_trackid_to_nu_ancestor_v;
+    bool _cluster_neutrino_particles;
+    int _define_neutrino_interaction_nodes( larlite::storage_manager& ioll );
+    int _define_neutrino_interaction_nodes( const larlite::event_mctrack& ev_track_v, const larlite::event_mcshower& ev_shower_v );
     
   public:
     
     std::map<int,int> _shower_daughter2mother;
     void _fill_shower_daughter2mother_map( const std::vector<larlite::mcshower>& mcsh_v );
+    
+
       
   public:
 
