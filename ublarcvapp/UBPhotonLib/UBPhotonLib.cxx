@@ -70,12 +70,20 @@ namespace ubphotonlib {
     _ginstance = nullptr;
   }
 
-  long UBPhotonLib::getVoxelIndex( const std::vector<float>& pos )
+  std::vector<int> UBPhotonLib::getVoxelDimIndices( const std::vector<float>& pos )
   {
-    int iindex[3] = {0,0,0};
-    bool valid = true;
+    std::vector<int> iindex(3,0);
     for (int i=0; i<3; i++) {
       iindex[i] = (int)((pos[i] - _cryo_origin_tpc_coord_cm[i])/_voxel_len_cm[i]);
+    }
+    return iindex;
+  }
+
+  long UBPhotonLib::getVoxelIndex( const std::vector<float>& pos )
+  {
+    std::vector<int> iindex = getVoxelDimIndices( pos );
+    bool valid = true;
+    for (int i=0; i<3; i++) {
       if ( iindex[i]<0 || iindex[i]>=_nvoxels_dim[i] )
 	valid = false;
     }
@@ -86,6 +94,40 @@ namespace ubphotonlib {
     long lindex = iindex[0]*_nvoxels_dim[1]*_nvoxels_dim[2] + iindex[1]*_nvoxels_dim[2] + iindex[2];
     
     return lindex;
+  }
+
+  float UBPhotonLib::getVisibility( const std::vector<float>& pos, int opch )
+  {
+    long lindex = getVoxelIndex( pos );
+    if ( lindex<0 )
+      return 0.0;
+
+    std::pair<long,int> voxopch_key( lindex, opch );
+    auto it=_voxelopchindex_to_visibility.find( voxopch_key );
+    if ( it==_voxelopchindex_to_visibility.end() ) {
+      // not found
+      return 0.0;
+    }
+
+    // return visibility
+    return it->second;
+  }
+
+  float UBPhotonLib::getVisibilityTrilinear( const std::vector<float>& pos, int opch )
+  {
+    long lindex = getVoxelIndex( pos );
+    if ( lindex<0 )
+      return 0.0;
+
+    std::pair<long,int> voxopch_key( lindex, opch );
+    auto it=_voxelopchindex_to_visibility.find( voxopch_key );
+    if ( it==_voxelopchindex_to_visibility.end() ) {
+      // not found
+      return 0.0;
+    }
+
+    // return visibility
+    return it->second;
   }
   
 }

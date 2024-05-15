@@ -10,6 +10,7 @@ if (HAS_LARLITE)
   add_subdirectory(ubdllee)
   add_subdirectory(Filter)
   add_subdirectory(MCTools)
+  add_subdirectory(UBPhotonLib)
 endif()
 
 

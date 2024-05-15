@@ -19,7 +19,10 @@ namespace ubphotonlib {
     static UBPhotonLib* getPhotonLib();
     static void destroy(); ///< to free up memory
 
+    std::vector<int> getVoxelDimIndices( const std::vector<float>& pos );
     long getVoxelIndex( const std::vector<float>& pos );
+    float getVisibility( const std::vector<float>& pos, int opch );
+    float getVisibilityTrilinear( const std::vector<float>& pos, int opch );    
     
   protected:
 
