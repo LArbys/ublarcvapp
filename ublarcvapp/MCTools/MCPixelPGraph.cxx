@@ -6,6 +6,7 @@
 // larcv
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/DataFormatTypes.h"
+#include "larcv/core/ROOTUtil/ROOTUtils.h"
 
 // larlite
 #include "larlite/DataFormat/mctrack.h"
@@ -15,6 +16,9 @@
 #include "larlite/LArUtil/Geometry.h"
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
+// ublarcvapp
+#include "ublarcvapp/dbscan/DBScan.h"
+
 #include "crossingPointsAnaMethods.h"
 #include "MCPos2ImageUtils.h"
 
@@ -23,11 +27,12 @@ namespace mctools {
 
   void MCPixelPGraph::buildgraph( larcv::IOManager& iolcv,
                                   larlite::storage_manager& ioll ) {
-    
-    larcv::EventImage2D* ev_adc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, adc_tree );
-    larcv::EventImage2D* ev_seg = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "segment" );
-    larcv::EventImage2D* ev_ins = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "instance" );
-    larcv::EventImage2D* ev_anc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "ancestor" );
+
+    ev_adc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, adc_tree );
+    ev_seg = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "segment" );
+    ev_ins = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "instance" );
+    ev_anc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "ancestor" );
+    larcv::EventImage2D* ev_larflow = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "larflow" );
 
     if ( ev_adc->Image2DArray().size()==0 ) {
       throw std::runtime_error("No ADC images!");
@@ -43,15 +48,30 @@ namespace mctools {
     }
     
     
-    larlite::event_mctrack*  ev_mctrack  = (larlite::event_mctrack*) ioll.get_data( larlite::data::kMCTrack,  "mcreco" );
-    larlite::event_mcshower* ev_mcshower = (larlite::event_mcshower*)ioll.get_data( larlite::data::kMCShower, "mcreco" );
-    larlite::event_mctruth*  ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
+    ev_mctrack  = (larlite::event_mctrack*) ioll.get_data( larlite::data::kMCTrack,  "mcreco" );
+    ev_mcshower = (larlite::event_mcshower*)ioll.get_data( larlite::data::kMCShower, "mcreco" );
+    ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
 
     buildgraph( ev_adc->Image2DArray(),
                 ev_seg->Image2DArray(),
                 ev_ins->Image2DArray(),
                 ev_anc->Image2DArray(),
                 *ev_mcshower, *ev_mctrack, *ev_mctruth );
+
+    // next we fix photons
+    for ( auto& node : node_v ) {
+      if ( node.pid==22 ) {
+	std::vector<float > startpt_info
+	  = fixingPhotonStartPoints( node,
+				     ev_ins->as_vector(), ev_anc->as_vector(),
+				     ev_adc->as_vector(), ev_larflow->as_vector() );
+	// update edep position of the node
+	for (int v=0; v<4; v++) {
+	  node.first_edep_pos[v] = startpt_info[v];
+	  node.imgpos4_edep[v]   = startpt_info[4+v];
+	}
+      }
+    }
   }
 
   /**
@@ -60,9 +80,10 @@ namespace mctools {
    */
   void MCPixelPGraph::buildgraphonly( larlite::storage_manager& ioll )
   {
-    larlite::event_mctrack*  ev_mctrack  = (larlite::event_mctrack*) ioll.get_data( larlite::data::kMCTrack,  "mcreco" );
-    larlite::event_mcshower* ev_mcshower = (larlite::event_mcshower*)ioll.get_data( larlite::data::kMCShower, "mcreco" );
-    larlite::event_mctruth*  ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
+    
+    ev_mctrack  = (larlite::event_mctrack*) ioll.get_data( larlite::data::kMCTrack,  "mcreco" );
+    ev_mcshower = (larlite::event_mcshower*)ioll.get_data( larlite::data::kMCShower, "mcreco" );
+    ev_mctruth  = (larlite::event_mctruth*) ioll.get_data( larlite::data::kMCTruth,  "generator" );
 
     buildgraphonly( *ev_mcshower, *ev_mctrack, *ev_mctruth );
 
@@ -82,6 +103,8 @@ namespace mctools {
                                   const larlite::event_mctruth&  mctruth_v )
   {
 
+    clear();
+    
     buildgraphonly( shower_v, track_v, mctruth_v );
 
     // fill the daugher to mother shower ID map
@@ -125,6 +148,8 @@ namespace mctools {
     //   }
     // }
 
+    clear();
+    
     node_v.clear();
     node_v.reserve( shower_v.size()+track_v.size() );
 
@@ -213,10 +238,17 @@ namespace mctools {
 
       // set start position.
       // try to move it into the tpc first
-      tracknode.imgpos4 = std::vector<float>(4,0);      
       tracknode.first_edep_pos = std::vector<float>(4,0);
       tracknode.first_tpc_pos = std::vector<float>(4,0);
       tracknode.first_img_pos = std::vector<float>(4,0);
+      tracknode.imgpos4 = std::vector<float>(4,0);
+      tracknode.imgpos4_edep = std::vector<float>(4,0);            
+      tracknode.imgpos4_start = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( tracknode.start[0],
+												   tracknode.start[1],
+												   tracknode.start[2],
+												   tracknode.start[3],
+												   true );
+	
 
       if ( mct.size()>=1 ) {
 	tracknode.first_edep_pos[0] = mct[0].X();
@@ -225,14 +257,23 @@ namespace mctools {
 	tracknode.first_edep_pos[3] = mct[0].T();
       
 	// first TPC point
-	std::vector<float> recopos(4,0);	
+	std::vector<float> recopos(4,0);
+	std::vector<float> edep_imgpos(4,0);		
 	std::vector<float> xyz(4,0);
 	bool intpc = false;
+	bool inimage = false;
+	bool first_step = false;
 	for (auto const& step : mct ) {
 	  xyz[0] = (float)step.X();
 	  xyz[1] = (float)step.Y();
 	  xyz[2] = (float)step.Z();
 	  xyz[3] = (float)step.T();
+
+	  if ( !first_step ) {
+	    first_step = true;
+	    tracknode.first_edep_pos = xyz;
+	  }
+	  
 	  if ( ( xyz[0]>0.0 && xyz[0]<tpc_x )
 	       && ( fabs(xyz[1])<tpc_y )
 	       && ( xyz[2]>0 && xyz[2]<tpc_z ) ) {
@@ -242,14 +283,18 @@ namespace mctools {
 	      tracknode.first_tpc_pos = xyz;
 	    }
 
-	    recopos = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_recopos( xyz[0], xyz[1], xyz[2], xyz[3], true, true );
-	    float tick = recopos[3];
-	    
-	    if ( tick>2400 && tick<3200+1008) {
+	    recopos = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( xyz[0], xyz[1], xyz[2], xyz[3], true );
+	    if ( !inimage && recopos[3]>2400.0 && recopos[3]<2400+1008*6 ) {
+	      // in the image
+	      inimage = true;
 	      tracknode.first_img_pos = xyz;
 	      tracknode.imgpos4 = recopos;
-	      break;
+	      tracknode.imgpos4_edep = recopos;
 	    }
+	  }
+	  if ( intpc && inimage ) {
+	    // no need to keep searching
+	    break;
 	  }
 	}//end of mcstep loop
       }//end of if more than 0 mcsteps
@@ -283,13 +328,60 @@ namespace mctools {
       showernode.first_tpc_pos  = std::vector<float>(4,0);
       showernode.first_img_pos  = std::vector<float>(4,0);
       showernode.imgpos4 = std::vector<float>(4,0);
+      showernode.imgpos4_edep = std::vector<float>(4,0);
+      showernode.imgpos4_start = std::vector<float>(4,0);
 
-      if ( !std::isinf( mcsh.DetProfile().X() ) && !std::isnan( mcsh.DetProfile().X() ) ) {
+      bool x_isinf = false;
+      if ( mcsh.DetProfile().X()>1.0e100 || mcsh.DetProfile().X()<-1.0e100 )
+	x_isinf = true;
+      if ( !x_isinf && !std::isnan( mcsh.DetProfile().X() ) ) {
+	std::cout << "inf test: " << mcsh.DetProfile().X() << " " << std::isinf( mcsh.DetProfile().X() ) << std::endl;
 	std::vector<float> detprofile = { (float)mcsh.DetProfile().X(), (float)mcsh.DetProfile().Y(), (float)mcsh.DetProfile().Z(), (float)mcsh.DetProfile().T() };
 	showernode.first_edep_pos = detprofile;
 	showernode.first_tpc_pos  = detprofile;
 	showernode.first_img_pos  = detprofile;
-	_get_imgpos( detprofile, showernode.imgpos4, sce, false );
+	//_get_imgpos( detprofile, showernode.imgpos4, sce, false );
+	showernode.imgpos4 = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.first_edep_pos[0],
+												showernode.first_edep_pos[1],
+												showernode.first_edep_pos[2],
+												showernode.first_edep_pos[3],
+												true );
+	if ( showernode.imgpos4.size()==0 )
+	  showernode.imgpos4.resize(4,0);
+
+	if ( abs(showernode.pid)==11 ) {
+	  showernode.imgpos4_edep = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.start[0],
+												       showernode.start[1],
+												       showernode.start[2],
+												       showernode.start[3],
+												       true );
+	  if ( showernode.imgpos4_edep.size()==0 )
+	    showernode.imgpos4_edep.resize(4,0);
+	  
+	  showernode.first_edep_pos = showernode.start;
+	}
+	else {
+	  // photons
+	  showernode.imgpos4_edep = ublarcvapp::mctools::MCPos2ImageUtils::Get()->to_imagepos( showernode.first_edep_pos[0],
+											       showernode.first_edep_pos[1],
+											       showernode.first_edep_pos[2],
+											       showernode.first_edep_pos[3] );
+	  if ( showernode.imgpos4_edep.size()==0 ) {
+	    showernode.imgpos4_edep.resize(4,0);
+	  }
+	  else {
+	    showernode.imgpos4_edep[3] += 12.0; // hacky fix for photons
+	  }
+	}
+	
+	showernode.imgpos4_start = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.start[0],
+												      showernode.start[1],
+												      showernode.start[2],
+												      showernode.start[3],
+												      true );
+	if ( showernode.imgpos4_start.size()==0 ) {
+	  showernode.imgpos4_start.resize(4,0);
+	}
       }
 
       if ( showernode.origin==1 ) {
@@ -563,7 +655,12 @@ namespace mctools {
   
   
   /**
-   * locate Node_t in node_v using trackid (from geant4)
+   * @brief locate Node_t in node_v using trackid (from geant4)
+   * 
+   * we first search our vector of Node_t objects, which are sorted by track id.
+   *
+   * we then search the keys of the _shower_daughter2mother map, where the keys
+   *  are track id of particles made by the initial shower.
    *
    * @return The node if found, nullptr if not found
    *
@@ -584,7 +681,7 @@ namespace mctools {
         // still nope
         return nullptr;
       }
-      // try again
+      // with the mother shower's trackid, try to find the node again
       it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
       if ( it!=node_v.end() )
         LARCV_DEBUG() << "  mother id maps to existing node" << std::endl;
@@ -628,20 +725,37 @@ namespace mctools {
        << " aid=" << node.aid
        << " pdg=" << node.pid
        << " KE=" << node.E_MeV << " MeV"
-      //<< " xyzt=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3]*1.0e-3 << " us)"
-       << " imgpos=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << " tick)"
-       << " tusec=" << node.start[3]*1.0e-3 << " us"
+      //<< " xyzt=
+      //<< " tusec=" << node.start[3]*1.0e-3 << " us"
       //<< " (mid,mother)=(" << node.mid << "," << node.mother << ") "
       //<< " (mid,mother)=(" << node.mid << ") "
        << " hasmother=" << hasmother
        << " ndaughters=" << node.daughter_v.size()
-       << " npixs=(";
+       << std::endl;
+    // additional positional info
+    if ( node.start.size()>=4 )
+      ss << "    start(x,y,z,t)=(" << node.start[0] << "," << node.start[1] << "," << node.start[2] << "," << node.start[3]*1.0e-3 << " us) " << std::endl;
+    
+    if ( node.first_edep_pos.size()>=4 )
+      ss << "    edep-tpcpos(x,y,z,t)=(" << node.first_edep_pos[0] << ","
+	 << node.first_edep_pos[1] << ","
+	 << node.first_edep_pos[2] << ","
+	 << node.first_edep_pos[3]*1.0e-3
+	 << " us)" << std::endl;
+    
+    if ( node.imgpos4.size()>=4 )
+      ss << "    tpc-imgpos4(u,v,y,tick)=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << " tick) " << std::endl;
+    
+    if (node.imgpos4_edep.size()>=4)
+      ss << "    edep-imgpos4(u,v,y,tick)=(" << node.imgpos4_edep[0] << "," << node.imgpos4_edep[1] << "," << node.imgpos4_edep[2] << "," << node.imgpos4_edep[3] << " tick) " << std::endl;
+    
+    ss << "    npixs=(";
     for ( size_t i=0; i<node.pix_vv.size(); i++ ) {
       ss << node.pix_vv[i].size()/2;
-      if ( i+1<node.pix_vv.size() ) ss << ", ";
+      if ( i+1<node.pix_vv.size() ) ss << ", ";      
     }
     ss << ")";
-
+    ss << std::endl;
     return ss.str();
   }
 
@@ -704,7 +818,7 @@ namespace mctools {
   }
 
   /**
-   * internal method to scan the adc and truth images and fill pixel locations in the Node_t objects
+   * @brief scan the adc and truth images and associate them with the different particle Node_t
    *
    */
   void MCPixelPGraph::_scanPixelData( const std::vector<larcv::Image2D>& adc_v,
@@ -738,6 +852,7 @@ namespace mctools {
     for ( size_t p=0; p<_nplanes; p++ ) {
 
       _unassigned_pixels_vv[p].clear();
+      int num_neg_shower_ids = 0;
 
       auto const& meta = adc_v[p].meta();
       const float threshold = threshold_v[p];
@@ -755,10 +870,11 @@ namespace mctools {
             std::cerr << __FILE__ << ":L" << __LINE__ << " error getting ADC pixel (" << r << "," << c << ")" << std::endl;
             continue;
           }
-          if ( adc<threshold )
-            continue;
+          // if ( adc<threshold )
+          //   continue;
 
-          nabove_thresh[p]++;
+	  if ( adc>=threshold )
+	    nabove_thresh[p]++;
           
           // above threshold, now lets find instance or ancestor
           int tid = 0;
@@ -787,36 +903,52 @@ namespace mctools {
             continue;                                    
           }
 
-          if ( tid<0 && (seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma) )
+	  // shower pixels have a negative track ID for some reason
+	  // does this always occur?
+          if ( tid<0 && (seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma) ) {
             tid *= -1;
+	    num_neg_shower_ids++;
+	  }
 
-          if ( tid>0 || aid>0 )
+	  bool has_id_label = false;
+          if ( tid>0 || aid>0 ) {
             nabove_thresh_withlabel[p]++;
-
-          if ( seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma ) {
+	    has_id_label = true;
+	  }
+	  
+          if ( aid>0 && (seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma) ) {
             shower_ancestor_ids.insert( aid );
           }
+
+	  if ( !has_id_label ) {
+	    // can't truth associate this pixel to any node
+	    continue;
+	  }
 
           Node_t* node = nullptr;
 
           if ( tid>0 ) {
-            // first we use the instance ID          
+            // first we use the instance ID
+	    // this implicitly uses the _shower_daughter2mother map we filled earlier.
             node = findTrackID( tid );
             if ( node==nullptr && adc>10.0 )
-              LARCV_DEBUG() << "  no node for charge-pixel tid=" << tid << std::endl;
+              LARCV_DEBUG() << "  no node for above threshold charge-pixel tid=" << tid << std::endl;
             // if ( node && node->tid!=tid )
             //   node = nullptr; // reset (what's this?)
           }
           
           // use ancestor if we could not find the node
           if ( !node && aid>0 ) {
+	    // this implicitly uses the _shower_daughter2mother map we filled earlier.	    
             node = findTrackID( aid );
             if ( node && node->tid!=aid )
               node = nullptr;
           }
 
           if ( node ) {
-
+	    // if the address is not null, this means we found a particle node
+	    // store the pixel.
+	    
             // if ( node->tid!=tid && node->aid!=aid ) {
             //   std::cout << "pixel assigned without matching tid or aid exactly: "
             //             << " pix-tid=" << tid << " pix-aid=" << aid
@@ -838,7 +970,7 @@ namespace mctools {
       
     }//end of loop over planes
 
-    // no make bounding boxes
+    // now make bounding boxes
     for ( auto& node : node_v ) {
       node.plane_bbox_twHW_vv.clear();
       node.plane_bbox_twHW_vv.resize(_nplanes);      
@@ -890,7 +1022,7 @@ namespace mctools {
   }
 
   /**
-   * get pixels associated with node and its descendents
+   * @brief get pixels associated with node and its descendents
    * 
    */
   std::vector< std::vector<int> > MCPixelPGraph::getPixelsFromParticleAndDaughters( int trackid ) {
@@ -1016,8 +1148,6 @@ namespace mctools {
       dpos[i]   = realpos4[i];
     }
 
-    
-
     std::vector<float>  txyz(4,0);
     if ( apply_sce ) {
       std::vector<double> offset = sce.GetPosOffsets( dpos[0], dpos[1], dpos[2] );        
@@ -1025,7 +1155,6 @@ namespace mctools {
       dpos[1] = dpos[1] + offset[1];
       dpos[2] = dpos[2] + offset[2];
     }
-
     
     for (int i=0; i<3; i++) {
       txyz[1+i] = realpos4[i];
@@ -1047,6 +1176,16 @@ namespace mctools {
     
   }
 
+  /**
+   * @brief makes a map from daughter track IDs to their mother (shower) track ID
+   *
+   * The info comes from the MCShowerObjecs themselves. They store daughter IDs
+   *  in a vector<unsigned int> accessed by mcshower::DaughterTrackID().
+   *
+   * This map will let us map the track ids stored in each pixel of the
+   *   the instance ID map to its original shower.
+   * 
+   */
   void MCPixelPGraph::_fill_shower_daughter2mother_map( const std::vector<larlite::mcshower>& mcsh_v )
   {
     LARCV_DEBUG() << "daughter2mother fill" << std::endl;
@@ -1442,6 +1581,297 @@ namespace mctools {
     }//end of loop over nodes
     
   }//end of adopt orphans
+
+  std::vector<TH2D> MCPixelPGraph::makeTH2D( std::string hist_stem_name )
+  {
+    // first get wire image into th2d
+    std::vector< TH2D > hist_v;
+    if ( ev_adc==nullptr )
+      return hist_v;
+
+    for ( auto& pmarker : vis_markers_v ) {
+      delete pmarker;
+    };
+    vis_markers_v.clear();
+
+    for ( auto& plabel : vis_label_v ) {
+      delete plabel;
+    }
+    vis_label_v.clear();
+    
+    if ( !cvis ) {
+      cvis = new TCanvas("cmcpg","MCPixel PGraph Canvas",800,2400);
+      cvis->Divide(1,3);
+    }
+    
+    hist_v = larcv::rootutils::as_th2d_v( ev_adc->as_vector(), hist_stem_name );
+
+    // label the nodes
+    for (auto& node : node_v ) {
+
+      for (int p=0; p<(int)hist_v.size(); p++) {
+	cvis->cd(p+1);
+	auto& hist = hist_v.at(p);
+	//auto& meta = ev_adc->as_vector().at(p).meta();
+	std::cout << "Draw marker for node[" << node.nodeidx << "]-plane[" << p << "] wire=" << node.imgpos4_edep[p] << " tick=" << node.imgpos4_edep[3] << std::endl;
+	TMarker* m = new TMarker( node.imgpos4_edep[p], node.imgpos4_edep[3], 20 );
+	//m->SetMarkerSize(3);
+	m->SetMarkerColor(kMagenta);	
+	hist.Draw("colz");
+	m->Draw();
+	vis_markers_v.push_back( m );
+      }
+      
+    }
+    cvis->Update();
+    //std::cout << "[enter] to continue" << std::endl;
+    //std::cin.get();
+    return hist_v;
+  }
+  
+  /**
+   * @brief Fix the location of where the start starts depositing energy 
+   *
+   */
+  std::vector<float> MCPixelPGraph::fixingPhotonStartPoints( Node_t& node,
+							     const std::vector<larcv::Image2D>& instance_v,
+							     const std::vector<larcv::Image2D>& ancestor_v,
+							     const std::vector<larcv::Image2D>& adc_v,
+							     const std::vector<larcv::Image2D>& larflow_v )
+  {
+
+    // start of photon shower is not something accurately specified in the mcreco
+    // products. detprofile is provided in mcshower -- but i think its basically trash.
+    // instead we will use the instanceid + larflow truth to
+    // (1) build 3d spacepoints
+    // (2) find the closest spacepoint with evidence for ~MIP level deposits
+    // (3) place the position there
+    // the profile also provides a momentum, but I bet its garbage
+
+    // this is only for photons (electrons have a good start point based on node.start)
+    std::vector<float> shower_start_pt;
+    
+    if ( node.pid!=22)
+      return shower_start_pt; 
+
+    // we must collect and scan the instance IDs related to the shower
+    int shower_aid = node.aid;
+    int shower_mid = node.mid;
+    int shower_tid = node.tid;
+
+    // we want to make 3d points from the pixels we have for the shower.
+    struct flowpt {
+      int source_plane;
+      int source_wire;
+      int target_plane;
+      int target_wire;
+      int source_trackid;
+      int target_trackid;
+      float src_pixval;
+      float pos[3];
+      int posid[3];
+      bool operator<( const flowpt& rhs ) const {
+	if (posid[0]<rhs.posid[0])
+	  return true;
+	else if (posid[0]>rhs.posid[0])
+	  return false;
+	// neither so [0] must be equal
+
+	if (posid[1]<rhs.posid[1] )
+	  return true;
+	else if (posid[1]>rhs.posid[1])
+	  return false;
+
+	// neither [1] worked, so must be equal
+	if (posid[2]<rhs.posid[2])
+	  return true;
+	return false;
+      };
+    };
+
+    int targetmap[3][2] = { {1,2},
+			    {0,2},
+			    {0,1} };
+
+    std::set< flowpt > pt_v;
+    
+    for (size_t p=0; p<node.pix_vv.size(); p++) {
+      auto const& pix_v = node.pix_vv.at(p);
+      size_t npix = (size_t)pix_v.size()/2;
+      
+      for (int iflowdir=0; iflowdir<2; iflowdir++) {
+	
+	auto& flowimg = larflow_v.at(2*p+iflowdir);
+      
+	for (size_t ipix=0; ipix<npix; ipix++) {
+	  float tick = pix_v[2*ipix];
+	  float wire = pix_v[2*ipix+1];
+	  int src_plane = p;
+	  int tar_plane = targetmap[src_plane][iflowdir];
+	  int row = 0;
+	  int col = 0;
+	  try {
+	    row = flowimg.meta().row( tick );
+	    col = flowimg.meta().col( wire );
+	  }
+	  catch(...) {
+	    continue;
+	  }
+	  
+	  float pixflow = flowimg.pixel( row, col );
+	  // std::cout << "building flow pixel: plane[" << p << "] (" << wire << "," << tick << ") "
+	  // 	    << "(" << col << "," << row << ") : flow=" << pixflow << std::endl;
+	  
+	  if ( pixflow<=-999 )
+	    continue;
+	  int tar_wire = col + (int)pixflow;
+	  if ( tar_wire<0 || tar_wire>=(int)larutil::Geometry::GetME()->Nwires(tar_plane) )
+	    continue;
+	  
+	  UInt_t src_ch = larutil::Geometry::GetME()->PlaneWireToChannel( (UInt_t)src_plane, (UInt_t)wire );
+	  UInt_t tar_ch = larutil::Geometry::GetME()->PlaneWireToChannel( (UInt_t)tar_plane, (UInt_t)tar_wire );
+	  Double_t y,z;
+	  bool crosses  = larutil::Geometry::GetME()->ChannelsIntersect( src_ch, tar_ch, y, z );
+	  if ( crosses ) {
+	    // create a spacepoint object
+	    flowpt pt;
+	    pt.source_plane = src_plane;
+	    pt.source_wire  = wire;
+	    pt.target_plane = tar_plane;
+	    pt.target_wire  = tar_wire;
+	    pt.source_trackid = node.tid;
+	    pt.target_trackid = 0; // not filled for now
+	    pt.src_pixval = adc_v.at(src_plane).pixel( row, (unsigned int)col );
+	    pt.pos[1] = y;
+	    pt.pos[2] = z;
+	    pt.pos[0] = (tick-3200.0)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
+	    // posid is effectively defining a voxelized grid
+	    // we do this to avoid close duplicate 3d pts
+	    pt.posid[0] = (int)(pt.pos[0]*1000);
+	    pt.posid[1] = (int)(pt.pos[1]*1000);
+	    pt.posid[2] = (int)(pt.pos[2]*1000);
+
+	    auto it_pt = pt_v.find( pt );
+	    if ( it_pt==pt_v.end() ) {
+	      //std::cout << "  insert intersection: (" << pt.pos[0] << "," << pt.pos[1] << "," << pt.pos[2] << ")" << std::endl;
+	      pt_v.insert(pt);
+	    }
+	    else {
+	      if ( (*it_pt).src_pixval < pt.src_pixval ) {
+		// std::cout << " replace src plane [" << (*it_pt).source_plane << " to " << pt.source_plane << "] "
+		// 	  << " with higher pixval " << (*it_pt).src_pixval << " vs. " << pt.src_pixval
+		// 	  << std::endl;
+		pt_v.insert(pt); // replaces?
+	      }
+	    }
+	  } //end of if possible wire intersection found (and calculated)
+	  else {
+	    //std::cout << "  failed intersection: (" << y << ", " << z << ")" << std::endl;
+	  }
+	} // end of loop over pixels in pix_vv list
+      }//end of loop over flow directions (2 of them)
+    }//end of loop over planes
+
+    std::cout << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
+    std::cout << "  Number of spacepoints found from using larflow: " << pt_v.size() << std::endl;
+
+    float mindist = 1.0e9;
+    std::vector<float> start_reco_pt = MCPos2ImageUtils::Get()->truepos_to_recopos( node.start[0],
+										    node.start[1],
+										    node.start[2],
+										    node.start[3],
+										    true, true );
+    std::cout << "  Find closest to start point: (" << start_reco_pt[0] << ","
+	      << start_reco_pt[1] << ", "
+	      << start_reco_pt[2] << ", "
+	      << start_reco_pt[3] << " usec)"
+	      << std::endl;
+
+    shower_start_pt.resize(4);
+
+    std::vector< std::vector<float> > data_v;
+    
+    for ( auto& pt : pt_v ) {
+      std::cout << "3d pt: (" << pt.pos[0] << ", " << pt.pos[1] << ", " << pt.pos[2] << ") "
+		<< " src_pixval=" << pt.src_pixval
+		<< " src_plane=" << pt.source_plane
+		<< std::endl;
+
+      float dist_edep = 0.;
+      float dx = 0.;
+      for (int v=0; v<3; v++) {
+	dx = pt.pos[v] - node.first_edep_pos[v];
+	dist_edep += dx*dx;
+      }
+      dist_edep = sqrt(dist_edep);
+      
+      // if ( dist_edep>photon_start_edep_radius_cm || pt.src_pixval<photon_start_pixval_threshold )
+      // 	continue;
+
+      std::vector<float> xpt(3,0);
+      for (int v=0; v<3; v++)
+	xpt[v] = pt.pos[v];
+      data_v.push_back( xpt );
+      
+    }
+
+    auto dbcluster_v = ublarcvapp::dbscan::DBScan::makeCluster3f( 0.3, 3, 50, data_v );
+    int nlargest = 0;
+    int icluster = -1;
+    for (int i=0; i<(int)dbcluster_v.size(); i++) {
+      int nhits = dbcluster_v.at(i).size();
+      if ( (int)nhits>nlargest && (int)nhits>=photon_start_min_cluster_size ) {
+	nlargest = nhits;
+	icluster = i;
+      }
+    }
+    
+    if ( icluster<0 ) {
+      shower_start_pt = node.first_edep_pos;
+    }
+    else  {
+      auto& largest_cluster = dbcluster_v.at(icluster);
+      for (int ipt=0; ipt<(int)largest_cluster.size(); ipt++) {
+	auto& xpt = data_v.at( largest_cluster.at(ipt) );
+	float dist = 0;
+	for (int v=0; v<3; v++) {
+	  float dx = xpt[v]-start_reco_pt[v];
+	  dist += dx*dx;
+	}
+	dist = sqrt(dist);
+	if ( dist<mindist ) {
+	  for (int v=0; v<3; v++)
+	    shower_start_pt[v] = xpt[v];
+	  shower_start_pt[3] = xpt[0]/(0.5*larutil::LArProperties::GetME()->DriftVelocity()) + 3200;
+	  mindist = dist;
+	}
+      }
+    }
+    
+    std::cout << "  minimum dist to shower startpt: " << mindist << " cm" << std::endl;
+    std::cout << "  startpt: (" << shower_start_pt[0] << ","
+	      << shower_start_pt[1] << ","
+	      << shower_start_pt[2] << ","
+	      << shower_start_pt[3] << " ticks)"
+	      << std::endl;
+
+    float t_ns = (shower_start_pt[3]-3200)*0.5*1000.0+3050.0; // ticks to ns
+    std::vector<float> shower_imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( shower_start_pt[0],
+									      shower_start_pt[1],
+									      shower_start_pt[2],
+									      t_ns );
+    std::cout << "  imgpos: (" << shower_imgpos4[0] << ", "
+	      << shower_imgpos4[1] << ", "
+	      << shower_imgpos4[2] << ", "
+	      << shower_imgpos4[3] << " ticks )"
+	      << std::endl;
+    
+    for (int v=0; v<4; v++)
+      shower_start_pt.push_back( shower_imgpos4[v] );
+    
+    return shower_start_pt;
+    
+  }
   
 }
 }

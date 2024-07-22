@@ -35,13 +35,13 @@ namespace mctools {
   {
     
     float v_cm_per_us    = ::larutil::LArProperties::GetME()->DriftVelocity();
-    float ticks_per_us   = (::larutil::DetectorProperties::GetME()->SamplingRate()*1.0e-3); // value return is in MHz, convert to usec
+    float us_per_tick   = (::larutil::DetectorProperties::GetME()->SamplingRate()*1.0e-3); // value return is in MHz, convert to usec
     float trig_g4time_ns = 4050.0;
     float dx_trigger_cm  = 0.0;
 
     // std::cout << "v_cm_per_us: " << v_cm_per_us << std::endl;
-    // std::cout << "ticks_per_us: " << ticks_per_us << std::endl;
-
+    // std::cout << "us_per_tick: " << us_per_tick << std::endl;
+    
     std::vector<float> pos_sce = { x_cm, y_cm, z_cm };
     if ( apply_sce ) {
       pos_sce = get_sce_shifted_pos( x_cm, y_cm, z_cm );
@@ -57,7 +57,7 @@ namespace mctools {
 
     // append the tick the charge should appear at
     //float tick = larutil::DetectorProperties::GetME()->ConvertXToTicks( reco_pos[0], 0 ); // this is busted
-    float tickx = reco_pos[0]/v_cm_per_us*ticks_per_us + 3200.0;
+    float tickx = (reco_pos[0])/v_cm_per_us/us_per_tick + 3200.0;
 
     //std::cout << "tick=" << tick << " vs " << tickx << std::endl; 
     reco_pos.push_back( tickx );
@@ -84,6 +84,58 @@ namespace mctools {
     }
 
     return out;
+  }
+
+  std::vector<float> MCPos2ImageUtils::to_imagepos( const float x, const float y, const float z, const float t_ns )
+  {
+
+    float v_cm_per_us    = ::larutil::LArProperties::GetME()->DriftVelocity();
+    float us_per_tick   = (::larutil::DetectorProperties::GetME()->SamplingRate()*1.0e-3); // value return is in MHz, convert to usec
+    
+    TVector3 vpos;
+    vpos[0] = x;
+    vpos[1] = y;
+    vpos[2] = z;
+    //std::cout << "vpos: " << vpos[0] << " " << vpos[1] << " " << vpos[2] << std::endl;
+
+    std::vector<float> imgpos(4,0);
+    if ( std::fabs(vpos[1])>116.5 || vpos[2]<0.0 && vpos[2]>1036.0 ) 
+      return imgpos;
+    
+    for (int p=0; p<3; p++) {
+      float wire = (float)larutil::Geometry::GetME()->NearestWire( vpos, p );
+      imgpos[p] = wire;
+    }
+    float tickx = vpos[0]/v_cm_per_us/us_per_tick + 3200.0;
+    imgpos[3] = tickx;
+    
+    return imgpos;
+  }
+
+  std::vector<float> MCPos2ImageUtils::truepos_to_imagepos( const float x, const float y, const float z,
+							    const float t_ns, bool apply_sce )
+  {
+    std::vector<float> recopos = truepos_to_recopos( x, y, z, t_ns, true, apply_sce );
+    TVector3 vpos;
+    vpos[0] = recopos[0];
+    vpos[1] = recopos[1];
+    vpos[2] = recopos[2];
+    //std::cout << "vpos: " << vpos[0] << " " << vpos[1] << " " << vpos[2] << std::endl;
+
+    std::vector<float> imgpos(4,0);
+    if ( std::fabs(vpos[1])>116.5 || vpos[2]<0.0 || vpos[2]>1036.0 ) 
+      return imgpos;
+
+    imgpos[3] = recopos[3]; // should be the tick
+
+    //const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
+    //float tick = ( recopos[3]-4.050 )/0.5 + recopos[0]/cm_per_tick + 3200.0;
+    for (int p=0; p<3; p++) {
+      float wire = (float)larutil::Geometry::GetME()->NearestWire( vpos, p );
+      imgpos[p] = wire;
+    }
+	
+    return imgpos;
   }
 
   

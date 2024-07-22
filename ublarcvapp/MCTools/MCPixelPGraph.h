@@ -7,12 +7,19 @@
 #include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/IOManager.h"
 #include "larcv/core/DataFormat/Image2D.h"
+#include "larcv/core/DataFormat/EventImage2D.h"
 
 // larlite
 #include "larlite/DataFormat/storage_manager.h"
 #include "larlite/DataFormat/mcshower.h"
 #include "larlite/DataFormat/mctrack.h"
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
+
+// ROOT
+#include "TH2D.h"
+#include "TText.h"
+#include "TMarker.h"
+#include "TCanvas.h"
 
 /**
  * Determine particle graph. Collect pixels for each particle.
@@ -32,9 +39,20 @@ namespace mctools {
 	_unassigned_pixels_vv(),
 	_eventRootNode(nullptr),
 	_nplanes(3),
+	photon_start_edep_radius_cm(10.0),
+	photon_start_pixval_threshold(30.0),
+	photon_start_min_cluster_size(10),
+	ev_mctrack(nullptr),
+	ev_mcshower(nullptr),
+	ev_mctruth(nullptr),
+	ev_adc(nullptr),
+	ev_seg(nullptr),
+	ev_ins(nullptr),
+	ev_anc(nullptr),
 	_kNuVertexDistCutoff_cm(0.3),
 	_nu_vertices_v(),
 	_cluster_neutrino_particles(false),
+	cvis(nullptr),
 	_shower_daughter2mother(),
 	adc_tree("wire")
       {};
@@ -79,6 +97,8 @@ namespace mctools {
       std::vector<float> first_tpc_pos;  //< (x,y,z,t) before sce, first step inside the TPC, visible in the image
       std::vector<float> first_img_pos;  //< (x,y,z,t) before sce, first step inside the TPC, visible in the image      
       std::vector<float> imgpos4; //< (x,y,z,tick) after sce // the image position corresponding to first_tpc_pos
+      std::vector<float> imgpos4_edep; //< (x,y,z,tick) after sce // the image position corresponding to the first_edep_pos
+      std::vector<float> imgpos4_start; //< (x,y,z,tick) after sce // the image position corresponding to the start pos after SCE
       std::vector< std::vector<float> > plane_bbox_twHW_vv; /// bounding box for pixels in each plane
       int origin; // 1=neutrino, 2=cosmic, 0=unassigned, -1=unassigned
 
@@ -98,7 +118,9 @@ namespace mctools {
         first_edep_pos({0,0,0,0}),	
         first_tpc_pos({0,0,0,0}),
         first_img_pos({0,0,0,0}),		
-        imgpos4({0,0,0,0}),	
+        imgpos4({0,0,0,0}),
+        imgpos4_edep({0,0,0,0}),
+        imgpos4_start({0,0,0,0}),
         origin(-1)
       {
 	daughter_v.clear();
@@ -126,6 +148,8 @@ namespace mctools {
         first_tpc_pos({0,0,0,0}),
         first_img_pos({0,0,0,0}),	
         imgpos4({0,0,0,0}),
+        imgpos4_edep({0,0,0,0}),
+        imgpos4_start({0,0,0,0}),		
         origin(-1)
       {};
 
@@ -189,11 +213,32 @@ namespace mctools {
     std::vector<Node_t*> getNeutrinoPrimaryParticles( bool exclude_neutrons=true );    
     std::vector<Node_t*> getNeutrinoParticles( bool exclude_neutrons=true );
 
+    // make visualization of nu particles
+    std::vector< TH2D > makeTH2D( std::string hist_stem_name );
+
+    float photon_start_edep_radius_cm;
+    float photon_start_pixval_threshold;
+    int   photon_start_min_cluster_size;
+    
+    std::vector<float> fixingPhotonStartPoints( Node_t& node,
+						const std::vector<larcv::Image2D>& instance_v,
+						const std::vector<larcv::Image2D>& ancestor_v,
+						const std::vector<larcv::Image2D>& adc_v,
+						const std::vector<larcv::Image2D>& larflow_v );
+    
 
     // clear the state
     void clear();
     
   protected:
+
+    larlite::event_mctrack*  ev_mctrack;
+    larlite::event_mcshower* ev_mcshower;
+    larlite::event_mctruth*  ev_mctruth;
+    larcv::EventImage2D*    ev_adc;
+    larcv::EventImage2D*    ev_seg;
+    larcv::EventImage2D*    ev_ins;
+    larcv::EventImage2D*    ev_anc;    
     
     void _recursivePrintGraph( Node_t* node, int& depth, bool visible_only=true );
     void _scanPixelData( const std::vector<larcv::Image2D>& adc_v,
@@ -220,6 +265,11 @@ namespace mctools {
     bool _cluster_neutrino_particles;
     int _define_neutrino_interaction_nodes( larlite::storage_manager& ioll );
     int _define_neutrino_interaction_nodes( const larlite::event_mctrack& ev_track_v, const larlite::event_mcshower& ev_shower_v );
+
+    // visualization
+    TCanvas* cvis;
+    std::vector< TMarker* > vis_markers_v;
+    std::vector< TText* >   vis_label_v;
     
   public:
     

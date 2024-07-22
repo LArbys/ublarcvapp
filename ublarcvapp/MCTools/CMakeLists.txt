@@ -49,7 +49,7 @@ target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 # Generate the shared library from the sources
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${LARCV_JSON_INCLUDE_DIR} )
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor ${LARLITE_LIBS_USED})
+target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor ${LARLITE_LIBS_USED} )
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "larcv/core/Base/larcv_base.h"
+#include "larcv/core/DataFormat/ImageMeta.h"
 
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 #include "larlite/DataFormat/mctrack.h"
@@ -63,6 +64,13 @@ namespace mctools {
     get_sce_shifted_pos( const float x, const float y, const float z );
 
 
+    std::vector<float>
+    truepos_to_imagepos( const float x, const float y, const float z,
+			 const float t_ns, bool apply_sce );
+
+    std::vector<float>
+    to_imagepos( const float x, const float y, const float z, const float t_ns );
+			
     larutil::SpaceChargeMicroBooNE* psce;
 
   private:

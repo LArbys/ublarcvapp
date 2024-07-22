@@ -1,3 +1,4 @@
+#!/bin/env python3
 from __future__ import print_function
 import os,sys,argparse
 
@@ -7,6 +8,9 @@ parser.add_argument("-ilcv","--input-larcv",required=False,default=None,type=str
 parser.add_argument("-adc", "--adc",type=str,default="wire",help="Name of tree with Wire ADC values [default: wire]")
 parser.add_argument("-tb",  "--tick-backward",action='store_true',default=False,help="Input LArCV data is tick-backward [default: false]")
 parser.add_argument("-d",   "--debug", action='store_true', default=False, help="Run in debug mode")
+parser.add_argument('-n', "--nentries", required=False, type=int, default=-1, help="number of entries to run")
+parser.add_argument('-e', "--entry", required=False, type=int, default=-1, help="start at given entry number")
+parser.add_argument('-v', "--vis", required=False, default=False, action='store_true', help="if flag provided, will visualize event")
 args = parser.parse_args()
 
 import ROOT as rt
@@ -40,9 +44,21 @@ if args.input_larcv is not None:
 else:
     HAS_LARCV = False
 
-nentries = ioll.get_entries()
-print("Number of entries: ",nentries)
-#nentries = 10
+print("HAS LARCV: ",HAS_LARCV)
+tot_nentries = ioll.get_entries()
+start_entry = 0
+print("Number of entries: ",tot_nentries)
+if args.entry > 0:
+    start_entry = args.entry
+if args.nentries>0:
+    nentries = args.nentries
+else:
+    nentries = tot_nentries
+end_entry = start_entry + nentries
+if end_entry>tot_nentries:
+    end_entry = tot_nentries
+    
+
 
 print("Start loop.")
 
@@ -60,13 +76,13 @@ if HAS_LARCV:
 
 if HAS_LARCV:
     tmp = rt.TFile("temp.root","recreate")
-    c = rt.TCanvas("c","c",1200,1800)
-    c.Divide(1,3)
+    c = rt.TCanvas("c","c",2100,1500)
+    c.Divide(3,3)
 
-print("[ENTER to Start")
-input()
+#print("[ENTER] to Start")
+#input()
 
-for ientry in range( nentries ):
+for ientry in range( start_entry, end_entry ):
 
     print() 
     print("==========================")
@@ -77,47 +93,178 @@ for ientry in range( nentries ):
     mcpg_nu.clear()
     mcpg.set_cluster_neutrino_particles(False)
     mcpg_nu.set_cluster_neutrino_particles(True)
-    
-    if HAS_LARCV:
-        iolcv.read_entry(ientry)
-        ev_adc = iolcv.get_data( larcv.kProductImage2D, args.adc )
-        print("number of images: ",ev_adc.Image2DArray().size())
-        adc_v = ev_adc.Image2DArray()
-        for p in range(adc_v.size()):
-            print(" image[",p,"] ",adc_v[p].meta().dump())
-    
-        # make histogram
-        hist_v = larcv.rootutils.as_th2d_v( adc_v, "hentry%d"%(ientry) )
-        for ih in range(adc_v.size()):
-            h = hist_v[ih]
-            h.GetZaxis().SetRangeUser(0,100)
 
-        mcpg.buildgraph( iolcv, ioll )
-    else:
+    if not HAS_LARCV:
         mcpg.buildgraphonly( ioll )
         mcpg_nu.buildgraphonly( ioll )
+    else:
+        print("HAS_LARCV: get images needed for pixel matching to particles")
+        #mcpg.buildgraphonly( ioll )        
+        iolcv.read_entry(ientry)
+        ev_adc = iolcv.get_data( larcv.kProductImage2D, args.adc )
+        ev_instance = iolcv.get_data( larcv.kProductImage2D, "instance" )
+        ev_ancestor = iolcv.get_data( larcv.kProductImage2D, "ancestor" )
+        ev_segment  = iolcv.get_data( larcv.kProductImage2D, "segment" )
+        ev_larflow  = iolcv.get_data( larcv.kProductImage2D, "larflow" )
+        print("number of images: ",ev_adc.Image2DArray().size())
+        adc_v = ev_adc.Image2DArray()
+        mcpg_nu.buildgraph( iolcv, ioll )        
+        for p in range(adc_v.size()):
+            print(" image[",p,"] ",adc_v[p].meta().dump())
+        
 
-    if args.debug:
-        print("ALL NODE INFO [NO NU]======================================")
-        mcpg.printAllNodeInfo()
-        print("====================================================")
-        print("CONSTRUCTED PARTICLE GRAPH [NO NU]")
-        mcpg.printGraph(0,False)
-        print("====================================================")
-        print("====================================================")
-        print("XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX")
-        print("====================================================")
+    photon_starts = {}            
+    if HAS_LARCV and False:
+        for i in range(mcpg_nu.node_v.size()):
+            node = mcpg_nu.node_v.at(i)
+            if node.pid!=22:
+                continue;
+            print("running fixingPhotonStartPoints(...) for photons")
+            gamma_start = mcpg_nu.fixingPhotonStartPoints( node,
+                                                           ev_instance.as_vector(),
+                                                           ev_ancestor.as_vector(),
+                                                           ev_adc.as_vector(),
+                                                           ev_larflow.as_vector() )
+            photon_starts[node.tid] = gamma_start
+            
+    ## isolate events
+    stop = False
+    for inode in range(mcpg_nu.node_v.size()):
+        node = mcpg_nu.node_v.at(inode)
+        if node.pid in [22]:
+            npixsum = 0
+            for p in range(node.pix_vv.size()):
+                npixsum += node.pix_vv[p].size()
+            if npixsum>1:
+                stop=True
+    print("STOP TO VISUALIZE/DUMP  MCPG INFO: ",stop)
+    if not stop:
+        continue
     
-    print("====================================================")
-    print("ALL NODE INFO [WITH NU VERTEX GROUPING]======================================")
-    mcpg_nu.printAllNodeInfo()
-    print("====================================================")
-    print("CONSTRUCTED PARTICLE GRAPH [WITH NU VERTEX GROUPING]")
-    mcpg_nu.printGraph(0,False)
-    print("====================================================")
+    if args.debug or args.vis:
+        if not HAS_LARCV:
+            print("================================================")
+            print("PARSING PARTICLE GRAPH ONLY: No pixel matching  ")
+            print("================================================")        
+            print("ALL NODE INFO [NO NU] --------------------------")
+            mcpg.printAllNodeInfo()
+            print(" -----------------------------------------------")
+            print("CONSTRUCTED PARTICLE GRAPH [NO NU]")
+            mcpg.printGraph(0,False)
+            print("====================================================")
+        else:
+            #print("================================================")
+            #print("PARSING PARTICLE GRAPH ONLY: No pixel matching  ")
+            #print("================================================")        
+            #print("CONSTRUCTED PARTICLE GRAPH [NO NU]")
+            #mcpg.printGraph(0,False)
+            #print("====================================================")
+            
+            print("====================================================")
+            print("CONSTRUCTED PARTICLE GRAPH [WITH NU VERTEX GROUPING]")
+            mcpg_nu.printGraph(0,False)
+            print("====================================================")
+            
     
-    print("[ENTER] to continue")
-    input()
+        # make histogram
+        marker_v = []
+        #hist_v = mcpg_nu.makeTH2D( "hentry%d"%(ientry) )
+        hist_v = larcv.rootutils.as_th2d_v( ev_adc.as_vector(), "hentry%d"%(ientry) )
+        segment_v = larcv.rootutils.as_th2d_v( ev_segment.as_vector(), "hsegment%d"%(ientry))
+        instance_v = larcv.rootutils.as_th2d_v( ev_instance.as_vector(), "hinstance%d"%(ientry))
+        ancestor_v = larcv.rootutils.as_th2d_v( ev_ancestor.as_vector(), "hancestor%d"%(ientry))
+
+        c.cd()
+        c.Draw()
+        c.Update()
+        for ih in range(hist_v.size()):
+            c.cd(3*ih+0+1)
+            h = hist_v[ih]
+            h.Draw("colz")            
+            h.GetZaxis().SetRangeUser(0,300)
+
+            for i in range(mcpg_nu.node_v.size()):
+                node = mcpg_nu.node_v.at(i)
+                if node.pid not in [22,11,-11]:
+                    continue
+                
+                x = node.imgpos4_edep[ih]
+                y = node.imgpos4_edep[3]
+                #print("nodeidx=",node.nodeidx," pid=",node.pid," (x,y)=",(x,y))
+                m = rt.TMarker( x, y, 4 )
+                m.SetNDC(False)
+                m.SetMarkerColor(rt.kMagenta)
+                m.Draw()
+                marker_v.append(m)
+
+                if node.tid in photon_starts:
+                    x2 = photon_starts[node.tid][4+ih]
+                    y2 = photon_starts[node.tid][4+3]
+                    m2 = rt.TMarker( x2, y2, 4 )
+                    m2.SetNDC(False)
+                    m2.SetMarkerColor(rt.kRed)
+                    m2.Draw()
+                    marker_v.append(m2)
+                
+                x4 = node.imgpos4_start[ih]
+                y4 = node.imgpos4_start[3]
+                m4 = rt.TMarker( x4, y4, 5 )
+                m4.SetNDC(False)
+                m4.SetMarkerSize(3)
+                m4.SetMarkerColor(rt.kBlack)
+                #print("x4: ",(x4,y4))
+                m4.Draw()
+                marker_v.append(m4)
+
+                #if ih==2:
+                #    print("DUMP PIXELS [plane=2] for node.nodeidx=",node.nodeidx," trackid=",node.tid," pid=",node.pid)
+                pix_v = node.pix_vv.at(ih)
+                npix = int(pix_v.size()/2)
+                for ipix in range(npix):
+                    xbin = int(pix_v.at(2*ipix+1))
+                    ybin = int((pix_v.at(2*ipix)-2400)/6.0)
+                    #if ih==2:
+                    #    print(" ipix[",ipix,"]: (xbin,ybin)=",(xbin,ybin)," (wire,tick)=",(pix_v.at(2*ipix+1),pix_v.at(2*ipix)))
+                    ancestor_v[ih].SetBinContent( xbin+1, ybin+1, node.tid )
+                
+            c.cd(3*ih+1+1)
+            #instance_v[ih].SetTitle("instance plane[%d]"%(ih))            
+            #instance_v[ih].Draw("colz")
+            segment_v[ih].SetTitle("segment plane[%d]"%(ih))            
+            segment_v[ih].Draw("colz")
+            c.cd(3*ih+2+1)
+            ancestor_v[ih].SetTitle("ancestor plane[%d]"%(ih))
+            ancestor_v[ih].Draw("colz")
+
+            c.Update()
+        # end of loop
+        c.Update()
+
+        # draw individual showers
+        cpart = []
+        for inode in range(mcpg_nu.node_v.size()):
+            node = mcpg_nu.node_v.at(inode)
+            if node.pid not in [22]:
+                continue
+            print("Make canvas of particle, tid=",node.tid)
+            meta = ev_adc.as_vector().at(2).meta()
+            hpart = rt.TH2D("hnode%d"%(inode),"",3456,0,3456,1008,2400,2400+6*1008)
+            pix_v = node.pix_vv.at(ih)
+            npix = int(pix_v.size()/2)
+            for ipix in range(npix):
+                xbin = int(pix_v.at(2*ipix+1))
+                ybin = int((pix_v.at(2*ipix)-2400)/6.0)
+                hpart.SetBinContent( xbin+1, ybin+1, 1 )
+            cpt = rt.TCanvas("cnode%d"%(inode),"node[%d] pid[%d] tid[%d]"%(inode,node.pid,node.tid),800,600)
+            hpart.GetZaxis().SetRangeUser(0,10.0)
+            hpart.Draw("colz")
+            cpt.Update()
+            cpart.append(cpt)
+            cpart.append(hpart)
+        
+    
+        print("[ENTER] to continue")
+        input()
     if True:
         continue
 
