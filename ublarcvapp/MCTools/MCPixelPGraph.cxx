@@ -2059,6 +2059,26 @@ namespace mctools {
 
     return pixelsum_v;
   }// end of MCPixelPGraph::getTruePhotonTrunkPlanePixelSums( int trackid )
+
+  /**
+  * @brief Get the position the particle first deposited energy
+  *
+  */ 
+  std::vector<float> MCPixelPGraph::getParticleEDepPos( const int& trackid )
+  {
+    std::vector<float> edep_pos;
+    Node_t* pnode = findTrackID( trackid );
+    if (pnode==nullptr) {
+      std::stringstream msg;
+      msg << "[MCPixelPGraph::getParticleEDepPos] [ERROR] : Could not find a particle node for trackid=" << trackid << std::endl;
+      throw std::runtime_error( msg.str() );
+    }
+    edep_pos.resize(3,0);
+    for (int v=0; v<3; v++) {
+      edep_pos[v] = pnode->first_edep_pos[v];
+    }
+    return edep_pos;
+  }
   
 }
 }

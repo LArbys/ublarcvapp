@@ -213,6 +213,9 @@ namespace mctools {
     std::vector<Node_t*> getNeutrinoPrimaryParticles( bool exclude_neutrons=true );    
     std::vector<Node_t*> getNeutrinoParticles( bool exclude_neutrons=true );
 
+    // get positions
+    std::vector<float> getParticleEDepPos( const int& trackid );
+
     // make visualization of nu particles
     // std::vector< TH2D > makeTH2D( std::string hist_stem_name );
 
