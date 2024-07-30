@@ -6,7 +6,7 @@
 // larcv
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/DataFormatTypes.h"
-#include "larcv/core/ROOTUtil/ROOTUtils.h"
+//#include "larcv/core/ROOTUtil/ROOTUtils.h"
 
 // larlite
 #include "larlite/DataFormat/mctrack.h"
@@ -32,7 +32,7 @@ namespace mctools {
     ev_seg = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "segment" );
     ev_ins = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "instance" );
     ev_anc = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "ancestor" );
-    larcv::EventImage2D* ev_larflow = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "larflow" );
+    ev_larflow = (larcv::EventImage2D*)iolcv.get_data( larcv::kProductImage2D, "larflow" );
 
     if ( ev_adc->Image2DArray().size()==0 ) {
       throw std::runtime_error("No ADC images!");
@@ -1432,6 +1432,16 @@ namespace mctools {
     _nu_vertices_v.clear();
     _shower_daughter2mother.clear();
     //_map_trackid_to_nu_ancestor_v.clear();
+
+    _nodeidx_to_photonlist_index_v.clear();
+    _true_photon_v.clear();
+
+    _empty_photon_pointlist_v.clear();
+
+    // ev_adc = nullptr;
+    // ev_seg = nullptr;
+    // ev_ins = nullptr;
+    // ev_anc = nullptr;
     
   }
 
@@ -1582,84 +1592,69 @@ namespace mctools {
     
   }//end of adopt orphans
 
-  std::vector<TH2D> MCPixelPGraph::makeTH2D( std::string hist_stem_name )
-  {
-    // first get wire image into th2d
-    std::vector< TH2D > hist_v;
-    if ( ev_adc==nullptr )
-      return hist_v;
+  // std::vector<TH2D> MCPixelPGraph::makeTH2D( std::string hist_stem_name )
+  // {
+  //   // first get wire image into th2d
+  //   std::vector< TH2D > hist_v;
+  //   if ( ev_adc==nullptr )
+  //     return hist_v;
 
-    for ( auto& pmarker : vis_markers_v ) {
-      delete pmarker;
-    };
-    vis_markers_v.clear();
+  //   for ( auto& pmarker : vis_markers_v ) {
+  //     delete pmarker;
+  //   };
+  //   vis_markers_v.clear();
 
-    for ( auto& plabel : vis_label_v ) {
-      delete plabel;
-    }
-    vis_label_v.clear();
+  //   for ( auto& plabel : vis_label_v ) {
+  //     delete plabel;
+  //   }
+  //   vis_label_v.clear();
     
-    if ( !cvis ) {
-      cvis = new TCanvas("cmcpg","MCPixel PGraph Canvas",800,2400);
-      cvis->Divide(1,3);
-    }
+  //   if ( !cvis ) {
+  //     cvis = new TCanvas("cmcpg","MCPixel PGraph Canvas",800,2400);
+  //     cvis->Divide(1,3);
+  //   }
     
-    hist_v = larcv::rootutils::as_th2d_v( ev_adc->as_vector(), hist_stem_name );
+  //   hist_v = larcv::rootutils::as_th2d_v( ev_adc->as_vector(), hist_stem_name );
 
-    // label the nodes
-    for (auto& node : node_v ) {
+  //   // label the nodes
+  //   for (auto& node : node_v ) {
 
-      for (int p=0; p<(int)hist_v.size(); p++) {
-	cvis->cd(p+1);
-	auto& hist = hist_v.at(p);
-	//auto& meta = ev_adc->as_vector().at(p).meta();
-	std::cout << "Draw marker for node[" << node.nodeidx << "]-plane[" << p << "] wire=" << node.imgpos4_edep[p] << " tick=" << node.imgpos4_edep[3] << std::endl;
-	TMarker* m = new TMarker( node.imgpos4_edep[p], node.imgpos4_edep[3], 20 );
-	//m->SetMarkerSize(3);
-	m->SetMarkerColor(kMagenta);	
-	hist.Draw("colz");
-	m->Draw();
-	vis_markers_v.push_back( m );
-      }
+  //     for (int p=0; p<(int)hist_v.size(); p++) {
+  // 	cvis->cd(p+1);
+  // 	auto& hist = hist_v.at(p);
+  // 	//auto& meta = ev_adc->as_vector().at(p).meta();
+  // 	std::cout << "Draw marker for node[" << node.nodeidx << "]-plane[" << p << "] wire=" << node.imgpos4_edep[p] << " tick=" << node.imgpos4_edep[3] << std::endl;
+  // 	TMarker* m = new TMarker( node.imgpos4_edep[p], node.imgpos4_edep[3], 20 );
+  // 	//m->SetMarkerSize(3);
+  // 	m->SetMarkerColor(kMagenta);	
+  // 	hist.Draw("colz");
+  // 	m->Draw();
+  // 	vis_markers_v.push_back( m );
+  //     }
       
-    }
-    cvis->Update();
-    //std::cout << "[enter] to continue" << std::endl;
-    //std::cin.get();
-    return hist_v;
-  }
-  
+  //   }
+  //   cvis->Update();
+  //   //std::cout << "[enter] to continue" << std::endl;
+  //   //std::cin.get();
+  //   return hist_v;
+  // }
+
   /**
-   * @brief Fix the location of where the start starts depositing energy 
+   * @brief use larflow truth to make 3D spacepoints for a given particle
    *
+   * @return a vector of 3d positions
+   * 
    */
-  std::vector<float> MCPixelPGraph::fixingPhotonStartPoints( Node_t& node,
-							     const std::vector<larcv::Image2D>& instance_v,
-							     const std::vector<larcv::Image2D>& ancestor_v,
-							     const std::vector<larcv::Image2D>& adc_v,
-							     const std::vector<larcv::Image2D>& larflow_v )
+  std::vector< std::vector<float> >
+  MCPixelPGraph::makeNode3DpointsFromLArFlowTruth( Node_t& node,
+						   const std::vector<larcv::Image2D>& adc_v,						   
+						   const std::vector<larcv::Image2D>& larflow_v )
   {
 
-    // start of photon shower is not something accurately specified in the mcreco
-    // products. detprofile is provided in mcshower -- but i think its basically trash.
-    // instead we will use the instanceid + larflow truth to
-    // (1) build 3d spacepoints
-    // (2) find the closest spacepoint with evidence for ~MIP level deposits
-    // (3) place the position there
-    // the profile also provides a momentum, but I bet its garbage
+    // we want to make 3d points from the pixels we have for the shower.    
+    std::vector< std::vector<float> > pos_vv;
 
-    // this is only for photons (electrons have a good start point based on node.start)
-    std::vector<float> shower_start_pt;
-    
-    if ( node.pid!=22)
-      return shower_start_pt; 
-
-    // we must collect and scan the instance IDs related to the shower
-    int shower_aid = node.aid;
-    int shower_mid = node.mid;
-    int shower_tid = node.tid;
-
-    // we want to make 3d points from the pixels we have for the shower.
+    // we use the plane-to-plane "flow" map to define 3d spacepoints
     struct flowpt {
       int source_plane;
       int source_wire;
@@ -1692,6 +1687,9 @@ namespace mctools {
     int targetmap[3][2] = { {1,2},
 			    {0,2},
 			    {0,1} };
+
+    // std::cout << "adc images: " << adc_v.size() << std::endl;
+    // std::cout << "larflow images: " << larflow_v.size() << std::endl;
 
     std::set< flowpt > pt_v;
     
@@ -1774,7 +1772,49 @@ namespace mctools {
 
     std::cout << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
     std::cout << "  Number of spacepoints found from using larflow: " << pt_v.size() << std::endl;
+    
+    for (auto& pt_info : pt_v ) {
+      pos_vv.push_back( std::vector<float>{ pt_info.pos[0], pt_info.pos[1], pt_info.pos[2] } );
+    }
 
+    return pos_vv;
+  }
+  
+  /**
+   * @brief Fix the location of where the start starts depositing energy 
+   *
+   */
+  std::vector<float> MCPixelPGraph::fixingPhotonStartPoints( Node_t& node,
+							     const std::vector<larcv::Image2D>& instance_v,
+							     const std::vector<larcv::Image2D>& ancestor_v,
+							     const std::vector<larcv::Image2D>& adc_v,
+							     const std::vector<larcv::Image2D>& larflow_v )
+  {
+
+    // start of photon shower is not something accurately specified in the mcreco
+    // products. detprofile is provided in mcshower -- but i think its basically trash.
+    // instead we will use the instanceid + larflow truth to
+    // (1) build 3d spacepoints
+    // (2) find the closest spacepoint with evidence for ~MIP level deposits
+    // (3) place the position there
+    // the profile also provides a momentum, but I bet its garbage
+
+    // this is only for photons (electrons have a good start point based on node.start)
+    std::vector<float> shower_start_pt;
+    
+    if ( node.pid!=22)
+      return shower_start_pt; 
+
+    // we must collect and scan the instance IDs related to the shower
+    // int shower_aid = node.aid;
+    // int shower_mid = node.mid;
+    // int shower_tid = node.tid;
+
+    pointList pos_vv = makeNode3DpointsFromLArFlowTruth( node, adc_v, larflow_v );
+
+    std::cout << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
+    std::cout << "  Number of spacepoints found from using larflow: " << pos_vv.size() << std::endl;
+    
     float mindist = 1.0e9;
     std::vector<float> start_reco_pt = MCPos2ImageUtils::Get()->truepos_to_recopos( node.start[0],
 										    node.start[1],
@@ -1791,16 +1831,13 @@ namespace mctools {
 
     std::vector< std::vector<float> > data_v;
     
-    for ( auto& pt : pt_v ) {
-      std::cout << "3d pt: (" << pt.pos[0] << ", " << pt.pos[1] << ", " << pt.pos[2] << ") "
-		<< " src_pixval=" << pt.src_pixval
-		<< " src_plane=" << pt.source_plane
-		<< std::endl;
+    for ( auto& pt : pos_vv ) {
+      //std::cout << "3d pt: (" << pt[0] << ", " << pt[1] << ", " << pt[2] << ") " << std::endl;
 
       float dist_edep = 0.;
       float dx = 0.;
       for (int v=0; v<3; v++) {
-	dx = pt.pos[v] - node.first_edep_pos[v];
+	dx = pt[v] - node.first_edep_pos[v];
 	dist_edep += dx*dx;
       }
       dist_edep = sqrt(dist_edep);
@@ -1810,7 +1847,7 @@ namespace mctools {
 
       std::vector<float> xpt(3,0);
       for (int v=0; v<3; v++)
-	xpt[v] = pt.pos[v];
+	xpt[v] = pt[v];
       data_v.push_back( xpt );
       
     }
@@ -1825,7 +1862,9 @@ namespace mctools {
 	icluster = i;
       }
     }
-    
+
+
+    pointList trunk_pt_v;    
     if ( icluster<0 ) {
       shower_start_pt = node.first_edep_pos;
     }
@@ -1845,7 +1884,8 @@ namespace mctools {
 	  shower_start_pt[3] = xpt[0]/(0.5*larutil::LArProperties::GetME()->DriftVelocity()) + 3200;
 	  mindist = dist;
 	}
-      }
+	trunk_pt_v.push_back( xpt );
+      }//end of loop over largest cluster points (by index)
     }
     
     std::cout << "  minimum dist to shower startpt: " << mindist << " cm" << std::endl;
@@ -1868,10 +1908,157 @@ namespace mctools {
     
     for (int v=0; v<4; v++)
       shower_start_pt.push_back( shower_imgpos4[v] );
+
+    int photon_point_list_index = (int)_true_photon_v.size();
+    _true_photon_v.emplace_back( std::move(trunk_pt_v) );
+    _nodeidx_to_photonlist_index_v[ node.nodeidx ] = photon_point_list_index;
     
     return shower_start_pt;
     
   }
+
+  /**
+   * @brief Get the 3d points representing the true photon trunk
+   *
+   */
+  const std::vector< std::vector<float> >& MCPixelPGraph::getTruePhotonTrunk3DPoints( Node_t& node )
+  {
+
+    auto it_pointlist = _nodeidx_to_photonlist_index_v.find( node.nodeidx );
+    if ( it_pointlist==_nodeidx_to_photonlist_index_v.end() ) {
+      std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not find photonlist for "
+		<< " nodeidx=" << node.nodeidx
+		<< " pdg=" << node.pid
+		<< " trackid=" << node.tid << ". "
+		<< "Returning emptry point list." 
+		<< std::endl;
+      _empty_photon_pointlist_v.clear();
+      return _empty_photon_pointlist_v;
+    }
+
+    size_t index = it_pointlist->second;
+    if ((int)index<0 || index>=_true_photon_v.size() ) {
+      std::stringstream msg;
+      msg << "Missing photon list index! node.trackid=" << node.tid
+	  << " map.trackid=" << it_pointlist->first
+	  << " map.index=" << it_pointlist->second
+	  << std::endl;
+      throw std::runtime_error( msg.str() );
+    }
+
+    return _true_photon_v.at( it_pointlist->second );
+  }
+
+  /**
+   * @brief Get the 3d points representing the true photon trunk by Track ID
+   *
+   */
+  const std::vector< std::vector<float> >& MCPixelPGraph::getTruePhotonTrunk3DPoints( int trackid )
+  {
+    Node_t* pnode = findTrackID( trackid );
+    if ( pnode==nullptr ) {
+      std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not particle Node for "
+		<< " trackid=" << pnode->tid << ". "
+		<< "Returning emptry point list." 
+		<< std::endl;
+      _empty_photon_pointlist_v.clear();
+      return _empty_photon_pointlist_v;
+    }
+
+    return getTruePhotonTrunk3DPoints( *pnode );
+  }  
+
+  /**
+   * @brief Get the sum of pixel values around the trunk plane
+   */
+  std::vector<float> MCPixelPGraph::getTruePhotonTrunkPlanePixelSums( int trackid )
+  {
+    // we want to sum using a kernel (3x3) pixels. We want to avoid double counting,
+    // so we must mark which pixels we used
+
+    const int dpix = 1;
+    std::vector<float> pixelsum_v;
+    
+    const pointList& photonpts = getTruePhotonTrunk3DPoints( trackid );
+    if ( photonpts.size()==0 ) {
+      return pixelsum_v;
+    }
+
+    // this pointer is saved when buildgraph(...) is called
+    // it is cleared (set to nullptr) when clear() is called.
+    if ( ev_adc==nullptr ) {
+      std::stringstream msg;
+      msg << "[MCPixelPGraph::getTruePhotonTrunkPlanePixelSums] [ERROR]: Missing ADC image for summing pixel values" << std::endl;
+      throw std::runtime_error( msg.str() );
+    }
+
+    std::cout << "[MCPixelPGraph::getTruePhotonTrunkPlanePixelSums] : number of photon pts = " << photonpts.size() << std::endl;
+
+    const int nplanes = ev_adc->Image2DArray().size();
+    std::vector<int> out_of_imgpix(nplanes,0);
+    pixelsum_v.resize(3,0);
+    
+    for (int p=0; p<(int)ev_adc->Image2DArray().size(); p++) {
+      auto const& img = ev_adc->Image2DArray().at(p);
+
+      std::set< std::pair<int,int> > _pix_used;
+      
+      // loop over 3d points
+      for (int ipt=0; ipt<(int)photonpts.size(); ipt++) {
+	auto& pt = photonpts.at(ipt);
+	// get the point in the image
+	std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
+									   pt[1],
+									   pt[2],
+									   0.0 );
+
+	//std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
+	
+	// sum over 3x3 kernel
+	// first find center pixel
+	int row_center = 0;
+	int col_center = 0;
+	try {
+	  row_center = img.meta().row( imgpos4[3] );
+	  col_center = img.meta().col( imgpos4[p] );
+	}
+	catch (...) {
+	  // out of image tick
+	  out_of_imgpix[p]++;
+	  continue;
+	}
+	
+	for (int dr=-dpix; dr<=dpix; dr++) {
+	  for (int dc=-dpix; dc<=dpix; dc++) {
+	    int r = row_center + dr;
+	    int c = col_center + dc;
+
+	    auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
+	    if ( it_pix==_pix_used.end() ) {
+	      // did not find it in the set, so add it as part of the sum
+	      float pixval = 0.0;
+	      try {
+		pixval = img.pixel( r, c );	      
+		_pix_used.insert( std::pair<int,int>(r,c) );
+		pixelsum_v[p] += pixval;
+	      }
+	      catch (...) {
+		// probably out of image
+		out_of_imgpix[p]++;
+		continue;
+	      }
+	    }
+	    
+	  }//end of dc loop
+	}//end of dr loop
+	  
+      }//end of point loop
+
+      std::cout << "PixelSum[" << p << "]: sum=" << pixelsum_v[p] << "  npixels=" << _pix_used.size() << " out_of_img=" << out_of_imgpix[p] << std::endl;
+    }//end of plane loop
+
+    return pixelsum_v;
+  }// end of MCPixelPGraph::getTruePhotonTrunkPlanePixelSums( int trackid )
   
 }
 }

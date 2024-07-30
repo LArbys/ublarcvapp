@@ -25,9 +25,9 @@ test script that demos the MCPixelPGraph class.
 rt.gStyle.SetOptStat(0)
 
 ioll = larlite.storage_manager( larlite.storage_manager.kREAD )
-ioll.set_data_to_read( larlite.data.kMCTrack,  "mcreco" )
-ioll.set_data_to_read( larlite.data.kMCShower, "mcreco" )
-ioll.set_data_to_read( larlite.data.kMCTruth,  "generator" )
+ioll.set_data_to_read( "mctrack",  "mcreco" ) # larlite.data.kMCTrack
+ioll.set_data_to_read( "mcshower", "mcreco" ) # larlite.data.kMCShower
+ioll.set_data_to_read( "mctruth", "generator" ) # larlite.data.kMCTruth
 ioll.add_in_filename(  args.input_larlite )
 ioll.open()
 
@@ -65,11 +65,11 @@ print("Start loop.")
 mcpg = ublarcvapp.mctools.MCPixelPGraph()
 mcpg_nu = ublarcvapp.mctools.MCPixelPGraph()
 if args.debug:
-    mcpg.set_verbosity( larcv.msg.kDEBUG )
-    mcpg_nu.set_verbosity( larcv.msg.kDEBUG )    
+    mcpg.set_verbosity( "debug" )
+    mcpg_nu.set_verbosity( "debug" )
 else:
-    mcpg.set_verbosity( larcv.msg.kINFO )
-    mcpg_nu.set_verbosity( larcv.msg.kINFO )    
+    mcpg.set_verbosity( "info" )
+    mcpg_nu.set_verbosity( "info" )
 
 if HAS_LARCV:
     mcpg.set_adc_treename( args.adc )
@@ -101,16 +101,17 @@ for ientry in range( start_entry, end_entry ):
         print("HAS_LARCV: get images needed for pixel matching to particles")
         #mcpg.buildgraphonly( ioll )        
         iolcv.read_entry(ientry)
-        ev_adc = iolcv.get_data( larcv.kProductImage2D, args.adc )
-        ev_instance = iolcv.get_data( larcv.kProductImage2D, "instance" )
-        ev_ancestor = iolcv.get_data( larcv.kProductImage2D, "ancestor" )
-        ev_segment  = iolcv.get_data( larcv.kProductImage2D, "segment" )
-        ev_larflow  = iolcv.get_data( larcv.kProductImage2D, "larflow" )
-        print("number of images: ",ev_adc.Image2DArray().size())
+        ev_adc = iolcv.get_data( "image2d", args.adc )
+        ev_instance = iolcv.get_data( "image2d", "instance" )
+        ev_ancestor = iolcv.get_data( "image2d", "ancestor" )
+        ev_segment  = iolcv.get_data( "image2d", "segment" )
+        ev_larflow  = iolcv.get_data( "image2d", "larflow" )
+        print("number of adc images: ",ev_adc.Image2DArray().size())
+        print("number of larflow images: ",ev_larflow.Image2DArray().size())
         adc_v = ev_adc.Image2DArray()
-        mcpg_nu.buildgraph( iolcv, ioll )        
         for p in range(adc_v.size()):
-            print(" image[",p,"] ",adc_v[p].meta().dump())
+            print(" image[",p,"] ",adc_v[p].meta().dump())        
+        mcpg_nu.buildgraph( iolcv, ioll )        
         
 
     photon_starts = {}            
@@ -247,6 +248,9 @@ for ientry in range( start_entry, end_entry ):
             if node.pid not in [22]:
                 continue
             print("Make canvas of particle, tid=",node.tid)
+            pixsum_v = mcpg_nu.getTruePhotonTrunkPlanePixelSums( node.tid )
+            if pixsum_v.size()>=3:
+                print(" pixelsum (",pixsum_v[0],", ",pixsum_v[1],", ",pixsum_v[2],")")
             meta = ev_adc.as_vector().at(2).meta()
             hpart = rt.TH2D("hnode%d"%(inode),"",3456,0,3456,1008,2400,2400+6*1008)
             pix_v = node.pix_vv.at(ih)

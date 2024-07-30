@@ -214,21 +214,39 @@ namespace mctools {
     std::vector<Node_t*> getNeutrinoParticles( bool exclude_neutrons=true );
 
     // make visualization of nu particles
-    std::vector< TH2D > makeTH2D( std::string hist_stem_name );
+    // std::vector< TH2D > makeTH2D( std::string hist_stem_name );
+
+    std::vector< std::vector<float> >
+    makeNode3DpointsFromLArFlowTruth( Node_t& node,
+				      const std::vector<larcv::Image2D>& adc_v,						   
+				      const std::vector<larcv::Image2D>& larflow_v );
+
+    // clear the state
+    void clear();
+
+  public:
+
+    // variables and functions for making better quantities to
+    // characterize true photons
 
     float photon_start_edep_radius_cm;
     float photon_start_pixval_threshold;
     int   photon_start_min_cluster_size;
+    typedef std::vector< std::vector<float> > pointList; /// just a redefinition
+    std::vector< pointList > _true_photon_v; /// list of 3d points representing the shower trunk
+    std::map< int, int > _nodeidx_to_photonlist_index_v; /// map from node.nodeidx to index in _true_photon_v
+    pointList _empty_photon_pointlist_v;
     
     std::vector<float> fixingPhotonStartPoints( Node_t& node,
 						const std::vector<larcv::Image2D>& instance_v,
 						const std::vector<larcv::Image2D>& ancestor_v,
 						const std::vector<larcv::Image2D>& adc_v,
 						const std::vector<larcv::Image2D>& larflow_v );
+    const pointList&   getTruePhotonTrunk3DPoints( Node_t& node );
+    const pointList&   getTruePhotonTrunk3DPoints( int trackid );    
+    std::vector<float> getTruePhotonTrunkPlanePixelSums( int trackid );
     
 
-    // clear the state
-    void clear();
     
   protected:
 
@@ -238,7 +256,8 @@ namespace mctools {
     larcv::EventImage2D*    ev_adc;
     larcv::EventImage2D*    ev_seg;
     larcv::EventImage2D*    ev_ins;
-    larcv::EventImage2D*    ev_anc;    
+    larcv::EventImage2D*    ev_anc;
+    larcv::EventImage2D*    ev_larflow;
     
     void _recursivePrintGraph( Node_t* node, int& depth, bool visible_only=true );
     void _scanPixelData( const std::vector<larcv::Image2D>& adc_v,

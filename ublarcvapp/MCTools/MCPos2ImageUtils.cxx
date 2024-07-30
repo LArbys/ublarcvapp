@@ -99,7 +99,7 @@ namespace mctools {
     //std::cout << "vpos: " << vpos[0] << " " << vpos[1] << " " << vpos[2] << std::endl;
 
     std::vector<float> imgpos(4,0);
-    if ( std::fabs(vpos[1])>116.5 || vpos[2]<0.0 && vpos[2]>1036.0 ) 
+    if ( std::fabs(vpos[1])>116.5 || vpos[2]<0.0 || vpos[2]>1036.0 ) 
       return imgpos;
     
     for (int p=0; p<3; p++) {
