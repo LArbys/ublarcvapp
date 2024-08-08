@@ -1812,7 +1812,9 @@ namespace mctools {
 
     pointList pos_vv = makeNode3DpointsFromLArFlowTruth( node, adc_v, larflow_v );
 
-    std::cout << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
+    std::cout << "================================================================" << std::endl;
+    std::cout << "[fixingPhotonStartPoints]" << std::endl;
+    std::cout << "  Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
     std::cout << "  Number of spacepoints found from using larflow: " << pos_vv.size() << std::endl;
     
     float mindist = 1.0e9;
@@ -1845,28 +1847,76 @@ namespace mctools {
       // if ( dist_edep>photon_start_edep_radius_cm || pt.src_pixval<photon_start_pixval_threshold )
       // 	continue;
 
-      std::vector<float> xpt(3,0);
+      std::vector<float> xpt(4,0);
       for (int v=0; v<3; v++)
 	xpt[v] = pt[v];
+      // add time dim
+      xpt[3] = 0.0;
       data_v.push_back( xpt );
       
     }
 
+
     auto dbcluster_v = ublarcvapp::dbscan::DBScan::makeCluster3f( 0.3, 3, 50, data_v );
-    int nlargest = 0;
     int icluster = -1;
+    float closest_qualified_cluster_dist = 1.0e9;
+
     for (int i=0; i<(int)dbcluster_v.size(); i++) {
+
+      // we calculate the pixel sum in each plane of each cluster.
+      // (this is costly -- if it starts to be too slow -- we will need some thresholding with easy measures)
       int nhits = dbcluster_v.at(i).size();
-      if ( (int)nhits>nlargest && (int)nhits>=photon_start_min_cluster_size ) {
-	nlargest = nhits;
+      
+      if ( nhits<5 )
+	continue;
+
+      float cluster_min_dist_to_source = 1e9;
+
+      pointList cluster_pt_v;
+      cluster_pt_v.reserve(nhits);
+      for (int ipt=0; ipt<nhits; ipt++) {
+	auto& xpt = data_v.at( dbcluster_v.at(i).at(ipt) );
+	cluster_pt_v.push_back( xpt );
+
+	// calculate distance to true point
+	float dist = 0;
+	for (int v=0; v<3; v++) {
+	  float dx = xpt[v]-start_reco_pt[v];
+	  dist += dx*dx;
+	}
+	dist = sqrt(dist);
+	if ( dist < cluster_min_dist_to_source )
+	  cluster_min_dist_to_source = dist;
+      }
+      
+      // get the pixel sum
+      std::vector<float> pixsum_v = getPlanePixelSumsFromPointList( cluster_pt_v );
+      
+      // another threshold: one plane must pass 10 MeV threshol
+      // using MeV = 0.00162*pixsum
+      int planes_passing = 0;
+      std::cout << "cluster[" << i << "] dist-to-source=" << cluster_min_dist_to_source << " cm; plane MeV: (";
+      for ( int p=0; p<(int)pixsum_v.size(); p++ ) {
+	float MeV = pixsum_v[p]*0.0162;
+	std::cout << MeV;
+	if ( p+1<nhits )
+	  std::cout << ", ";
+	if ( MeV>20.0 ) {
+	  planes_passing++;
+	}
+      }
+      std::cout << ")" << std::endl;
+      
+      if ( planes_passing>=2 && cluster_min_dist_to_source < closest_qualified_cluster_dist ) {
+	closest_qualified_cluster_dist = cluster_min_dist_to_source;
 	icluster = i;
       }
     }
-
-
+    
+    
     pointList trunk_pt_v;    
     if ( icluster<0 ) {
-      shower_start_pt = node.first_edep_pos;
+      shower_start_pt = std::vector<float>{ -1.0, -1.0, -1.0 };
     }
     else  {
       auto& largest_cluster = dbcluster_v.at(icluster);
@@ -1912,6 +1962,7 @@ namespace mctools {
     int photon_point_list_index = (int)_true_photon_v.size();
     _true_photon_v.emplace_back( std::move(trunk_pt_v) );
     _nodeidx_to_photonlist_index_v[ node.nodeidx ] = photon_point_list_index;
+    std::cout << "========================================================END======" << std::endl;
     
     return shower_start_pt;
     
@@ -2060,6 +2111,83 @@ namespace mctools {
     return pixelsum_v;
   }// end of MCPixelPGraph::getTruePhotonTrunkPlanePixelSums( int trackid )
 
+  std::vector<float>
+  MCPixelPGraph::getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist )
+  {
+    std::vector<float> pixsum_v;
+    
+    if ( !ev_adc )
+      return pixsum_v;
+  
+    const int nplanes = ev_adc->Image2DArray().size();
+    const int dpix = 2;
+    std::vector<int> out_of_imgpix(nplanes,0);
+    pixsum_v.resize(nplanes,0);
+    
+    for (int p=0; p<nplanes; p++) {
+      
+      auto const& img = ev_adc->Image2DArray().at(p);
+
+      // this lists (row,col) combinations we gathered pixels from
+      std::set< std::pair<int,int> > _pix_used;
+      
+      // loop over 3d points
+      for (int ipt=0; ipt<(int)pointlist.size(); ipt++) {
+	auto& pt = pointlist.at(ipt);
+	// get the point in the image
+	std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
+									   pt[1],
+									   pt[2],
+									   0.0 );
+
+	//std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
+	
+	// sum over 3x3 kernel
+	// first find center pixel
+	int row_center = 0;
+	int col_center = 0;
+	try {
+	  row_center = img.meta().row( imgpos4[3] );
+	  col_center = img.meta().col( imgpos4[p] );
+	}
+	catch (...) {
+	  // out of image tick
+	  out_of_imgpix[p]++;
+	  continue;
+	}
+	
+	for (int dr=-dpix; dr<=dpix; dr++) {
+	  for (int dc=-dpix; dc<=dpix; dc++) {
+	    int r = row_center + dr;
+	    int c = col_center + dc;
+
+	    auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
+	    if ( it_pix==_pix_used.end() ) {
+	      // did not find it in the set, so add it as part of the sum
+	      float pixval = 0.0;
+	      try {
+		pixval = img.pixel( r, c );	      
+		_pix_used.insert( std::pair<int,int>(r,c) );
+		pixsum_v[p] += pixval;
+	      }
+	      catch (...) {
+		// probably out of image
+		out_of_imgpix[p]++;
+		continue;
+	      }
+	    }
+	    
+	  }//end of dc loop
+	}//end of dr loop
+	  
+      }//end of point loop
+      
+      //std::cout << "PixelSum[" << p << "]: sum=" << pixelsum_v[p] << "  npixels=" << _pix_used.size() << " out_of_img=" << out_of_imgpix[p] << std::endl;
+    }//end of plane loop
+
+    return pixsum_v;
+  }// end of MCPixelPGraph::getPlanePixelSumsFromPointList
+  
   /**
   * @brief Get the position the particle first deposited energy
   *

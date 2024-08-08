@@ -248,7 +248,7 @@ namespace mctools {
     const pointList&   getTruePhotonTrunk3DPoints( Node_t& node );
     const pointList&   getTruePhotonTrunk3DPoints( int trackid );    
     std::vector<float> getTruePhotonTrunkPlanePixelSums( int trackid );
-    
+    std::vector<float> getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist );
 
     
   protected:
