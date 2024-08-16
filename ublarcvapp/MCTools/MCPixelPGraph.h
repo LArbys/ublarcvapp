@@ -235,10 +235,15 @@ namespace mctools {
     float photon_start_edep_radius_cm;
     float photon_start_pixval_threshold;
     int   photon_start_min_cluster_size;
-    typedef std::vector< std::vector<float> > pointList; /// just a redefinition
+    typedef std::vector< std::vector<float> > pointList; ///< just a redefinition
+    typedef std::set< std::pair<int,int> > PixelSet_t; ///< just a redefinition
     std::vector< pointList > _true_photon_v; /// list of 3d points representing the shower trunk
+    std::vector< std::vector<larcv::Image2D> > _true_photon_plane_trunkimg_vv;
+    std::vector< std::vector< PixelSet_t > >   _true_photon_plane_pixset_vv;
+    std::vector< std::vector< float > >        _true_photon_plane_pixsum_vv;
     std::map< int, int > _nodeidx_to_photonlist_index_v; /// map from node.nodeidx to index in _true_photon_v
     pointList _empty_photon_pointlist_v;
+    std::vector<float> _empty_pixsum_v;
     
     std::vector<float> fixingPhotonStartPoints( Node_t& node,
 						const std::vector<larcv::Image2D>& instance_v,
@@ -249,6 +254,8 @@ namespace mctools {
     const pointList&   getTruePhotonTrunk3DPoints( int trackid );    
     std::vector<float> getTruePhotonTrunkPlanePixelSums( int trackid );
     std::vector<float> getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist );
+    std::vector< MCPixelPGraph::PixelSet_t > getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
+									    std::vector<float>& pixsum_v );
 
     
   protected:
