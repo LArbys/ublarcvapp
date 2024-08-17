@@ -231,7 +231,7 @@ namespace mctools {
 
     // variables and functions for making better quantities to
     // characterize true photons
-
+  protected:
     float photon_start_edep_radius_cm;
     float photon_start_pixval_threshold;
     int   photon_start_min_cluster_size;
@@ -244,20 +244,26 @@ namespace mctools {
     std::map< int, int > _nodeidx_to_photonlist_index_v; /// map from node.nodeidx to index in _true_photon_v
     pointList _empty_photon_pointlist_v;
     std::vector<float> _empty_pixsum_v;
+    std::vector< MCPixelPGraph::PixelSet_t > _empty_pixelset_v;
+    std::vector< larcv::Image2D > _empty_imagemask_v;
     
     std::vector<float> fixingPhotonStartPoints( Node_t& node,
 						const std::vector<larcv::Image2D>& instance_v,
 						const std::vector<larcv::Image2D>& ancestor_v,
 						const std::vector<larcv::Image2D>& adc_v,
 						const std::vector<larcv::Image2D>& larflow_v );
+    std::vector<float> getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist );
+    std::vector< MCPixelPGraph::PixelSet_t > _getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
+									    std::vector<float>& pixsum_v );
+
+    //* Functions to get info about the true photon trunk energy deposits and pixels */
+  public:
     const pointList&   getTruePhotonTrunk3DPoints( Node_t& node );
     const pointList&   getTruePhotonTrunk3DPoints( int trackid );    
     std::vector<float> getTruePhotonTrunkPlanePixelSums( int trackid );
-    std::vector<float> getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist );
-    std::vector< MCPixelPGraph::PixelSet_t > getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
-									    std::vector<float>& pixsum_v );
+    const std::vector< MCPixelPGraph::PixelSet_t >& getTruePhotonTrunkPlanePixelSets( int trackid );
+    const std::vector< larcv::Image2D >& getTruePhotonTrunkPlaneImage2DMasks( int trackid );
 
-    
   protected:
 
     larlite::event_mctrack*  ev_mctrack;

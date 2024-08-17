@@ -1970,7 +1970,7 @@ namespace mctools {
     // making pixellist
     const int nplanes = adc_v.size();
     std::vector<float> plane_pixsum_v( nplanes, 0.0 );
-    std::vector< PixelSet_t > plane_pixsets_v = getPlanePixelSetsAndPixelSums( trunk_pt_v, plane_pixsum_v );
+    std::vector< PixelSet_t > plane_pixsets_v = _getPlanePixelSetsAndPixelSums( trunk_pt_v, plane_pixsum_v );
 
     // making image masks
     std::vector< larcv::Image2D > trunk_planeimg_v;
@@ -2128,124 +2128,64 @@ namespace mctools {
     std::vector<float> pixsum_v = _true_photon_plane_pixsum_vv.at( it_pixsum->second );
     return pixsum_v;
     
-    
-    // const pointList& photonpts = getTruePhotonTrunk3DPoints( trackid );
-    // if ( photonpts.size()==0 ) {
-    //   return pixelsum_v;
-    // }
-
-    // // this pointer is saved when buildgraph(...) is called
-    // // it is cleared (set to nullptr) when clear() is called.
-    // if ( ev_adc==nullptr ) {
-    //   std::stringstream msg;
-    //   //msg << "[MCPixelPGraph::getTruePhotonTrunkPlanePixelSums] [ERROR]: Missing ADC image for summing pixel values" << std::endl;
-    //   msg << "Missing ADC image for summing pixel values" << std::endl;
-    //   LARCV_DEBUG() << msg.str();
-    //   throw std::runtime_error( msg.str() );
-    // }
-
-    // std::cout << "[MCPixelPGraph::getTruePhotonTrunkPlanePixelSums] : number of photon pts = " << photonpts.size() << std::endl;
-    // auto itg = _nodeidx_to_photonlist_index_v
-
-    // const int nplanes = ev_adc->Image2DArray().size();
-    // std::vector<int> out_of_imgpix(nplanes,0);
-    // pixelsum_v.resize(3,0);
-
-    // std::vector<larcv::Image2D> trunk_planeimg_v;
-    
-    // for (int p=0; p<(int)ev_adc->Image2DArray().size(); p++) {
-    //   auto const& img = ev_adc->Image2DArray().at(p);
-
-    //   std::set< std::pair<int,int> > _pix_used;
-      
-    //   // loop over 3d points
-    //   for (int ipt=0; ipt<(int)photonpts.size(); ipt++) {
-    // 	auto& pt = photonpts.at(ipt);
-    // 	// get the point in the image
-    // 	std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
-    // 									   pt[1],
-    // 									   pt[2],
-    // 									   0.0 );
-
-    // 	//std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
-	
-    // 	// sum over 3x3 kernel
-    // 	// first find center pixel
-    // 	int row_center = 0;
-    // 	int col_center = 0;
-    // 	try {
-    // 	  row_center = img.meta().row( imgpos4[3] );
-    // 	  col_center = img.meta().col( imgpos4[p] );
-    // 	}
-    // 	catch (...) {
-    // 	  // out of image tick
-    // 	  out_of_imgpix[p]++;
-    // 	  continue;
-    // 	}
-	
-    // 	for (int dr=-dpix; dr<=dpix; dr++) {
-    // 	  for (int dc=-dpix; dc<=dpix; dc++) {
-    // 	    int r = row_center + dr;
-    // 	    int c = col_center + dc;
-
-    // 	    auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
-    // 	    if ( it_pix==_pix_used.end() ) {
-    // 	      // did not find it in the set, so add it as part of the sum
-    // 	      float pixval = 0.0;
-    // 	      try {
-    // 		pixval = img.pixel( r, c );	      
-    // 		_pix_used.insert( std::pair<int,int>(r,c) );
-    // 		pixelsum_v[p] += pixval;
-    // 	      }
-    // 	      catch (...) {
-    // 		// probably out of image
-    // 		out_of_imgpix[p]++;
-    // 		continue;
-    // 	      }
-    // 	    }
-	    
-    // 	  }//end of dc loop
-    // 	}//end of dr loop
-	  
-    //   }//end of point loop
-
-    //   std::cout << "PixelSum[" << p << "]: sum=" << pixelsum_v[p] << "  npixels=" << _pix_used.size() << " out_of_img=" << out_of_imgpix[p] << std::endl;
-
-    //   // make an image
-    //   int min_row = 999999;
-    //   int max_row = 0;
-    //   int min_col = 999999;
-    //   int max_col = 0;
-    //   for ( auto& pix : _pix_used ) {
-    // 	if ( min_row > pix.first )  min_row = pix.first;
-    // 	if ( max_row < pix.first )  max_row = pix.first;
-    // 	if ( min_col > pix.second ) min_col = pix.second;
-    // 	if ( min_col < pix.second ) max_col = pix.second;
-    //   }
-    //   auto const& meta = img.meta();
-    //   int colcount = max_col-min_col+1;
-    //   int rowcount = max_row-min_row+1;
-    //   float width  = float( colcount );
-    //   float height = meta.pixel_height()*rowcount;
-    //   float origin_x = float( meta.pos_x( min_col ) );
-    //   float origin_y = float( meta.pos_y( min_row ) );
-    //   larcv::ImageMeta trunk_meta( width, height, rowcount, colcount, origin_x, origin_y, meta.plane() );
-    //   larcv::Image2D trunk_img( trunk_meta );
-    //   trunk_img.paint(0.0);
-
-    //   // fill the mask
-    //   for (auto& pix : _pix_used ) {
-    // 	trunk_img.set_pixel( pix.second, pix.first, 1.0 );
-    //   }
-
-    //   trunk_planeimg_v.emplace_back( std::move(trunk_img) );
-      
-    // }//end of plane loop
-
-    // return pixelsum_v;
-    
   }// end of MCPixelPGraph::getTruePhotonTrunkPlanePixelSums( int trackid )
 
+  /**
+   * @brief Get the sum of pixel values around the trunk plane
+   */
+  const std::vector< MCPixelPGraph::PixelSet_t >&
+  MCPixelPGraph::getTruePhotonTrunkPlanePixelSets( int trackid )
+  {
+    // we want to sum using a kernel (3x3) pixels. We want to avoid double counting,
+    // so we must mark which pixels we used
+    Node_t* pnode = findTrackID( trackid );
+    if ( pnode==nullptr ) {
+      std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not find particle Node pointer for "
+		<< " trackid=" << pnode->tid << ". "
+		<< "Returning emptry point list." 
+		<< std::endl;
+      _empty_pixelset_v.clear();
+      return _empty_pixelset_v;
+    }
+    
+    auto it_pixsum = _nodeidx_to_photonlist_index_v.find( pnode->nodeidx );
+    if ( it_pixsum==_nodeidx_to_photonlist_index_v.end() ) {
+      LARCV_ERROR() << "Did not find true photon trunk info for trackid=" << trackid << std::endl;
+    }
+    
+    return _true_photon_plane_pixset_vv.at( it_pixsum->second );
+  }
+  
+  /**
+   * @brief Get larcv image containing trunk pixels
+   */
+  const std::vector< larcv::Image2D >&
+  MCPixelPGraph::getTruePhotonTrunkPlaneImage2DMasks( int trackid )
+  {
+    
+    Node_t* pnode = findTrackID( trackid );
+    if ( pnode==nullptr ) {
+      LARCV_WARNING() << "[MCPixelPGraph::getTruePhotonTrunkPlanePixelSets] "
+		      << " [WARNING]: did not find particle Node pointer for "
+		      << " trackid=" << pnode->tid << ". "
+		      << "Returning emptry point list." 
+		      << std::endl;
+      _empty_imagemask_v.clear();
+      return _empty_imagemask_v;
+    }
+    
+    auto it_pixsum = _nodeidx_to_photonlist_index_v.find( pnode->nodeidx );
+    if ( it_pixsum==_nodeidx_to_photonlist_index_v.end() ) {
+      LARCV_ERROR() << "Did not find true photon trunk info for trackid=" << trackid << std::endl;
+    }
+
+    return _true_photon_plane_trunkimg_vv.at( it_pixsum->second );
+    
+  }
+
+  /**
+   * @brief Does the calculation to get the pixels in each plane corresponding to 3D points of true shower trunk
+   */
   std::vector<float>
   MCPixelPGraph::getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist )
   {
@@ -2329,8 +2269,8 @@ namespace mctools {
    *
    */
   std::vector< MCPixelPGraph::PixelSet_t >
-  MCPixelPGraph::getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
-						std::vector<float>& pixsum_v ) {
+  MCPixelPGraph::_getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
+						 std::vector<float>& pixsum_v ) {
 
     std::vector< MCPixelPGraph::PixelSet_t > plane_pixsets_v;
     const int nplanes = ev_adc->Image2DArray().size();
