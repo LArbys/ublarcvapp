@@ -61,15 +61,15 @@ namespace mctools {
     // next we fix photons
     for ( auto& node : node_v ) {
       if ( node.pid==22 ) {
-	std::vector<float > startpt_info
-	  = fixingPhotonStartPoints( node,
-				     ev_ins->as_vector(), ev_anc->as_vector(),
-				     ev_adc->as_vector(), ev_larflow->as_vector() );
-	// update edep position of the node
-	for (int v=0; v<4; v++) {
-	  node.first_edep_pos[v] = startpt_info[v];
-	  node.imgpos4_edep[v]   = startpt_info[4+v];
-	}
+	      std::vector<float > startpt_info
+	       = fixingPhotonStartPoints( node,
+				                            ev_ins->as_vector(), ev_anc->as_vector(),
+				                            ev_adc->as_vector(), ev_larflow->as_vector() );
+	      // update edep position of the node
+	      for (int v=0; v<4; v++) {
+	        node.first_edep_pos[v] = startpt_info[v];
+	        node.imgpos4_edep[v]   = startpt_info[4+v];
+	      }
       }
     }
   }
@@ -225,13 +225,13 @@ namespace mctools {
 
       
       if ( tracknode.origin==1 ) {
-	// store nu particle
-	NuPart_t nuparticle;
-	nuparticle.geantid = tracknode.tid;
-	nuparticle.pdg = tracknode.pid;
-	nuparticle.E_MeV = mct.Start().E();
-	nuparticle.pos = tracknode.start;
-	nu_part_v.push_back( nuparticle );
+	      // store nu particle
+	      NuPart_t nuparticle;
+	      nuparticle.geantid = tracknode.tid;
+	      nuparticle.pdg = tracknode.pid;
+	      nuparticle.E_MeV = mct.Start().E();
+	      nuparticle.pos = tracknode.start;
+	      nu_part_v.push_back( nuparticle );
       }
       
 
@@ -383,15 +383,17 @@ namespace mctools {
 	  showernode.imgpos4_start.resize(4,0);
 	}
       }
-
       if ( showernode.origin==1 ) {
-	// store nu particle
-	NuPart_t nuparticle;
-	nuparticle.geantid = showernode.tid;
-	nuparticle.pdg = showernode.pid;
-	nuparticle.E_MeV = mcsh.Start().E();
-	nuparticle.pos = std::vector<float>{ (float)mcsh.Start().X(), (float)mcsh.Start().Y(), (float)mcsh.Start().Z(), (float)mcsh.Start().T() };
-	nu_part_v.push_back( nuparticle );
+	      // store nu particle
+	      NuPart_t nuparticle;
+	      nuparticle.geantid = showernode.tid;
+	      nuparticle.pdg = showernode.pid;
+	      nuparticle.E_MeV = mcsh.Start().E();
+	      nuparticle.pos = std::vector<float>{ (float)mcsh.Start().X(), 
+                                             (float)mcsh.Start().Y(), 
+                                             (float)mcsh.Start().Z(), 
+                                             (float)mcsh.Start().T() };
+	      nu_part_v.push_back( nuparticle );
       }
       
       tid_list.insert( showernode.tid );      
@@ -402,9 +404,9 @@ namespace mctools {
     long smallest_nu_tid = -1;
     for ( auto& node : node_v ) {
       if ( node.origin==1 ) {
-	if (smallest_nu_tid<0 || node.tid < smallest_nu_tid ) {
-	  smallest_nu_tid = node.tid;
-	}
+	      if (smallest_nu_tid<0 || node.tid < smallest_nu_tid ) {
+	        smallest_nu_tid = node.tid;
+	      }
       }
     }
     LARCV_DEBUG() << "Smallest neutrino Geant4 Track ID: " << smallest_nu_tid << std::endl;
@@ -417,33 +419,35 @@ namespace mctools {
     int matched_geant_id = -1;
     for ( auto& mctruth : mctruth_v ) {
       for ( auto& part : mctruth.GetParticles() ) {
-	if ( part.StatusCode()==1 ) {
-	  ifs_1 += 1;
-	  // does ginal state particel match any of the geant4 particles?
-	  for (auto& nupart : nu_part_v) {
-	    
-	    // match pdg
-	    if ( nupart.pdg!=part.PdgCode() )
-	      continue;
+	      if ( part.StatusCode()==1 ) {
+	        ifs_1 += 1;
+	        // does ginal state particel match any of the geant4 particles?
+	        for (auto& nupart : nu_part_v) {
+	          // match pdg
+	          if ( nupart.pdg!=part.PdgCode() )
+	            continue;
 
-	    // match energy
-	    float dE_MeV = std::fabs(nupart.E_MeV-part.Momentum(0)[3]*1000.0);
-	    LARCV_DEBUG() << "mctruth part: " << dE_MeV << std::endl;
-	    if ( dE_MeV > 10.0 )
-	      continue;
+	          // match energy
+	          float dE_MeV = std::fabs(nupart.E_MeV-part.Momentum(0)[3]*1000.0);
+	          LARCV_DEBUG() << "mctruth part: " << dE_MeV << std::endl;
+	          if ( dE_MeV > 10.0 )
+	            continue;
 
-	    matched_fs = ifs_1;
-	    matched_geant_id = nupart.geantid;
-	    LARCV_DEBUG() << "have first match. genie finalstate id=" << matched_fs << " geantid=" << matched_geant_id << std::endl;
-	    break;
-	  }
+	          matched_fs = ifs_1;
+	          matched_geant_id = nupart.geantid;
+	          LARCV_DEBUG() << "have first match. "
+                          << "genie finalstate id=" << matched_fs 
+                          << " geantid="  << matched_geant_id 
+                          << std::endl;
+	            break;
+	        }
 	  
-	}//end of if status code
-	if (matched_fs>=0)
-	  break;
+	      }//end of if status code
+	      if (matched_fs>=0)
+	        break;
       }//end of mcpart loop
       if (matched_fs>=0)
-	break;
+	      break;
     }//end of mctruth loop
 
     int geantid_offset = smallest_nu_tid  - (matched_fs-1);
@@ -455,55 +459,55 @@ namespace mctools {
     for ( auto& mctruth : mctruth_v ) {
       int imcpart = 0;
       for ( auto& part : mctruth.GetParticles() ) {
-	LARCV_DEBUG() << " mcpart[" << imctruth << "," << imcpart << "] -------" << std::endl;
-	LARCV_DEBUG() << "   status=" << part.StatusCode() << std::endl;
-	LARCV_DEBUG() << "   trackid=" << part.TrackId() << std::endl;
-	LARCV_DEBUG() << "   pdg=" << part.PdgCode() << std::endl;
-	LARCV_DEBUG() << "   motherid=" << part.Mother() << std::endl;
-	LARCV_DEBUG() << "   process=" << part.Process() << " endprocess=" << part.EndProcess() << std::endl;
-	LARCV_DEBUG() << "   num daughters=" << part.Daughters().size() << std::endl;
+        LARCV_DEBUG() << " mcpart[" << imctruth << "," << imcpart << "] -------" << std::endl;
+        LARCV_DEBUG() << "   status=" << part.StatusCode() << std::endl;
+        LARCV_DEBUG() << "   trackid=" << part.TrackId() << std::endl;
+        LARCV_DEBUG() << "   pdg=" << part.PdgCode() << std::endl;
+        LARCV_DEBUG() << "   motherid=" << part.Mother() << std::endl;
+        LARCV_DEBUG() << "   process=" << part.Process() << " endprocess=" << part.EndProcess() << std::endl;
+        LARCV_DEBUG() << "   num daughters=" << part.Daughters().size() << std::endl;
 	
-	if ( part.StatusCode()==1 ) {
-	  int geant_trackid = geantid_offset + ifs;
-	  LARCV_DEBUG() << "  Stable Final State. Implied Geant4 ID = " << geant_trackid << std::endl;
-	  ifs++;
-	  
-	  auto it_tid = tid_list.find(geant_trackid);
-	  if (it_tid==tid_list.end() ) {
-	    int nodeidx = node_v.size();
-	    int type = 3; // genie-final-state
-	    int tid  = geant_trackid;
-	    int vidx = imcpart;
-	    int pid = part.PdgCode();
-	    Node_t* mother = nullptr;
-	    int mid = -1;
-	    float energy = part.Momentum(0)[3]*1e3 - part.Mass()*1.0e3; // in GeV, convert to MeV
-	    std::vector<float> start { (float)part.Position(0)[0],
-	      (float)part.Position(0)[1],
-	      (float)part.Position(0)[2],
-	      (float)part.Position(0)[3]};
-	    std::vector<float> imgpos4(4,0);
-	    _get_imgpos( start, imgpos4, sce, true );
-	    
-	    //LARCV_DEBUG() << "Creating Mother node from GENIE final states: tid=" << tid << " type=" << 3 << std::endl;
-	    Node_t fsnode( nodeidx, type, tid, vidx, pid, mother, mid, energy, "primary" );
-	    fsnode.start = start;
-	    fsnode.imgpos4 = imgpos4;
-	    fsnode.mtid = tid;
-	    fsnode.aid  = tid;
-	    fsnode.origin = 1; // neutrino origin (from genie)
-	    LARCV_DEBUG() << "Add Genie Final State Particle to initial List: tid=" << tid << " pdg=" << pid << std::endl;	    
-	    node_v.emplace_back( std::move(fsnode) );
-	  }
-	  else {
-	    LARCV_DEBUG() << "Genie Final State Partial [tid=" << geant_trackid << "] Already in MCReco List" << std::endl;
-	  }
-	}
-	imcpart++;	
+        if ( part.StatusCode()==1 ) {
+          int geant_trackid = geantid_offset + ifs;
+          LARCV_DEBUG() << "  Stable Final State. Implied Geant4 ID = " << geant_trackid << std::endl;
+          ifs++;
+          
+          auto it_tid = tid_list.find(geant_trackid);
+          if (it_tid==tid_list.end() ) {
+            int nodeidx = node_v.size();
+            int type = 3; // genie-final-state
+            int tid  = geant_trackid;
+            int vidx = imcpart;
+            int pid = part.PdgCode();
+            Node_t* mother = nullptr;
+            int mid = -1;
+            float energy = part.Momentum(0)[3]*1e3 - part.Mass()*1.0e3; // in GeV, convert to MeV
+            std::vector<float> start { (float)part.Position(0)[0],
+                                      (float)part.Position(0)[1],
+                                      (float)part.Position(0)[2],
+                                      (float)part.Position(0)[3]};
+            std::vector<float> imgpos4(4,0);
+            _get_imgpos( start, imgpos4, sce, true );
+            
+            //LARCV_DEBUG() << "Creating Mother node from GENIE final states: tid=" << tid << " type=" << 3 << std::endl;
+            Node_t fsnode( nodeidx, type, tid, vidx, pid, mother, mid, energy, "primary" );
+            fsnode.start = start;
+            fsnode.imgpos4 = imgpos4;
+            fsnode.mtid = tid;
+            fsnode.aid  = tid;
+            fsnode.origin = 1; // neutrino origin (from genie)
+            LARCV_DEBUG() << "Add Genie Final State Particle to initial List: tid=" << tid << " pdg=" << pid << std::endl;	    
+            node_v.emplace_back( std::move(fsnode) );
+          }
+          else {
+            LARCV_DEBUG() << "Genie Final State Partial [tid=" << geant_trackid << "] Already in MCReco List" << std::endl;
+          }
+        }
+        imcpart++;	
       }
       imctruth++;
     }
-    
+        
     // try to connect primary neutrino origin nodes to mctruth info
     //_adoptNeutrinoOrphans( &mctruth_v );
 
@@ -557,12 +561,12 @@ namespace mctools {
         }
       }
       else if (node.type==3) {
-	// genie fs nodes
-	// connet to ROOT node as they are primary by definition
-	mothernode = &(node_v[0]);
+	      // genie fs nodes
+	      // connet to ROOT node as they are primary by definition
+	      mothernode = &(node_v[0]);
       }      
       else {
-	continue;
+	      continue;
       }
 
       if (mothernode) {
@@ -588,8 +592,9 @@ namespace mctools {
   /**
    * @brief wrapper function to retrieve Node's corresponding mctrack object from larlite container
    */
-  const larlite::mctrack&  MCPixelPGraph::_retrieve_mctrackobject( const Node_t* node,
-								   const larlite::event_mctrack& ev_track_v )
+  const larlite::mctrack& 
+  MCPixelPGraph::_retrieve_mctrackobject( const Node_t* node,
+								                        const larlite::event_mctrack& ev_track_v )
   {
     try {
       const larlite::mctrack& x = ev_track_v.at(node->vidx);
@@ -1646,6 +1651,8 @@ namespace mctools {
   /**
    * @brief use larflow truth to make 3D spacepoints for a given particle
    *
+   * we return all points formed by the intersections
+   * 
    * @return a vector of 3d positions
    * 
    */
@@ -1670,24 +1677,31 @@ namespace mctools {
       float pos[3];
       int posid[3];
       bool operator<( const flowpt& rhs ) const {
-	if (posid[0]<rhs.posid[0])
-	  return true;
-	else if (posid[0]>rhs.posid[0])
-	  return false;
-	// neither so [0] must be equal
+	      if (posid[0]<rhs.posid[0])
+	        return true;
+      	else if (posid[0]>rhs.posid[0])
+	        return false;
+	      // neither so [0] must be equal
 
-	if (posid[1]<rhs.posid[1] )
-	  return true;
-	else if (posid[1]>rhs.posid[1])
-	  return false;
+	      if (posid[1]<rhs.posid[1] )
+	        return true;
+	      else if (posid[1]>rhs.posid[1])
+	        return false;
 
-	// neither [1] worked, so must be equal
-	if (posid[2]<rhs.posid[2])
-	  return true;
-	return false;
+	      // neither [1] worked, so must be equal
+	      if (posid[2]<rhs.posid[2])
+	        return true;
+	      return false;
       };
     };
 
+    // note: this is a hardcoded map of indices relevant only to the
+    // way microboone encoded the 2d wire intersections in the larflow images
+    // example of how to read these indices
+    // targetmap[0][0] = 1 --> larfow image with index-0 (out of 6) contains the map from U pixels [0] mapped to pixels in the V plane (=1)
+    // targetmap[0][1] = 2 --> larfow image with index-1 (out of 6) contains the map from U pixels [0] mapped to pixels in the Y plane (=2)
+    // targetmap[1][0] = 0 --> larfow image with index-2 (out of 6) contains the map from V pixels [1] mapped to pixels in the U plane (=0)
+    // .. etc ..
     int targetmap[3][2] = { {1,2},
 			    {0,2},
 			    {0,1} };
@@ -1697,86 +1711,128 @@ namespace mctools {
 
     std::set< flowpt > pt_v;
     
+    // we loop over the pixels in the wire plane image that has been 
+    // associated to this particle node
     for (size_t p=0; p<node.pix_vv.size(); p++) {
       auto const& pix_v = node.pix_vv.at(p);
+
+      // the associated pixels are stored as a pair of (tick,wire) indices for each pixel
+      // the information is unrolled as a single 1D vector, so the total number of pixels 
+      // are half the length of the vector.
       size_t npix = (size_t)pix_v.size()/2;
       
+      // a given wire plane is mapped to the two other wire planes,
+      // so we have to handle two mappings, encoding 2D wire-intersections
       for (int iflowdir=0; iflowdir<2; iflowdir++) {
-	
-	auto& flowimg = larflow_v.at(2*p+iflowdir);
+        // get the index of the larflow image holding the 2d wire-intersection information
+        int ilarflow_image_index = 2*p+iflowdir;
+        // use the index to get the image
+	      auto& flowimg = larflow_v.at(ilarflow_image_index);
       
-	for (size_t ipix=0; ipix<npix; ipix++) {
-	  float tick = pix_v[2*ipix];
-	  float wire = pix_v[2*ipix+1];
-	  int src_plane = p;
-	  int tar_plane = targetmap[src_plane][iflowdir];
-	  int row = 0;
-	  int col = 0;
-	  try {
-	    row = flowimg.meta().row( tick );
-	    col = flowimg.meta().col( wire );
-	  }
-	  catch(...) {
-	    continue;
-	  }
-	  
-	  float pixflow = flowimg.pixel( row, col );
-	  // std::cout << "building flow pixel: plane[" << p << "] (" << wire << "," << tick << ") "
-	  // 	    << "(" << col << "," << row << ") : flow=" << pixflow << std::endl;
-	  
-	  if ( pixflow<=-999 )
-	    continue;
-	  int tar_wire = col + (int)pixflow;
-	  if ( tar_wire<0 || tar_wire>=(int)larutil::Geometry::GetME()->Nwires(tar_plane) )
-	    continue;
-	  
-	  UInt_t src_ch = larutil::Geometry::GetME()->PlaneWireToChannel( (UInt_t)src_plane, (UInt_t)wire );
-	  UInt_t tar_ch = larutil::Geometry::GetME()->PlaneWireToChannel( (UInt_t)tar_plane, (UInt_t)tar_wire );
-	  Double_t y,z;
-	  bool crosses  = larutil::Geometry::GetME()->ChannelsIntersect( src_ch, tar_ch, y, z );
-	  if ( crosses ) {
-	    // create a spacepoint object
-	    flowpt pt;
-	    pt.source_plane = src_plane;
-	    pt.source_wire  = wire;
-	    pt.target_plane = tar_plane;
-	    pt.target_wire  = tar_wire;
-	    pt.source_trackid = node.tid;
-	    pt.target_trackid = 0; // not filled for now
-	    pt.src_pixval = adc_v.at(src_plane).pixel( row, (unsigned int)col );
-	    pt.pos[1] = y;
-	    pt.pos[2] = z;
-	    pt.pos[0] = (tick-3200.0)*0.5*larutil::LArProperties::GetME()->DriftVelocity();
-	    // posid is effectively defining a voxelized grid
-	    // we do this to avoid close duplicate 3d pts
-	    pt.posid[0] = (int)(pt.pos[0]*1000);
-	    pt.posid[1] = (int)(pt.pos[1]*1000);
-	    pt.posid[2] = (int)(pt.pos[2]*1000);
+        // loop over the pixels for the given particle
+	      for (size_t ipix=0; ipix<npix; ipix++) {
+	        float tick = pix_v[2*ipix]; // the row dimension variable
+	        float wire = pix_v[2*ipix+1]; // the column dimension variable
+	        int src_plane = p; // index of the current plane
+	        int tar_plane = targetmap[src_plane][iflowdir]; // index of the wire plane we map to
 
-	    auto it_pt = pt_v.find( pt );
-	    if ( it_pt==pt_v.end() ) {
-	      //std::cout << "  insert intersection: (" << pt.pos[0] << "," << pt.pos[1] << "," << pt.pos[2] << ")" << std::endl;
-	      pt_v.insert(pt);
-	    }
-	    else {
-	      if ( (*it_pt).src_pixval < pt.src_pixval ) {
-		// std::cout << " replace src plane [" << (*it_pt).source_plane << " to " << pt.source_plane << "] "
-		// 	  << " with higher pixval " << (*it_pt).src_pixval << " vs. " << pt.src_pixval
-		// 	  << std::endl;
-		pt_v.insert(pt); // replaces?
-	      }
-	    }
-	  } //end of if possible wire intersection found (and calculated)
-	  else {
-	    //std::cout << "  failed intersection: (" << y << ", " << z << ")" << std::endl;
-	  }
-	} // end of loop over pixels in pix_vv list
-      }//end of loop over flow directions (2 of them)
+          // convert (tick,wire) to the (row,col) in the image array
+	        int row = 0;
+	        int col = 0;
+          // out of bounds calls will trigger a throw, we will just catch it and move on
+	        try {
+	          row = flowimg.meta().row( tick );
+	          col = flowimg.meta().col( wire );
+	        }
+	        catch(...) {
+            LARCV_WARNING() << "Tried to access larflow pixel out-of-bounds: "
+                            << "(wire,tick)=(" << wire << "," << tick << ")" 
+                            << std::endl;
+	          continue;
+	        }
+	  
+          // if we get here, this is a valid pixel inside the flow image
+          // the map from the current plane's wire to the target plane's wire
+          // is stored as the shift required to get to the correct wire.
+	        float pixflow = flowimg.pixel( row, col );
+	        // std::cout << "building flow pixel: plane[" << p << "] (" << wire << "," << tick << ") "
+	        // 	    << "(" << col << "," << row << ") : flow=" << pixflow << std::endl;
+	  
+          // the sentinal value of -999 means that this pixel did not contain a true mapping.
+          // if we see it, we move on.
+          // in retrospect, storing the column index of the pixel would have been better. 
+          // would have allowed the sentinal value to be -999 that might have allowed for easier zero
+          // removal compression. but maybe root's compression recognizes repeated values.
+	        if ( pixflow<=-999 )
+	          continue;
+
+          // for non-sentinal values, we get the column index of the pixel in the target plane
+          // that we map to.
+	        int tar_wire = col + (int)pixflow;
+
+          // check that the wire is not out-of-bounds for some reason
+          // if truth properly made, this should be unnecessary
+	        if ( tar_wire<0 || tar_wire>=(int)larutil::Geometry::GetME()->Nwires(tar_plane) )
+	          continue;
+	  
+          // now we use larutil's geometry class to calcuate the (y,z) position of the wire intersection
+	        UInt_t src_ch = larutil::Geometry::GetME()->PlaneWireToChannel( (UInt_t)src_plane, (UInt_t)wire );
+	        UInt_t tar_ch = larutil::Geometry::GetME()->PlaneWireToChannel( (UInt_t)tar_plane, (UInt_t)tar_wire );
+	        Double_t y,z;
+	        bool crosses  = larutil::Geometry::GetME()->ChannelsIntersect( src_ch, tar_ch, y, z );
+          // check that the intersection point provided is inside the TPC.
+          // if inside, crosses==true
+	        if ( crosses ) {
+	          // create a spacepoint object, inside the TPC
+	          flowpt pt;
+	          pt.source_plane = src_plane;
+	          pt.source_wire  = wire;
+	          pt.target_plane = tar_plane;
+	          pt.target_wire  = tar_wire;
+            pt.source_trackid = node.tid;
+            pt.target_trackid = 0; // not filled for now
+            pt.src_pixval = adc_v.at(src_plane).pixel( row, (unsigned int)col );
+            pt.pos[1] = y;
+            pt.pos[2] = z;
+            pt.pos[0] = (tick-3200.0)*0.5*larutil::LArProperties::GetME()->DriftVelocity(); //< to do, need larutil function to make experiment agnostic
+
+            // convert the flow into an integer 'posid' set of indices.
+            // posid is effectively defining a voxelized grid
+            // we do this to avoid close duplicate 3d pts
+            pt.posid[0] = (int)(pt.pos[0]*1000);
+            pt.posid[1] = (int)(pt.pos[1]*1000);
+            pt.posid[2] = (int)(pt.pos[2]*1000);
+            // look for the posid triplet in our set
+            auto it_pt = pt_v.find( pt );
+            if ( it_pt==pt_v.end() ) {
+              // a new index, insert into the set
+              //std::cout << "  insert intersection: (" << pt.pos[0] << "," << pt.pos[1] << "," << pt.pos[2] << ")" << std::endl;
+              pt_v.insert(pt);
+            }
+            else {
+              // if we had a previous intersection at this 3d point, we use the one with the largest
+              // energy deposition.
+              // (note: this might actual bias towards suprious intersections due to overlapping ionization due to tomographic projection)
+              // (note: but, since we restrict to node-only pixels, probably ok. no issues seen so far. so probably minor.)
+              if ( (*it_pt).src_pixval < pt.src_pixval ) {
+                // std::cout << " replace src plane [" << (*it_pt).source_plane << " to " << pt.source_plane << "] "
+                // 	  << " with higher pixval " << (*it_pt).src_pixval << " vs. " << pt.src_pixval
+                // 	  << std::endl;
+                pt_v.insert(pt); // replaces?
+              }
+            }
+          } //end of if possible wire intersection found (and calculated)
+          else {
+            //std::cout << "  failed intersection: (" << y << ", " << z << ")" << std::endl;
+          }
+	      } // end of loop over pixels in pix_vv list
+      }// end of loop over flow directions (2 of them)
     }//end of loop over planes
 
     std::cout << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
     std::cout << "  Number of spacepoints found from using larflow: " << pt_v.size() << std::endl;
     
+    // store the points into our storage vector, pos_vv, which we return.
     for (auto& pt_info : pt_v ) {
       pos_vv.push_back( std::vector<float>{ pt_info.pos[0], pt_info.pos[1], pt_info.pos[2] } );
     }
@@ -1814,156 +1870,190 @@ namespace mctools {
     // int shower_mid = node.mid;
     // int shower_tid = node.tid;
 
+    // created 3d points of energy deposition from truth information saved in
+    // the larflow images. The larflow images encode 2D wire-intersections
+    // which provide (Y,Z) positions in the detector. The X position is
+    // inferred by the drift time relative to the beam trigger (at tick 3200).
+    // We only build 3d points coming from pixels associated with the node.
     pointList pos_vv = makeNode3DpointsFromLArFlowTruth( node, adc_v, larflow_v );
 
-    std::cout << "================================================================" << std::endl;
-    std::cout << "[fixingPhotonStartPoints]" << std::endl;
-    std::cout << "  Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
-    std::cout << "  Number of spacepoints found from using larflow: " << pos_vv.size() << std::endl;
+    LARCV_INFO() << "================================================================" << std::endl;
+    LARCV_INFO() << "  Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
+    LARCV_INFO() << "  Number of spacepoints found from using larflow: " << pos_vv.size() << std::endl;
     
-    float mindist = 1.0e9;
+    // get the position where the photon was created
+    // note: not the same as the location where it first interacted
     std::vector<float> start_reco_pt = MCPos2ImageUtils::Get()->truepos_to_recopos( node.start[0],
 										    node.start[1],
 										    node.start[2],
 										    node.start[3],
 										    true, true );
-    std::cout << "  Find closest to start point: (" << start_reco_pt[0] << ","
+    LARCV_DEBUG() << "  Find closest cluster to start point: (" << start_reco_pt[0] << ","
 	      << start_reco_pt[1] << ", "
 	      << start_reco_pt[2] << ", "
 	      << start_reco_pt[3] << " usec)"
 	      << std::endl;
 
+    // ensure the shower_start_pt vector has 4 components
+    // it will store (x,y,z,t)
     shower_start_pt.resize(4);
 
+    // we want to define the "trunk" cluster of the shower.
+    // first, convert the information into the form our clustering algorithm needs.
     std::vector< std::vector<float> > data_v;
-    
+    // loop over the 3d points
     for ( auto& pt : pos_vv ) {
       //std::cout << "3d pt: (" << pt[0] << ", " << pt[1] << ", " << pt[2] << ") " << std::endl;
 
-      float dist_edep = 0.;
-      float dx = 0.;
-      for (int v=0; v<3; v++) {
-	dx = pt[v] - node.first_edep_pos[v];
-	dist_edep += dx*dx;
-      }
-      dist_edep = sqrt(dist_edep);
+      // // calculate distance of 3d point to first energy deposition point
+      // float dist_edep = 0.;
+      // float dx = 0.;
+      // for (int v=0; v<3; v++) {
+	    //   dx = pt[v] - node.first_edep_pos[v];
+	    //   dist_edep += dx*dx;
+      // }
+      // dist_edep = sqrt(dist_edep);
       
       // if ( dist_edep>photon_start_edep_radius_cm || pt.src_pixval<photon_start_pixval_threshold )
       // 	continue;
 
       std::vector<float> xpt(4,0);
       for (int v=0; v<3; v++)
-	xpt[v] = pt[v];
-      // add time dim
+	      xpt[v] = pt[v];
+      // add time dim, but put in a useless value.
       xpt[3] = 0.0;
       data_v.push_back( xpt );
       
     }
 
-
+    // use our interface to DBScan
     auto dbcluster_v = ublarcvapp::dbscan::DBScan::makeCluster3f( 0.3, 3, 50, data_v );
+
+    // loop through the cluster and find the closest one
+    // that qualifies in terms of size
     int icluster = -1;
     float closest_qualified_cluster_dist = 1.0e9;
-
     for (int i=0; i<(int)dbcluster_v.size(); i++) {
 
       // we calculate the pixel sum in each plane of each cluster.
       // (this is costly -- if it starts to be too slow -- we will need some thresholding with easy measures)
       int nhits = dbcluster_v.at(i).size();
       
+      // ignore small clusters
       if ( nhits<5 )
-	continue;
+	      continue;
 
+      // find closest distance to photon start/creation point
       float cluster_min_dist_to_source = 1e9;
 
+      // extract the points for the given cluster (with index i)
       pointList cluster_pt_v;
       cluster_pt_v.reserve(nhits);
       for (int ipt=0; ipt<nhits; ipt++) {
-	auto& xpt = data_v.at( dbcluster_v.at(i).at(ipt) );
-	cluster_pt_v.push_back( xpt );
+	      auto& xpt = data_v.at( dbcluster_v.at(i).at(ipt) );
+	      cluster_pt_v.push_back( xpt );
 
-	// calculate distance to true point
-	float dist = 0;
-	for (int v=0; v<3; v++) {
-	  float dx = xpt[v]-start_reco_pt[v];
-	  dist += dx*dx;
-	}
-	dist = sqrt(dist);
-	if ( dist < cluster_min_dist_to_source )
-	  cluster_min_dist_to_source = dist;
-      }
+	      // calculate distance to true point
+	      float dist = 0;
+	      for (int v=0; v<3; v++) {
+	        float dx = xpt[v]-start_reco_pt[v];
+	        dist += dx*dx;
+	      }
+	      dist = sqrt(dist);
+	      if ( dist < cluster_min_dist_to_source )
+	        cluster_min_dist_to_source = dist;
+      }//end of loop over hits
       
-      // get the pixel sum
+      // get the pixel sum of the cluster
       std::vector<float> pixsum_v = getPlanePixelSumsFromPointList( cluster_pt_v );
       
       // another threshold: one plane must pass 10 MeV threshol
-      // using MeV = 0.00162*pixsum
+      // using MeV = 0.00162*pixsum, from matt's conversion formula
       int planes_passing = 0;
       //std::cout << "cluster[" << i << "] dist-to-source=" << cluster_min_dist_to_source << " cm; plane MeV: (";
       for ( int p=0; p<(int)pixsum_v.size(); p++ ) {
-	float MeV = pixsum_v[p]*0.0162;
-	//std::cout << MeV;
-	// if ( p+1<nhits )
-	//   std::cout << ", ";
-	if ( MeV>20.0 ) {
-	  planes_passing++;
-	}
+	      float MeV = pixsum_v[p]*0.0162;
+	      //std::cout << MeV;
+	      // if ( p+1<nhits )
+	      //   std::cout << ", ";
+        // enforce an energy threshold
+        // (note: is this too high? especially since we must see that amount in 2 of 3 planes)
+	      if ( MeV>20.0 ) {
+	        planes_passing++;
+	      }
       }
       //std::cout << ")" << std::endl;
       
+      // check if cluster passes 'detectability criterion'
+      // and, if so, is the closest cluster to the creation point of the photon
       if ( planes_passing>=2 && cluster_min_dist_to_source < closest_qualified_cluster_dist ) {
-	closest_qualified_cluster_dist = cluster_min_dist_to_source;
-	icluster = i;
+	      closest_qualified_cluster_dist = cluster_min_dist_to_source;
+	      icluster = i;
       }
-    }
+    }//end of loop over all hits
     
-    
-    pointList trunk_pt_v;    
-    if ( icluster<0 ) {
+    // container to store our trunk points
+    pointList trunk_pt_v;
+
+     if ( icluster<0 ) {
+      // if we did not find a valid cluster,
+      // we count this shower as unreconstructable.
+      // we define a sentinal value for the starting energy deposition point    
       shower_start_pt = std::vector<float>{ -1.0, -1.0, -1.0 };
-    }
+    } 
     else  {
+      // a valid cluster is found. store the points for this cluster
       auto& largest_cluster = dbcluster_v.at(icluster);
+      // we also find the min distance between a hit in the cluster
+      // and the starting reco point.
+      // this 3d point will serve as the true first energy deposit point
+      float mindist = 1.0e9;
       for (int ipt=0; ipt<(int)largest_cluster.size(); ipt++) {
-	auto& xpt = data_v.at( largest_cluster.at(ipt) );
-	float dist = 0;
-	for (int v=0; v<3; v++) {
-	  float dx = xpt[v]-start_reco_pt[v];
-	  dist += dx*dx;
-	}
-	dist = sqrt(dist);
-	if ( dist<mindist ) {
-	  for (int v=0; v<3; v++)
-	    shower_start_pt[v] = xpt[v];
-	  shower_start_pt[3] = xpt[0]/(0.5*larutil::LArProperties::GetME()->DriftVelocity()) + 3200;
-	  mindist = dist;
-	}
-	trunk_pt_v.push_back( xpt );
+	      auto& xpt = data_v.at( largest_cluster.at(ipt) );
+	      float dist = 0;
+	      for (int v=0; v<3; v++) {
+	        float dx = xpt[v]-start_reco_pt[v];
+	        dist += dx*dx;
+	      }
+	      dist = sqrt(dist);
+	      if ( dist<mindist ) {
+          // if the current closest point, use it to define the photon interaction point
+	        for (int v=0; v<3; v++)
+	          shower_start_pt[v] = xpt[v];
+	        shower_start_pt[3] = xpt[0]/(0.5*larutil::LArProperties::GetME()->DriftVelocity()) + 3200;
+	        mindist = dist;
+	      }
+	      trunk_pt_v.push_back( xpt );
       }//end of loop over largest cluster points (by index)
+      LARCV_DEBUG() << "  minimum dist to shower startpt: " << mindist << " cm" << std::endl;
     }
     
-    std::cout << "  minimum dist to shower startpt: " << mindist << " cm" << std::endl;
-    std::cout << "  startpt: (" << shower_start_pt[0] << ","
+    LARCV_INFO() << "  startpt: (" << shower_start_pt[0] << ","
 	      << shower_start_pt[1] << ","
 	      << shower_start_pt[2] << ","
 	      << shower_start_pt[3] << " ticks)"
 	      << std::endl;
 
+    // convert the first interaction point (x,y,z,t) position into 
+    // image coordinates which are (u,v,y,tick)
     float t_ns = (shower_start_pt[3]-3200)*0.5*1000.0+3050.0; // ticks to ns
     std::vector<float> shower_imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( shower_start_pt[0],
 									      shower_start_pt[1],
 									      shower_start_pt[2],
 									      t_ns );
-    std::cout << "  imgpos: (" << shower_imgpos4[0] << ", "
+    LARCV_INFO() << "  imgpos: (" << shower_imgpos4[0] << ", "
 	      << shower_imgpos4[1] << ", "
 	      << shower_imgpos4[2] << ", "
 	      << shower_imgpos4[3] << " ticks )"
 	      << std::endl;
     
+    // append the imgcoordantes to the out-going vector
     for (int v=0; v<4; v++)
       shower_start_pt.push_back( shower_imgpos4[v] );
 
     // get an index for this true photon pointList
+    // we will use it to store information about this trunk
+    // and then retrieve it later.
     int photon_point_list_index = (int)_true_photon_v.size();
     _nodeidx_to_photonlist_index_v[ node.nodeidx ] = photon_point_list_index;
 
@@ -1980,20 +2070,25 @@ namespace mctools {
       auto& pixset = plane_pixsets_v.at(p);
       
       // make an image
+      // we also keep track of the min/max for the
+      // rows and columns. this defines 
+      // a bounding box we need to define the image mask
+      // crop bounds.
       int min_row = 999999;
       int max_row = 0;
       int min_col = 999999;
       int max_col = 0;
 
-      
+      // loop over the pixels in order to find axis-aligned bounding box
       for ( auto& pix : pixset ) {
-	int pix_row = pix.first;
-	int pix_col = pix.second;
-	if ( min_row > pix_row )  min_row = pix_row;
-	if ( max_row < pix_row )  max_row = pix_row;
-	if ( min_col > pix_col )  min_col = pix_col;
-	if ( max_col < pix_col )  max_col = pix_col;
+	      int pix_row = pix.first;
+	      int pix_col = pix.second;
+	      if ( min_row > pix_row )  min_row = pix_row;
+	      if ( max_row < pix_row )  max_row = pix_row;
+	      if ( min_col > pix_col )  min_col = pix_col;
+	      if ( max_col < pix_col )  max_col = pix_col;
       }
+      // define the imagemeta to make the cropped larcv::Image2d object
       auto const& meta = img.meta();
       int colcount = max_col-min_col+1;
       int rowcount = max_row-min_row+1;
@@ -2011,23 +2106,23 @@ namespace mctools {
       LARCV_DEBUG() << trunk_meta.dump() << std::endl;
       LARCV_DEBUG() << "original meta: " << meta.dump() << std::endl;
 
-      //fill the mask
+      // loop over the pixels and fill the mask
       for (auto& pix : pixset ) {
-	int pix_row = pix.first;
-	int pix_col = pix.second;	
-	//LARCV_DEBUG() << " set pixel (row,col)=(" << pix_row << ", " << pix_col << ") " << std::endl;
-	try {
-	  trunk_img.set_pixel( pix_row-min_row, pix_col-min_col, 1.0 );
-	}
-	catch (...) {
-	  LARCV_ERROR() << "pixel (row,col)=(" << pix_row << "," << pix_col << ") is outside crop." << std::endl;
-	}
+	      int pix_row = pix.first;
+	      int pix_col = pix.second;	
+	      //LARCV_DEBUG() << " set pixel (row,col)=(" << pix_row << ", " << pix_col << ") " << std::endl;
+	      try {
+	        trunk_img.set_pixel( pix_row-min_row, pix_col-min_col, 1.0 );
+	      }
+	      catch (...) {
+	        LARCV_ERROR() << "pixel (row,col)=(" << pix_row << "," << pix_col << ") is outside crop." << std::endl;
+	      }
       }
 
+      // store the image in the plane container
       trunk_planeimg_v.emplace_back( std::move(trunk_img) );
       
     }//end of plane loop
-      
 
     // store all of this stuff
     _true_photon_v.emplace_back( std::move(trunk_pt_v) );
@@ -2062,11 +2157,11 @@ namespace mctools {
     auto it_pointlist = _nodeidx_to_photonlist_index_v.find( node.nodeidx );
     if ( it_pointlist==_nodeidx_to_photonlist_index_v.end() ) {
       std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not find photonlist for "
-		<< " nodeidx=" << node.nodeidx
-		<< " pdg=" << node.pid
-		<< " trackid=" << node.tid << ". "
-		<< "Returning emptry point list." 
-		<< std::endl;
+		            << " nodeidx=" << node.nodeidx
+		            << " pdg=" << node.pid
+		            << " trackid=" << node.tid << ". "
+		            << "Returning emptry point list." 
+		            << std::endl;
       _empty_photon_pointlist_v.clear();
       return _empty_photon_pointlist_v;
     }
@@ -2075,9 +2170,9 @@ namespace mctools {
     if ((int)index<0 || index>=_true_photon_v.size() ) {
       std::stringstream msg;
       msg << "Missing photon list index! node.trackid=" << node.tid
-	  << " map.trackid=" << it_pointlist->first
-	  << " map.index=" << it_pointlist->second
-	  << std::endl;
+          << " map.trackid=" << it_pointlist->first
+          << " map.index=" << it_pointlist->second
+          << std::endl;
       throw std::runtime_error( msg.str() );
     }
 
@@ -2093,9 +2188,9 @@ namespace mctools {
     Node_t* pnode = findTrackID( trackid );
     if ( pnode==nullptr ) {
       std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not particle Node for "
-		<< " trackid=" << pnode->tid << ". "
-		<< "Returning emptry point list." 
-		<< std::endl;
+          << " trackid=" << pnode->tid << ". "
+          << "Returning emptry point list." 
+          << std::endl;
       _empty_photon_pointlist_v.clear();
       return _empty_photon_pointlist_v;
     }
@@ -2113,9 +2208,9 @@ namespace mctools {
     Node_t* pnode = findTrackID( trackid );
     if ( pnode==nullptr ) {
       std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not find particle Node pointer for "
-		<< " trackid=" << pnode->tid << ". "
-		<< "Returning emptry point list." 
-		<< std::endl;
+          << " trackid=" << pnode->tid << ". "
+          << "Returning emptry point list." 
+          << std::endl;
       _empty_photon_pointlist_v.clear();
       return _empty_pixsum_v;
     }
@@ -2141,9 +2236,9 @@ namespace mctools {
     Node_t* pnode = findTrackID( trackid );
     if ( pnode==nullptr ) {
       std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not find particle Node pointer for "
-		<< " trackid=" << pnode->tid << ". "
-		<< "Returning emptry point list." 
-		<< std::endl;
+        << " trackid=" << pnode->tid << ". "
+        << "Returning emptry point list." 
+        << std::endl;
       _empty_pixelset_v.clear();
       return _empty_pixelset_v;
     }
@@ -2209,52 +2304,52 @@ namespace mctools {
       
       // loop over 3d points
       for (int ipt=0; ipt<(int)pointlist.size(); ipt++) {
-	auto& pt = pointlist.at(ipt);
-	// get the point in the image
-	std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
-									   pt[1],
-									   pt[2],
-									   0.0 );
+        auto& pt = pointlist.at(ipt);
+        // get the point in the image
+        std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
+                          pt[1],
+                          pt[2],
+                          0.0 );
 
-	//std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
+	      //std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
 	
-	// sum over 3x3 kernel
-	// first find center pixel
-	int row_center = 0;
-	int col_center = 0;
-	try {
-	  row_center = img.meta().row( imgpos4[3] );
-	  col_center = img.meta().col( imgpos4[p] );
-	}
-	catch (...) {
-	  // out of image tick
-	  out_of_imgpix[p]++;
-	  continue;
-	}
+        // sum over 3x3 kernel
+        // first find center pixel
+        int row_center = 0;
+        int col_center = 0;
+        try {
+          row_center = img.meta().row( imgpos4[3] );
+          col_center = img.meta().col( imgpos4[p] );
+        }
+        catch (...) {
+          // out of image tick
+          out_of_imgpix[p]++;
+          continue;
+        }
 	
-	for (int dr=-dpix; dr<=dpix; dr++) {
-	  for (int dc=-dpix; dc<=dpix; dc++) {
-	    int r = row_center + dr;
-	    int c = col_center + dc;
+        for (int dr=-dpix; dr<=dpix; dr++) {
+          for (int dc=-dpix; dc<=dpix; dc++) {
+            int r = row_center + dr;
+            int c = col_center + dc;
 
-	    auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
-	    if ( it_pix==_pix_used.end() ) {
-	      // did not find it in the set, so add it as part of the sum
-	      float pixval = 0.0;
-	      try {
-		pixval = img.pixel( r, c );	      
-		_pix_used.insert( std::pair<int,int>(r,c) );
-		pixsum_v[p] += pixval;
-	      }
-	      catch (...) {
-		// probably out of image
-		out_of_imgpix[p]++;
-		continue;
-	      }
-	    }
-	    
-	  }//end of dc loop
-	}//end of dr loop
+            auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
+            if ( it_pix==_pix_used.end() ) {
+              // did not find it in the set, so add it as part of the sum
+              float pixval = 0.0;
+              try {
+                pixval = img.pixel( r, c );	      
+                _pix_used.insert( std::pair<int,int>(r,c) );
+                pixsum_v[p] += pixval;
+              }
+              catch (...) {
+                // probably out of image
+                out_of_imgpix[p]++;
+                continue;
+              }
+            }
+        
+          }//end of dc loop
+        }//end of dr loop
 	  
       }//end of point loop
       
@@ -2290,60 +2385,57 @@ namespace mctools {
       
       // loop over 3d points
       for (int ipt=0; ipt<(int)pt_v.size(); ipt++) {
-	auto& pt = pt_v.at(ipt);
-	// get the point in the image
-	std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
-									   pt[1],
-									   pt[2],
-									   0.0 );
-	//std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
-	
-	// sum over 3x3 kernel
-	// first find center pixel
-	int row_center = 0;
-	int col_center = 0;
-	try {
-	  row_center = img.meta().row( imgpos4[3] );
-	  col_center = img.meta().col( imgpos4[p] );
-	}
-	catch (...) {
-	  // out of image tick
-	  out_of_imgpix[p]++;
-	  continue;
-	}
-	
-	for (int dr=-dpix; dr<=dpix; dr++) {
-	  for (int dc=-dpix; dc<=dpix; dc++) {
-	    int r = row_center + dr;
-	    int c = col_center + dc;
+        auto& pt = pt_v.at(ipt);
+        // get the point in the image
+        std::vector<float> imgpos4 = MCPos2ImageUtils::Get()->to_imagepos( pt[0],
+                          pt[1],
+                          pt[2],
+                          0.0 );
+        //std::cout << "  pt[" << ipt << "] imgpos4: (" << imgpos4[0] << ", " << imgpos4[1] << ", " << imgpos4[2] << ", " << imgpos4[3] << ")" << std::endl;
+        
+        // sum over 3x3 kernel
+        // first find center pixel
+        int row_center = 0;
+        int col_center = 0;
+        try {
+          row_center = img.meta().row( imgpos4[3] );
+          col_center = img.meta().col( imgpos4[p] );
+        }
+        catch (...) {
+          // out of image tick
+          out_of_imgpix[p]++;
+          continue;
+        }
+      
+        for (int dr=-dpix; dr<=dpix; dr++) {
+          for (int dc=-dpix; dc<=dpix; dc++) {
+            int r = row_center + dr;
+            int c = col_center + dc;
 
-	    auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
-	    if ( it_pix==_pix_used.end() ) {
-	      // did not find it in the set, so add it as part of the sum
-	      float pixval = 0.0;
-	      try {
-		pixval = img.pixel( r, c );	      
-		_pix_used.insert( std::pair<int,int>(r,c) );
-		pixsum_v[p] += pixval;
-	      }
-	      catch (...) {
-		// probably out of image
-		out_of_imgpix[p]++;
-		continue;
-	      }
-	    }
-	    
-	  }//end of dc loop
-	}//end of dr loop
-	  
-      }//end of point loop
-      
+            auto it_pix = _pix_used.find( std::pair<int,int>(r,c) );
+            if ( it_pix==_pix_used.end() ) {
+              // did not find it in the set, so add it as part of the sum
+              float pixval = 0.0;
+              try {
+                pixval = img.pixel( r, c );	      
+                _pix_used.insert( std::pair<int,int>(r,c) );
+                pixsum_v[p] += pixval;
+              }
+              catch (...) {
+                // probably out of image
+                out_of_imgpix[p]++;
+                continue;
+              }
+            }
+	        }//end of dc loop
+	      }//end of dr loop
+      }//end of point loop 
+
       //std::cout << "PixelSum[" << p << "]: sum=" << pixelsum_v[p] << "  npixels=" << _pix_used.size() << " out_of_img=" << out_of_imgpix[p] << std::endl;
+      plane_pixsets_v.emplace_back( std::move( _pix_used ) );   
       
-      plane_pixsets_v.emplace_back( std::move( _pix_used ) );
-				    
     }//end of plane loop
-    
+
     return plane_pixsets_v;
   }
   

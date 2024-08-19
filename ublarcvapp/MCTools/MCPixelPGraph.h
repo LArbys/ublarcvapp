@@ -108,12 +108,12 @@ namespace mctools {
         vidx(-1),        
         tid(-1),
         aid(-1),
-	mtid(-1),
+	      mtid(-1),
         pid(-1),
         mother(nullptr),
         mid(-1),
         E_MeV(-1.0),
-	process("null"),
+	      process("null"),
         start({0,0,0,0}),
         first_edep_pos({0,0,0,0}),	
         first_tpc_pos({0,0,0,0}),
@@ -123,7 +123,7 @@ namespace mctools {
         imgpos4_start({0,0,0,0}),
         origin(-1)
       {
-	daughter_v.clear();
+	      daughter_v.clear();
       };
         
       Node_t(int _nodeidx, int _type, int _tid, int _vidx,
@@ -136,13 +136,13 @@ namespace mctools {
         type(_type),
         vidx(_vidx),        
         tid(_tid),
-	aid(-1),
-	mtid(-1),
+	      aid(-1),
+	      mtid(-1),
         pid(_pid),
         mother(_mother),
         mid(_mid),
         E_MeV(_energy),
-	process(proc),
+	      process(proc),
         start({0,0,0,0}),
         first_edep_pos({0,0,0,0}),	
         first_tpc_pos({0,0,0,0}),
@@ -159,27 +159,27 @@ namespace mctools {
       };
 
       bool isTrackObject() const {
-	if ( type==0 )
-	  return true;
-	return false;
+	      if ( type==0 )
+	        return true;
+	      return false;
       };
 
       bool isShowerObject() const {
-	if (type==1)
-	  return true;
-	return false;
+	      if (type==1)
+	        return true;
+	      return false;
       };
 
       bool isNuVertexObject() const {
-	if (type==2)
-	  return true;
-	return false;
+	      if (type==2)
+	        return true;
+	      return false;
       };
 
       bool isGenieFinalStateObject() const {
-	if (type==3)
-	  return true;
-	return false;
+	      if (type==3)
+	        return true;
+	      return false;
       };            
 
     };
@@ -231,12 +231,14 @@ namespace mctools {
 
     // variables and functions for making better quantities to
     // characterize true photons
+    typedef std::vector< std::vector<float> > pointList; ///< just a redefinition for convenience
+    typedef std::set< std::pair<int,int> > PixelSet_t;   ///< just a redefinition for convenience
+    typedef std::vector< larcv::Image2D > ImageSet_t;    ///< just a redefinition for convenience
+    
   protected:
     float photon_start_edep_radius_cm;
     float photon_start_pixval_threshold;
     int   photon_start_min_cluster_size;
-    typedef std::vector< std::vector<float> > pointList; ///< just a redefinition
-    typedef std::set< std::pair<int,int> > PixelSet_t; ///< just a redefinition
     std::vector< pointList > _true_photon_v; /// list of 3d points representing the shower trunk
     std::vector< std::vector<larcv::Image2D> > _true_photon_plane_trunkimg_vv;
     std::vector< std::vector< PixelSet_t > >   _true_photon_plane_pixset_vv;
