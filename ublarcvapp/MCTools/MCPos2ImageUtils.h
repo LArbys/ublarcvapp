@@ -32,7 +32,7 @@ namespace mctools {
       : larcv::larcv_base("MCPos2ImageUtils"),
       psce(nullptr)
       {
-	psce = new larutil::SpaceChargeMicroBooNE;
+	      psce = new larutil::SpaceChargeMicroBooNE;
       };
 
 
@@ -43,7 +43,7 @@ namespace mctools {
 
     static MCPos2ImageUtils* Get() {
       if ( !_p_singleton ) {
-	_p_singleton = new MCPos2ImageUtils;
+	      _p_singleton = new MCPos2ImageUtils;
       }
       return _p_singleton;
     };

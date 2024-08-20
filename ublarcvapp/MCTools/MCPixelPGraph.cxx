@@ -60,16 +60,18 @@ namespace mctools {
 
     // next we fix photons
     for ( auto& node : node_v ) {
-      if ( node.pid==22 ) {
+      if ( node.pid==22 || abs(node.pid)==11 ) {
 	      std::vector<float > startpt_info
 	       = fixingPhotonStartPoints( node,
 				                            ev_ins->as_vector(), ev_anc->as_vector(),
 				                            ev_adc->as_vector(), ev_larflow->as_vector() );
-	      // update edep position of the node
-	      for (int v=0; v<4; v++) {
-	        node.first_edep_pos[v] = startpt_info[v];
-	        node.imgpos4_edep[v]   = startpt_info[4+v];
-	      }
+	      // update edep position of the node for photons only
+        if ( node.pid==22 ) {
+          for (int v=0; v<4; v++) {
+            node.first_edep_pos[v] = startpt_info[v];
+            node.imgpos4_edep[v]   = startpt_info[4+v];
+          }
+        }
       }
     }
   }
@@ -333,55 +335,55 @@ namespace mctools {
 
       bool x_isinf = false;
       if ( mcsh.DetProfile().X()>1.0e100 || mcsh.DetProfile().X()<-1.0e100 )
-	x_isinf = true;
+	      x_isinf = true;
       if ( !x_isinf && !std::isnan( mcsh.DetProfile().X() ) ) {
-	std::cout << "inf test: " << mcsh.DetProfile().X() << " " << std::isinf( mcsh.DetProfile().X() ) << std::endl;
-	std::vector<float> detprofile = { (float)mcsh.DetProfile().X(), (float)mcsh.DetProfile().Y(), (float)mcsh.DetProfile().Z(), (float)mcsh.DetProfile().T() };
-	showernode.first_edep_pos = detprofile;
-	showernode.first_tpc_pos  = detprofile;
-	showernode.first_img_pos  = detprofile;
-	//_get_imgpos( detprofile, showernode.imgpos4, sce, false );
-	showernode.imgpos4 = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.first_edep_pos[0],
-												showernode.first_edep_pos[1],
-												showernode.first_edep_pos[2],
-												showernode.first_edep_pos[3],
-												true );
-	if ( showernode.imgpos4.size()==0 )
-	  showernode.imgpos4.resize(4,0);
+        //std::cout << "inf test: " << mcsh.DetProfile().X() << " " << std::isinf( mcsh.DetProfile().X() ) << std::endl;
+        std::vector<float> detprofile = { (float)mcsh.DetProfile().X(), (float)mcsh.DetProfile().Y(), (float)mcsh.DetProfile().Z(), (float)mcsh.DetProfile().T() };
+        showernode.first_edep_pos = detprofile;
+        showernode.first_tpc_pos  = detprofile;
+        showernode.first_img_pos  = detprofile;
+        //_get_imgpos( detprofile, showernode.imgpos4, sce, false );
+        showernode.imgpos4 = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.first_edep_pos[0],
+                              showernode.first_edep_pos[1],
+                              showernode.first_edep_pos[2],
+                              showernode.first_edep_pos[3],
+                              true );
+        if ( showernode.imgpos4.size()==0 )
+          showernode.imgpos4.resize(4,0);
 
-	if ( abs(showernode.pid)==11 ) {
-	  showernode.imgpos4_edep = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.start[0],
-												       showernode.start[1],
-												       showernode.start[2],
-												       showernode.start[3],
-												       true );
-	  if ( showernode.imgpos4_edep.size()==0 )
-	    showernode.imgpos4_edep.resize(4,0);
-	  
-	  showernode.first_edep_pos = showernode.start;
-	}
-	else {
-	  // photons
-	  showernode.imgpos4_edep = ublarcvapp::mctools::MCPos2ImageUtils::Get()->to_imagepos( showernode.first_edep_pos[0],
-											       showernode.first_edep_pos[1],
-											       showernode.first_edep_pos[2],
-											       showernode.first_edep_pos[3] );
-	  if ( showernode.imgpos4_edep.size()==0 ) {
-	    showernode.imgpos4_edep.resize(4,0);
-	  }
-	  else {
-	    showernode.imgpos4_edep[3] += 12.0; // hacky fix for photons
-	  }
-	}
-	
-	showernode.imgpos4_start = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.start[0],
-												      showernode.start[1],
-												      showernode.start[2],
-												      showernode.start[3],
-												      true );
-	if ( showernode.imgpos4_start.size()==0 ) {
-	  showernode.imgpos4_start.resize(4,0);
-	}
+        if ( abs(showernode.pid)==11 ) {
+          showernode.imgpos4_edep = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.start[0],
+                                    showernode.start[1],
+                                    showernode.start[2],
+                                    showernode.start[3],
+                                    true );
+          if ( showernode.imgpos4_edep.size()==0 )
+            showernode.imgpos4_edep.resize(4,0);
+          
+          showernode.first_edep_pos = showernode.start;
+        }
+        else {
+          // photons
+          showernode.imgpos4_edep = ublarcvapp::mctools::MCPos2ImageUtils::Get()->to_imagepos( showernode.first_edep_pos[0],
+                                  showernode.first_edep_pos[1],
+                                  showernode.first_edep_pos[2],
+                                  showernode.first_edep_pos[3] );
+          if ( showernode.imgpos4_edep.size()==0 ) {
+            showernode.imgpos4_edep.resize(4,0);
+          }
+          else {
+            showernode.imgpos4_edep[3] += 12.0; // hacky fix for photons
+          }
+        }
+        
+        showernode.imgpos4_start = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( showernode.start[0],
+                                    showernode.start[1],
+                                    showernode.start[2],
+                                    showernode.start[3],
+                                    true );
+        if ( showernode.imgpos4_start.size()==0 ) {
+          showernode.imgpos4_start.resize(4,0);
+        }
       }
       if ( showernode.origin==1 ) {
 	      // store nu particle
@@ -1829,8 +1831,8 @@ namespace mctools {
       }// end of loop over flow directions (2 of them)
     }//end of loop over planes
 
-    std::cout << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
-    std::cout << "  Number of spacepoints found from using larflow: " << pt_v.size() << std::endl;
+    LARCV_INFO() << "Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
+    LARCV_INFO() << "  Number of spacepoints found from using larflow: " << pt_v.size() << std::endl;
     
     // store the points into our storage vector, pos_vv, which we return.
     for (auto& pt_info : pt_v ) {
@@ -1862,8 +1864,11 @@ namespace mctools {
     // this is only for photons (electrons have a good start point based on node.start)
     std::vector<float> shower_start_pt;
     
-    if ( node.pid!=22)
+    if ( node.pid!=22 && abs(node.pid)!=11) {
+      // we only apply the following to energy deposits made by photons (pid=22) and electrons (pid=11)
+      // i.e. those producing EM showers
       return shower_start_pt; 
+    }
 
     // we must collect and scan the instance IDs related to the shower
     // int shower_aid = node.aid;
@@ -1927,12 +1932,14 @@ namespace mctools {
     }
 
     // use our interface to DBScan
+    LARCV_DEBUG() << "Clustering spacepoints" << std::endl;
     auto dbcluster_v = ublarcvapp::dbscan::DBScan::makeCluster3f( 0.3, 3, 50, data_v );
 
     // loop through the cluster and find the closest one
     // that qualifies in terms of size
     int icluster = -1;
     float closest_qualified_cluster_dist = 1.0e9;
+    std::vector<float> closest_pixsum_v;
     for (int i=0; i<(int)dbcluster_v.size(); i++) {
 
       // we calculate the pixel sum in each plane of each cluster.
@@ -1982,15 +1989,22 @@ namespace mctools {
 	        planes_passing++;
 	      }
       }
-      //std::cout << ")" << std::endl;
+      // LARCV_DEBUG() << "cluster[" << i << "] npoints=" << nhits 
+      //               << " dist-to-source=" << cluster_min_dist_to_source << " cm;"
+      //               << " plane MeV: (" << pixsum_v[0]*0.0162 << ", "
+      //               << pixsum_v[0]*0.0162 << ", "
+      //               << pixsum_v[2]*0.0162 << ")" 
+      //               << std::endl;
+      // LARCV_DEBUG() << "number of planes passing: " << planes_passing << std::endl;
       
       // check if cluster passes 'detectability criterion'
       // and, if so, is the closest cluster to the creation point of the photon
       if ( planes_passing>=2 && cluster_min_dist_to_source < closest_qualified_cluster_dist ) {
 	      closest_qualified_cluster_dist = cluster_min_dist_to_source;
 	      icluster = i;
+        closest_pixsum_v = pixsum_v;
       }
-    }//end of loop over all hits
+    }//end of loop over clusters
     
     // container to store our trunk points
     pointList trunk_pt_v;
@@ -2000,6 +2014,7 @@ namespace mctools {
       // we count this shower as unreconstructable.
       // we define a sentinal value for the starting energy deposition point    
       shower_start_pt = std::vector<float>{ -1.0, -1.0, -1.0 };
+      LARCV_DEBUG() << "No valid trunk cluster found." << std::endl;
     } 
     else  {
       // a valid cluster is found. store the points for this cluster
@@ -2025,8 +2040,14 @@ namespace mctools {
 	      }
 	      trunk_pt_v.push_back( xpt );
       }//end of loop over largest cluster points (by index)
+      LARCV_DEBUG() << "Defining observable trunk using cluster[" << icluster << "] " << std::endl;
+      LARCV_DEBUG() << "  npoints=" << largest_cluster.size() 
+                    << "  plane MeV: (" << closest_pixsum_v[0]*0.0162 << ", "
+                    << closest_pixsum_v[1]*0.0162 << ", "
+                    << closest_pixsum_v[2]*0.0162 << ")" 
+                    << std::endl;
       LARCV_DEBUG() << "  minimum dist to shower startpt: " << mindist << " cm" << std::endl;
-    }
+    }//end of else a valid shower cluster found
     
     LARCV_INFO() << "  startpt: (" << shower_start_pt[0] << ","
 	      << shower_start_pt[1] << ","
@@ -2061,6 +2082,12 @@ namespace mctools {
     const int nplanes = adc_v.size();
     std::vector<float> plane_pixsum_v( nplanes, 0.0 );
     std::vector< PixelSet_t > plane_pixsets_v = _getPlanePixelSetsAndPixelSums( trunk_pt_v, plane_pixsum_v );
+    if ( plane_pixsum_v.size()>=3 ) {
+      LARCV_INFO() << "  pixel sums MeV: (" << plane_pixsum_v[0]*0.0162 << ", "
+                  << plane_pixsum_v[1]*0.0162 << ", "
+                  << plane_pixsum_v[2]*0.0162 << ") "
+                  << std::endl;
+    }
 
     // making image masks
     std::vector< larcv::Image2D > trunk_planeimg_v;
@@ -2102,9 +2129,8 @@ namespace mctools {
       larcv::Image2D trunk_img( trunk_meta );
       trunk_img.paint(0.0);
 
-      LARCV_DEBUG() << "Defined plane bounding box for trunk" << std::endl;
-      LARCV_DEBUG() << trunk_meta.dump() << std::endl;
-      LARCV_DEBUG() << "original meta: " << meta.dump() << std::endl;
+      LARCV_DEBUG() << "Defined plane bounding box for trunk: \n" << trunk_meta.dump() << std::endl;
+      LARCV_DEBUG() << "original meta: \n " << meta.dump() << std::endl;
 
       // loop over the pixels and fill the mask
       for (auto& pix : pixset ) {
@@ -2141,7 +2167,7 @@ namespace mctools {
     if ( _true_photon_v.size()!=_true_photon_plane_trunkimg_vv.size() )
       LARCV_ERROR() << "size of the true photon 3d point container is not the same as the trunk image mask container" << std::endl;
     
-    std::cout << "========================================================END======" << std::endl;
+    //std::cout << "========================================================END======" << std::endl;
     
     return shower_start_pt;
     
