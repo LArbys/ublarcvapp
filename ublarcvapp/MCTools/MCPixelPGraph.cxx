@@ -2080,6 +2080,7 @@ namespace mctools {
 
     // making pixellist
     const int nplanes = adc_v.size();
+    bool valid_imagemask = true;
     std::vector<float> plane_pixsum_v( nplanes, 0.0 );
     std::vector< PixelSet_t > plane_pixsets_v = _getPlanePixelSetsAndPixelSums( trunk_pt_v, plane_pixsum_v );
     if ( plane_pixsum_v.size()>=3 ) {
@@ -2119,10 +2120,20 @@ namespace mctools {
       auto const& meta = img.meta();
       int colcount = max_col-min_col+1;
       int rowcount = max_row-min_row+1;
+      if (colcount<=0 or rowcount<=0) {
+	// invalid bounding box
+	colcount = 1;
+	rowcount = 1;
+	min_col = 0;
+	min_row = 0;
+	max_col = 1;
+	max_row = 1;
+      }
       float width  = float( colcount );
       float height = meta.pixel_height()*rowcount;
       float origin_x = float( meta.pos_x( min_col ) );
       float origin_y = float( meta.pos_y( min_row ) );
+	
       LARCV_DEBUG() << "min (col,row)=(" << min_col << "," << min_row << ")" << std::endl;
       LARCV_DEBUG() << "min (x,y)=(" << origin_x << "," << origin_y << ")" << std::endl;      
       larcv::ImageMeta trunk_meta( width, height, rowcount, colcount, origin_x, origin_y, meta.plane() );
