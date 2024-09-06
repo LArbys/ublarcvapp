@@ -7,8 +7,8 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 
 # CFLAGS
-SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
-SET(CMAKE_CXX_FLAGS "-Wall -fPIC -pedantic -fopenmp -mtune=native")
+#SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
+#SET(CMAKE_CXX_FLAGS "-Wall -fPIC -pedantic -fopenmp -mtune=native")
 
 ## Dependencies
 

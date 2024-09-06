@@ -64,6 +64,7 @@ namespace mctools {
                      const std::vector<larcv::Image2D>& segment_v,
                      const std::vector<larcv::Image2D>& instance_v,
                      const std::vector<larcv::Image2D>& ancestor_v,
+		     const std::vector<larcv::Image2D>& larflow_v,
                      const larlite::event_mcshower& shower_v,
                      const larlite::event_mctrack&  track_v,
                      const larlite::event_mctruth&  mctruth_v );
@@ -254,9 +255,11 @@ namespace mctools {
 						const std::vector<larcv::Image2D>& ancestor_v,
 						const std::vector<larcv::Image2D>& adc_v,
 						const std::vector<larcv::Image2D>& larflow_v );
-    std::vector<float> getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist );
+    std::vector<float> getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist,
+						       const std::vector<larcv::Image2D>& adc_v );
     std::vector< MCPixelPGraph::PixelSet_t > _getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
-									    std::vector<float>& pixsum_v );
+									     const std::vector<larcv::Image2D>& adc_v,
+									     std::vector<float>& pixsum_v );
 
     //* Functions to get info about the true photon trunk energy deposits and pixels */
   public:

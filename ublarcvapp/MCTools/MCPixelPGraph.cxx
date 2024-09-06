@@ -56,24 +56,9 @@ namespace mctools {
                 ev_seg->Image2DArray(),
                 ev_ins->Image2DArray(),
                 ev_anc->Image2DArray(),
+		ev_larflow->Image2DArray(),
                 *ev_mcshower, *ev_mctrack, *ev_mctruth );
 
-    // next we fix photons
-    for ( auto& node : node_v ) {
-      if ( node.pid==22 || abs(node.pid)==11 ) {
-	      std::vector<float > startpt_info
-	       = fixingPhotonStartPoints( node,
-				                            ev_ins->as_vector(), ev_anc->as_vector(),
-				                            ev_adc->as_vector(), ev_larflow->as_vector() );
-	      // update edep position of the node for photons only
-        if ( node.pid==22 ) {
-          for (int v=0; v<4; v++) {
-            node.first_edep_pos[v] = startpt_info[v];
-            node.imgpos4_edep[v]   = startpt_info[4+v];
-          }
-        }
-      }
-    }
   }
 
   /**
@@ -100,6 +85,7 @@ namespace mctools {
                                   const std::vector<larcv::Image2D>& segment_v,
                                   const std::vector<larcv::Image2D>& instance_v,
                                   const std::vector<larcv::Image2D>& ancestor_v,
+				  const std::vector<larcv::Image2D>& larflow_v,
                                   const larlite::event_mcshower& shower_v,
                                   const larlite::event_mctrack&  track_v,
                                   const larlite::event_mctruth&  mctruth_v )
@@ -114,6 +100,24 @@ namespace mctools {
     
     std::vector<float> threshold_v(adc_v.size(),10.0);
     _scanPixelData( adc_v, segment_v, instance_v, ancestor_v, threshold_v );
+    
+    // next we fix photons
+    for ( auto& node : node_v ) {
+      if ( node.pid==22 || abs(node.pid)==11 ) {
+	std::vector<float > startpt_info
+	  = fixingPhotonStartPoints( node,
+				     instance_v, ancestor_v,
+				     adc_v, larflow_v );
+	// update edep position of the node for photons only
+        if ( node.pid==22 ) {
+          for (int v=0; v<4; v++) {
+            node.first_edep_pos[v] = startpt_info[v];    // set the location of the starting edep position (detectort coordinates)
+            node.imgpos4_edep[v]   = startpt_info[4+v];  // set the location ion the image
+          }
+        }
+      }
+    }
+    
   }
   
   /**
@@ -1730,6 +1734,7 @@ namespace mctools {
         int ilarflow_image_index = 2*p+iflowdir;
         // use the index to get the image
 	      auto& flowimg = larflow_v.at(ilarflow_image_index);
+
       
         // loop over the pixels for the given particle
 	      for (size_t ipix=0; ipix<npix; ipix++) {
@@ -1750,13 +1755,23 @@ namespace mctools {
             LARCV_WARNING() << "Tried to access larflow pixel out-of-bounds: "
                             << "(wire,tick)=(" << wire << "," << tick << ")" 
                             << std::endl;
+		  LARCV_WARNING() << "FlowImage[" << ilarflow_image_index << "] meta: " << flowimg.meta().dump() << std::endl;	    
 	          continue;
 	        }
 	  
           // if we get here, this is a valid pixel inside the flow image
           // the map from the current plane's wire to the target plane's wire
           // is stored as the shift required to get to the correct wire.
-	        float pixflow = flowimg.pixel( row, col );
+	        float pixflow = -999;
+		try {
+		  pixflow = flowimg.pixel( row, col );
+		}
+		catch(...) {
+		  pixflow = -999;
+		  LARCV_WARNING() << "Tried to access larflow pixel out-of-bounds: "
+				  << "(wire,tick)=(" << wire << "," << tick << ")" 
+				  << std::endl;
+		}
 	        // std::cout << "building flow pixel: plane[" << p << "] (" << wire << "," << tick << ") "
 	        // 	    << "(" << col << "," << row << ") : flow=" << pixflow << std::endl;
 	  
@@ -1869,7 +1884,9 @@ namespace mctools {
       // i.e. those producing EM showers
       return shower_start_pt; 
     }
-
+    LARCV_INFO() << "================================================================" << std::endl;
+    LARCV_INFO() << " START " << std::endl;
+    
     // we must collect and scan the instance IDs related to the shower
     // int shower_aid = node.aid;
     // int shower_mid = node.mid;
@@ -1882,7 +1899,7 @@ namespace mctools {
     // We only build 3d points coming from pixels associated with the node.
     pointList pos_vv = makeNode3DpointsFromLArFlowTruth( node, adc_v, larflow_v );
 
-    LARCV_INFO() << "================================================================" << std::endl;
+
     LARCV_INFO() << "  Node[" << node.nodeidx << "] tid=" << node.tid << " pid=" << node.pid << std::endl;
     LARCV_INFO() << "  Number of spacepoints found from using larflow: " << pos_vv.size() << std::endl;
     
@@ -1893,7 +1910,7 @@ namespace mctools {
 										    node.start[2],
 										    node.start[3],
 										    true, true );
-    LARCV_DEBUG() << "  Find closest cluster to start point: (" << start_reco_pt[0] << ","
+    LARCV_INFO() << "  Find closest cluster to start point: (" << start_reco_pt[0] << ","
 	      << start_reco_pt[1] << ", "
 	      << start_reco_pt[2] << ", "
 	      << start_reco_pt[3] << " usec)"
@@ -1932,15 +1949,16 @@ namespace mctools {
     }
 
     // use our interface to DBScan
-    LARCV_DEBUG() << "Clustering spacepoints" << std::endl;
     auto dbcluster_v = ublarcvapp::dbscan::DBScan::makeCluster3f( 0.3, 3, 50, data_v );
+    LARCV_INFO() << "Clustering spacepoints. Num clusters=" << dbcluster_v.size() << std::endl;    
 
     // loop through the cluster and find the closest one
     // that qualifies in terms of size
     int icluster = -1;
     float closest_qualified_cluster_dist = 1.0e9;
     std::vector<float> closest_pixsum_v;
-    for (int i=0; i<(int)dbcluster_v.size(); i++) {
+    for (int i=0; i<(int)dbcluster_v.size()-1; i++) {
+      // (we skip the last noise cluster)
 
       // we calculate the pixel sum in each plane of each cluster.
       // (this is costly -- if it starts to be too slow -- we will need some thresholding with easy measures)
@@ -1952,6 +1970,7 @@ namespace mctools {
 
       // find closest distance to photon start/creation point
       float cluster_min_dist_to_source = 1e9;
+      std::vector<float> closest_pt(3,0.0);
 
       // extract the points for the given cluster (with index i)
       pointList cluster_pt_v;
@@ -1967,12 +1986,14 @@ namespace mctools {
 	        dist += dx*dx;
 	      }
 	      dist = sqrt(dist);
-	      if ( dist < cluster_min_dist_to_source )
+	      if ( dist < cluster_min_dist_to_source ) {
 	        cluster_min_dist_to_source = dist;
+		closest_pt = xpt;
+	      }
       }//end of loop over hits
       
       // get the pixel sum of the cluster
-      std::vector<float> pixsum_v = getPlanePixelSumsFromPointList( cluster_pt_v );
+      std::vector<float> pixsum_v = getPlanePixelSumsFromPointList( cluster_pt_v, adc_v );
       
       // another threshold: one plane must pass 10 MeV threshol
       // using MeV = 0.00162*pixsum, from matt's conversion formula
@@ -1985,17 +2006,19 @@ namespace mctools {
 	      //   std::cout << ", ";
         // enforce an energy threshold
         // (note: is this too high? especially since we must see that amount in 2 of 3 planes)
-	      if ( MeV>20.0 ) {
+	      if ( MeV>5.0 ) {
 	        planes_passing++;
 	      }
       }
-      // LARCV_DEBUG() << "cluster[" << i << "] npoints=" << nhits 
-      //               << " dist-to-source=" << cluster_min_dist_to_source << " cm;"
-      //               << " plane MeV: (" << pixsum_v[0]*0.0162 << ", "
-      //               << pixsum_v[0]*0.0162 << ", "
-      //               << pixsum_v[2]*0.0162 << ")" 
-      //               << std::endl;
-      // LARCV_DEBUG() << "number of planes passing: " << planes_passing << std::endl;
+      if (planes_passing>=1 && cluster_min_dist_to_source<100.0) {
+	LARCV_INFO() << "cluster[" << i << "] npoints=" << nhits 
+		     << " dist-to-source=" << cluster_min_dist_to_source << " cm;"
+		     << " plane MeV: (" << pixsum_v[0]*0.0162 << ", "
+		     << pixsum_v[1]*0.0162 << ", "
+		     << pixsum_v[2]*0.0162 << ")"
+		     << " pt=(" << closest_pt[0] << "," << closest_pt[1] << "," << closest_pt[2] << ")"
+		     << "nplanes passing: " << planes_passing << std::endl;
+      }
       
       // check if cluster passes 'detectability criterion'
       // and, if so, is the closest cluster to the creation point of the photon
@@ -2062,7 +2085,7 @@ namespace mctools {
 									      shower_start_pt[1],
 									      shower_start_pt[2],
 									      t_ns );
-    LARCV_INFO() << "  imgpos: (" << shower_imgpos4[0] << ", "
+    LARCV_INFO() << "  shower imgpos: (" << shower_imgpos4[0] << ", "
 	      << shower_imgpos4[1] << ", "
 	      << shower_imgpos4[2] << ", "
 	      << shower_imgpos4[3] << " ticks )"
@@ -2082,7 +2105,7 @@ namespace mctools {
     const int nplanes = adc_v.size();
     bool valid_imagemask = true;
     std::vector<float> plane_pixsum_v( nplanes, 0.0 );
-    std::vector< PixelSet_t > plane_pixsets_v = _getPlanePixelSetsAndPixelSums( trunk_pt_v, plane_pixsum_v );
+    std::vector< PixelSet_t > plane_pixsets_v = _getPlanePixelSetsAndPixelSums( trunk_pt_v, adc_v, plane_pixsum_v );
     if ( plane_pixsum_v.size()>=3 ) {
       LARCV_INFO() << "  pixel sums MeV: (" << plane_pixsum_v[0]*0.0162 << ", "
                   << plane_pixsum_v[1]*0.0162 << ", "
@@ -2244,7 +2267,7 @@ namespace mctools {
     // so we must mark which pixels we used
     Node_t* pnode = findTrackID( trackid );
     if ( pnode==nullptr ) {
-      std::cout << "[MCPixelPGraph::getTruePhotonTrunk3DPoints] [WARNING]: did not find particle Node pointer for "
+      LARCV_ERROR() << ": did not find particle Node pointer for "
           << " trackid=" << pnode->tid << ". "
           << "Returning emptry point list." 
           << std::endl;
@@ -2254,7 +2277,12 @@ namespace mctools {
     
     auto it_pixsum = _nodeidx_to_photonlist_index_v.find( pnode->nodeidx );
     if ( it_pixsum==_nodeidx_to_photonlist_index_v.end() ) {
-      LARCV_ERROR() << "Did not find true photon trunk info for trackid=" << trackid << std::endl;
+      LARCV_NORMAL() << "Did not find true photon trunk info for trackid=" << trackid << std::endl;
+      for ( auto& it_x : _nodeidx_to_photonlist_index_v ) {
+	pnode = &(node_v.at( it_x.first ));
+	LARCV_NORMAL() << "  [nodeidx=" << it_x.first << ", trackid=" << pnode->tid << "] photonlist index=" << it_x.second << std::endl;
+      }
+      LARCV_ERROR() << "Stopping on error" << std::endl;
     }
 
     std::vector<float> pixsum_v = _true_photon_plane_pixsum_vv.at( it_pixsum->second );
@@ -2319,14 +2347,12 @@ namespace mctools {
    * @brief Does the calculation to get the pixels in each plane corresponding to 3D points of true shower trunk
    */
   std::vector<float>
-  MCPixelPGraph::getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist )
+  MCPixelPGraph::getPlanePixelSumsFromPointList( const std::vector< std::vector<float> >& pointlist,
+						 const std::vector< larcv::Image2D >& adc_v )
   {
     std::vector<float> pixsum_v;
-    
-    if ( !ev_adc )
-      return pixsum_v;
-  
-    const int nplanes = ev_adc->Image2DArray().size();
+      
+    const int nplanes = adc_v.size();
     const int dpix = 1;
     std::vector<int> out_of_imgpix(nplanes,0);
     // allocate space to the pixsum
@@ -2334,7 +2360,7 @@ namespace mctools {
     
     for (int p=0; p<nplanes; p++) {
       
-      auto const& img = ev_adc->Image2DArray().at(p);
+      auto const& img = adc_v.at(p);
 
       // this lists (row,col) combinations we gathered pixels from
       std::set< std::pair<int,int> > _pix_used;
@@ -2402,10 +2428,13 @@ namespace mctools {
    */
   std::vector< MCPixelPGraph::PixelSet_t >
   MCPixelPGraph::_getPlanePixelSetsAndPixelSums( const MCPixelPGraph::pointList& pt_v,
-						 std::vector<float>& pixsum_v ) {
+						 const std::vector<larcv::Image2D>& adc_v,
+						 std::vector<float>& pixsum_v )
+  {
+						 
 
     std::vector< MCPixelPGraph::PixelSet_t > plane_pixsets_v;
-    const int nplanes = ev_adc->Image2DArray().size();
+    const int nplanes = adc_v.size();
     const int dpix = 2;
 
     std::vector<int> out_of_imgpix(nplanes,0);
@@ -2415,7 +2444,7 @@ namespace mctools {
 
     for (int p=0; p<nplanes; p++) {
 
-      auto const& img = ev_adc->Image2DArray().at(p);
+      auto const& img = adc_v.at(p);
 
       // this lists (row,col) combinations we gathered pixels from
       PixelSet_t _pix_used;
