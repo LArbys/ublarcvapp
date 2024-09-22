@@ -104,17 +104,25 @@ namespace mctools {
     // next we fix photons
     for ( auto& node : node_v ) {
       if ( node.pid==22 || abs(node.pid)==11 ) {
-	std::vector<float > startpt_info
-	  = fixingPhotonStartPoints( node,
+	      std::vector<float > startpt_info
+	        = fixingPhotonStartPoints( node,
 				     instance_v, ancestor_v,
 				     adc_v, larflow_v );
-	// update edep position of the node for photons only
+        // update edep position of the node for photons only
         if ( node.pid==22 ) {
           for (int v=0; v<4; v++) {
             node.first_edep_pos[v] = startpt_info[v];    // set the location of the starting edep position (detectort coordinates)
             node.imgpos4_edep[v]   = startpt_info[4+v];  // set the location ion the image
           }
         }
+        // if ( node.origin==2 && abs(node.pid)==11 ) {
+        //   // the cosmics timing are messed up (at least corsika samples are?)
+        //   for (int v=0; v<4; v++) {
+        //     node.start[v] = startpt_info[v];    // set the location of the starting edep position (detectort coordinates)
+        //     node.first_edep_pos[v] = startpt_info[v];    // set the location of the starting edep position (detectort coordinates)
+        //     node.imgpos4_edep[v]   = startpt_info[4+v];  // set the location ion the image
+        //   }
+        // }
       }
     }
     
@@ -157,7 +165,7 @@ namespace mctools {
     clear();
     
     node_v.clear();
-    node_v.reserve( shower_v.size()+track_v.size() );
+    node_v.reserve( shower_v.size()+track_v.size()+100 );
 
     // Create ROOT node
     Node_t neutrino ( node_v.size(), -1, 0, 0, -1 );
@@ -257,52 +265,52 @@ namespace mctools {
 	
 
       if ( mct.size()>=1 ) {
-	tracknode.first_edep_pos[0] = mct[0].X();
-	tracknode.first_edep_pos[1] = mct[0].Y();
-	tracknode.first_edep_pos[2] = mct[0].Z();
-	tracknode.first_edep_pos[3] = mct[0].T();
+        tracknode.first_edep_pos[0] = mct[0].X();
+        tracknode.first_edep_pos[1] = mct[0].Y();
+        tracknode.first_edep_pos[2] = mct[0].Z();
+        tracknode.first_edep_pos[3] = mct[0].T();
       
-	// first TPC point
-	std::vector<float> recopos(4,0);
-	std::vector<float> edep_imgpos(4,0);		
-	std::vector<float> xyz(4,0);
-	bool intpc = false;
-	bool inimage = false;
-	bool first_step = false;
-	for (auto const& step : mct ) {
-	  xyz[0] = (float)step.X();
-	  xyz[1] = (float)step.Y();
-	  xyz[2] = (float)step.Z();
-	  xyz[3] = (float)step.T();
+        // first TPC point
+        std::vector<float> recopos(4,0);
+        std::vector<float> edep_imgpos(4,0);		
+        std::vector<float> xyz(4,0);
+        bool intpc = false;
+        bool inimage = false;
+        bool first_step = false;
+        for (auto const& step : mct ) {
+          xyz[0] = (float)step.X();
+          xyz[1] = (float)step.Y();
+          xyz[2] = (float)step.Z();
+          xyz[3] = (float)step.T();
 
-	  if ( !first_step ) {
-	    first_step = true;
-	    tracknode.first_edep_pos = xyz;
-	  }
-	  
-	  if ( ( xyz[0]>0.0 && xyz[0]<tpc_x )
-	       && ( fabs(xyz[1])<tpc_y )
-	       && ( xyz[2]>0 && xyz[2]<tpc_z ) ) {
+          if ( !first_step ) {
+            first_step = true;
+            tracknode.first_edep_pos = xyz;
+          }
+          
+          if ( ( xyz[0]>0.0 && xyz[0]<tpc_x )
+              && ( fabs(xyz[1])<tpc_y )
+              && ( xyz[2]>0 && xyz[2]<tpc_z ) ) {
 
-	    if ( intpc==false ) {
-	      intpc = true;
-	      tracknode.first_tpc_pos = xyz;
-	    }
+            if ( intpc==false ) {
+              intpc = true;
+              tracknode.first_tpc_pos = xyz;
+            }
 
-	    recopos = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( xyz[0], xyz[1], xyz[2], xyz[3], true );
-	    if ( !inimage && recopos[3]>2400.0 && recopos[3]<2400+1008*6 ) {
-	      // in the image
-	      inimage = true;
-	      tracknode.first_img_pos = xyz;
-	      tracknode.imgpos4 = recopos;
-	      tracknode.imgpos4_edep = recopos;
-	    }
-	  }
-	  if ( intpc && inimage ) {
-	    // no need to keep searching
-	    break;
-	  }
-	}//end of mcstep loop
+            recopos = ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( xyz[0], xyz[1], xyz[2], xyz[3], true );
+            if ( !inimage && recopos[3]>2400.0 && recopos[3]<2400+1008*6 ) {
+              // in the image
+              inimage = true;
+              tracknode.first_img_pos = xyz;
+              tracknode.imgpos4 = recopos;
+              tracknode.imgpos4_edep = recopos;
+            }
+          }
+          if ( intpc && inimage ) {
+            // no need to keep searching
+            break;
+          }
+        }//end of mcstep loop
       }//end of if more than 0 mcsteps
 
       node_v.emplace_back( std::move(tracknode) );
@@ -317,6 +325,10 @@ namespace mctools {
                     << " mid=" << mcsh.MotherTrackID()
                     << " aid=" << mcsh.AncestorTrackID()
                     << " pid=" << mcsh.PdgCode()
+                    << " start=(" << (float)mcsh.Start().X() << "," 
+                    << (float)mcsh.Start().Y() << "," 
+                    << (float)mcsh.Start().Z() << ","
+                    << " t=" << (float)mcsh.Start().T() << ")"
                     << std::endl;
       
       //if ( mcsh.Origin()==1 ) {
@@ -685,7 +697,7 @@ namespace mctools {
       auto it_showerdaughter = _shower_daughter2mother.find( trackid );
       if ( it_showerdaughter!=_shower_daughter2mother.end() ) {
         // found an id
-        LARCV_DEBUG() << "  found map to mother: " << it_showerdaughter->second << std::endl;
+        //LARCV_DEBUG() << "  found map to mother: " << it_showerdaughter->second << std::endl;
         dummy.tid = it_showerdaughter->second;
       }
       else {
@@ -694,8 +706,8 @@ namespace mctools {
       }
       // with the mother shower's trackid, try to find the node again
       it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
-      if ( it!=node_v.end() )
-        LARCV_DEBUG() << "  mother id maps to existing node" << std::endl;
+      //if ( it!=node_v.end() )
+      //  LARCV_DEBUG() << "  mother id maps to existing node" << std::endl;
     }
     
     if ( it==node_v.end() || it->tid!=dummy.tid ) { 
@@ -721,7 +733,8 @@ namespace mctools {
    * @param[in] node Note_t object to make info for.
    *
    */
-  std::string MCPixelPGraph::strNodeInfo( const Node_t& node ) {
+  std::string MCPixelPGraph::strNodeInfo( const Node_t& node ) 
+  {
 
     int hasmother = ( node.mother ) ? 1 : 0;
     
@@ -749,10 +762,10 @@ namespace mctools {
     
     if ( node.first_edep_pos.size()>=4 )
       ss << "    edep-tpcpos(x,y,z,t)=(" << node.first_edep_pos[0] << ","
-	 << node.first_edep_pos[1] << ","
-	 << node.first_edep_pos[2] << ","
-	 << node.first_edep_pos[3]*1.0e-3
-	 << " us)" << std::endl;
+          << node.first_edep_pos[1] << ","
+          << node.first_edep_pos[2] << ","
+          << node.first_edep_pos[3]*1.0e-3
+          << " us)" << std::endl;
     
     if ( node.imgpos4.size()>=4 )
       ss << "    tpc-imgpos4(u,v,y,tick)=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << " tick) " << std::endl;
@@ -884,8 +897,8 @@ namespace mctools {
           // if ( adc<threshold )
           //   continue;
 
-	  if ( adc>=threshold )
-	    nabove_thresh[p]++;
+          if ( adc>=threshold )
+            nabove_thresh[p]++;
           
           // above threshold, now lets find instance or ancestor
           int tid = 0;
@@ -914,33 +927,33 @@ namespace mctools {
             continue;                                    
           }
 
-	  // shower pixels have a negative track ID for some reason
-	  // does this always occur?
+          // shower pixels have a negative track ID for some reason
+          // does this always occur?
           if ( tid<0 && (seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma) ) {
             tid *= -1;
-	    num_neg_shower_ids++;
-	  }
+	          num_neg_shower_ids++;
+	        }
 
-	  bool has_id_label = false;
-          if ( tid>0 || aid>0 ) {
-            nabove_thresh_withlabel[p]++;
-	    has_id_label = true;
-	  }
+          bool has_id_label = false;
+                if ( tid>0 || aid>0 ) {
+                  nabove_thresh_withlabel[p]++;
+            has_id_label = true;
+          }
 	  
           if ( aid>0 && (seg==(int)larcv::kROIEminus || seg==(int)larcv::kROIGamma) ) {
             shower_ancestor_ids.insert( aid );
           }
 
-	  if ( !has_id_label ) {
-	    // can't truth associate this pixel to any node
-	    continue;
-	  }
+          if ( !has_id_label ) {
+            // can't truth associate this pixel to any node
+            continue;
+          }
 
           Node_t* node = nullptr;
 
           if ( tid>0 ) {
             // first we use the instance ID
-	    // this implicitly uses the _shower_daughter2mother map we filled earlier.
+	          // this implicitly uses the _shower_daughter2mother map we filled earlier.
             node = findTrackID( tid );
             if ( node==nullptr && adc>10.0 )
               LARCV_DEBUG() << "  no node for above threshold charge-pixel tid=" << tid << std::endl;
@@ -950,15 +963,15 @@ namespace mctools {
           
           // use ancestor if we could not find the node
           if ( !node && aid>0 ) {
-	    // this implicitly uses the _shower_daughter2mother map we filled earlier.	    
+	          // this implicitly uses the _shower_daughter2mother map we filled earlier.	    
             node = findTrackID( aid );
             if ( node && node->tid!=aid )
               node = nullptr;
           }
 
           if ( node ) {
-	    // if the address is not null, this means we found a particle node
-	    // store the pixel.
+	          // if the address is not null, this means we found a particle node
+	          // store the pixel.
 	    
             // if ( node->tid!=tid && node->aid!=aid ) {
             //   std::cout << "pixel assigned without matching tid or aid exactly: "
@@ -1209,7 +1222,7 @@ namespace mctools {
       std::sort( dlist.begin(), dlist.end() );
       for (auto const& daughterid : dlist ) {
         _shower_daughter2mother[daughterid]= showerid;
-        LARCV_DEBUG() << "  " << daughterid << " -> " << showerid << std::endl;
+        //LARCV_DEBUG() << "  " << daughterid << " -> " << showerid << std::endl;
       }
     }
     LARCV_INFO() << "Num entries in daughter2mother map: " << _shower_daughter2mother.size() << std::endl;
@@ -1988,7 +2001,7 @@ namespace mctools {
 	      dist = sqrt(dist);
 	      if ( dist < cluster_min_dist_to_source ) {
 	        cluster_min_dist_to_source = dist;
-		closest_pt = xpt;
+		      closest_pt = xpt;
 	      }
       }//end of loop over hits
       
@@ -2011,13 +2024,13 @@ namespace mctools {
 	      }
       }
       if (planes_passing>=1 && cluster_min_dist_to_source<100.0) {
-	LARCV_INFO() << "cluster[" << i << "] npoints=" << nhits 
-		     << " dist-to-source=" << cluster_min_dist_to_source << " cm;"
-		     << " plane MeV: (" << pixsum_v[0]*0.0162 << ", "
-		     << pixsum_v[1]*0.0162 << ", "
-		     << pixsum_v[2]*0.0162 << ")"
-		     << " pt=(" << closest_pt[0] << "," << closest_pt[1] << "," << closest_pt[2] << ")"
-		     << "nplanes passing: " << planes_passing << std::endl;
+        LARCV_INFO() << "cluster[" << i << "] npoints=" << nhits 
+              << " dist-to-source=" << cluster_min_dist_to_source << " cm;"
+              << " plane MeV: (" << pixsum_v[0]*0.0162 << ", "
+              << pixsum_v[1]*0.0162 << ", "
+              << pixsum_v[2]*0.0162 << ")"
+              << " pt=(" << closest_pt[0] << "," << closest_pt[1] << "," << closest_pt[2] << ")"
+              << "nplanes passing: " << planes_passing << std::endl;
       }
       
       // check if cluster passes 'detectability criterion'
@@ -2144,13 +2157,13 @@ namespace mctools {
       int colcount = max_col-min_col+1;
       int rowcount = max_row-min_row+1;
       if (colcount<=0 or rowcount<=0) {
-	// invalid bounding box
-	colcount = 1;
-	rowcount = 1;
-	min_col = 0;
-	min_row = 0;
-	max_col = 1;
-	max_row = 1;
+        // invalid bounding box
+        colcount = 1;
+        rowcount = 1;
+        min_col = 0;
+        min_row = 0;
+        max_col = 1;
+        max_row = 1;
       }
       float width  = float( colcount );
       float height = meta.pixel_height()*rowcount;
