@@ -3,6 +3,7 @@
 #include "larlite/LArUtil/DetectorProperties.h"
 #include "larlite/LArUtil/LArProperties.h"
 #include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/InvalidWireError.h"
 
 namespace ublarcvapp {
 namespace mctools {
@@ -98,12 +99,21 @@ namespace mctools {
     vpos[2] = z;
     //std::cout << "vpos: " << vpos[0] << " " << vpos[1] << " " << vpos[2] << std::endl;
 
+    // make sure pos is inside the tpc
+
+
     std::vector<float> imgpos(4,0);
     if ( std::fabs(vpos[1])>116.5 || vpos[2]<0.0 || vpos[2]>1036.0 ) 
       return imgpos;
     
     for (int p=0; p<3; p++) {
-      float wire = (float)larutil::Geometry::GetME()->NearestWire( vpos, p );
+      float wire = 0;
+      try {
+        wire = (float)larutil::Geometry::GetME()->NearestWire( vpos, p );
+      }
+      catch (larutil::InvalidWireError& err) {
+        wire = err.better_wire_number;
+      }
       imgpos[p] = wire;
     }
     float tickx = vpos[0]/v_cm_per_us/us_per_tick + 3200.0;
@@ -131,7 +141,13 @@ namespace mctools {
     //const float cm_per_tick = ::larutil::LArProperties::GetME()->DriftVelocity()*0.5;
     //float tick = ( recopos[3]-4.050 )/0.5 + recopos[0]/cm_per_tick + 3200.0;
     for (int p=0; p<3; p++) {
-      float wire = (float)larutil::Geometry::GetME()->NearestWire( vpos, p );
+      float wire = 0.0;
+      try {
+        wire = (float)larutil::Geometry::GetME()->NearestWire( vpos, p );
+      }
+      catch (larutil::InvalidWireError& err) {
+        wire = err.better_wire_number;
+      }
       imgpos[p] = wire;
     }
 	
