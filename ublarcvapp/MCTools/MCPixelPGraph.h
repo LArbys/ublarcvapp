@@ -93,6 +93,8 @@ namespace mctools {
       std::vector<int>      daughter_idx_v; // daughter node indices in node_v
       std::vector<Node_t*>  daughter_v;     // pointer to daughters 
       std::vector< std::vector<int> > pix_vv; // pixels in each plane. pixels stored in (tick,wire) coordinates
+      std::vector< std::vector<float> > pixval_vv; // pixel values in each plane, aligned with pix_vv 
+      std::vector<float> pixsum_v; // sum of pixel values in each plane
       std::vector<float> start;   //< (x,y,z,t) before sce, true start of particle
       std::vector<float> first_edep_pos; //< (x,y,z,t) before sce, first step that leaves edep in cryostat
       std::vector<float> first_tpc_pos;  //< (x,y,z,t) before sce, first step inside the TPC, visible in the image
@@ -101,6 +103,7 @@ namespace mctools {
       std::vector<float> imgpos4_edep; //< (x,y,z,tick) after sce // the image position corresponding to the first_edep_pos
       std::vector<float> imgpos4_start; //< (x,y,z,tick) after sce // the image position corresponding to the start pos after SCE
       std::vector< std::vector<float> > plane_bbox_twHW_vv; /// bounding box for pixels in each plane
+    
       int origin; // 1=neutrino, 2=cosmic, 0=unassigned, -1=unassigned
 
       Node_t()

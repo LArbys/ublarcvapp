@@ -768,15 +768,29 @@ namespace mctools {
           << " us)" << std::endl;
     
     if ( node.imgpos4.size()>=4 )
-      ss << "    tpc-imgpos4(u,v,y,tick)=(" << node.imgpos4[0] << "," << node.imgpos4[1] << "," << node.imgpos4[2] << "," << node.imgpos4[3] << " tick) " << std::endl;
+      ss << "    tpc-imgpos4(u,v,y,tick)=(" << node.imgpos4[0] << "," 
+         << node.imgpos4[1] << "," 
+         << node.imgpos4[2] << "," 
+         << node.imgpos4[3] << " tick) " << std::endl;
     
     if (node.imgpos4_edep.size()>=4)
-      ss << "    edep-imgpos4(u,v,y,tick)=(" << node.imgpos4_edep[0] << "," << node.imgpos4_edep[1] << "," << node.imgpos4_edep[2] << "," << node.imgpos4_edep[3] << " tick) " << std::endl;
+      ss << "    edep-imgpos4(u,v,y,tick)=(" << node.imgpos4_edep[0] << "," 
+         << node.imgpos4_edep[1] << "," 
+         << node.imgpos4_edep[2] << "," 
+         << node.imgpos4_edep[3] << " tick) " 
+         << std::endl;
     
     ss << "    npixs=(";
     for ( size_t i=0; i<node.pix_vv.size(); i++ ) {
       ss << node.pix_vv[i].size()/2;
       if ( i+1<node.pix_vv.size() ) ss << ", ";      
+    }
+    ss << ")";
+    ss << std::endl;
+
+    ss << "    pixelsum=(";
+    for ( size_t i=0; i<node.pixsum_v.size(); i++ ) {
+      ss << node.pixsum_v[i] << ", ";      
     }
     ss << ")";
     ss << std::endl;
@@ -858,8 +872,11 @@ namespace mctools {
     // loop through nodes and setup pixel arrays    
     for (auto& node : node_v ) {
       node.pix_vv.resize(_nplanes);
+      node.pixval_vv.resize(_nplanes);
+      node.pixsum_v.resize(_nplanes,0.0);
       for ( size_t p=0; p<_nplanes; p++ ) {
         node.pix_vv[p].clear();
+        node.pixval_vv[p].clear();
       }
     }
 
@@ -983,6 +1000,8 @@ namespace mctools {
             nassigned[p]++;
             node->pix_vv[p].push_back( tick );
             node->pix_vv[p].push_back( wire );
+            node->pixval_vv[p].push_back( adc );
+            node->pixsum_v[p] += adc;
           }
           else {
             _unassigned_pixels_vv[p].push_back( tick );
@@ -2008,7 +2027,7 @@ namespace mctools {
       // get the pixel sum of the cluster
       std::vector<float> pixsum_v = getPlanePixelSumsFromPointList( cluster_pt_v, adc_v );
       
-      // another threshold: one plane must pass 10 MeV threshol
+      // another threshold: one plane must pass 5 MeV threshol
       // using MeV = 0.00162*pixsum, from matt's conversion formula
       int planes_passing = 0;
       //std::cout << "cluster[" << i << "] dist-to-source=" << cluster_min_dist_to_source << " cm; plane MeV: (";
@@ -2045,7 +2064,7 @@ namespace mctools {
     // container to store our trunk points
     pointList trunk_pt_v;
 
-     if ( icluster<0 ) {
+    if ( icluster<0 ) {
       // if we did not find a valid cluster,
       // we count this shower as unreconstructable.
       // we define a sentinal value for the starting energy deposition point    
@@ -2292,8 +2311,8 @@ namespace mctools {
     if ( it_pixsum==_nodeidx_to_photonlist_index_v.end() ) {
       LARCV_NORMAL() << "Did not find true photon trunk info for trackid=" << trackid << std::endl;
       for ( auto& it_x : _nodeidx_to_photonlist_index_v ) {
-	pnode = &(node_v.at( it_x.first ));
-	LARCV_NORMAL() << "  [nodeidx=" << it_x.first << ", trackid=" << pnode->tid << "] photonlist index=" << it_x.second << std::endl;
+        pnode = &(node_v.at( it_x.first ));
+        LARCV_NORMAL() << "  [nodeidx=" << it_x.first << ", trackid=" << pnode->tid << "] photonlist index=" << it_x.second << std::endl;
       }
       LARCV_ERROR() << "Stopping on error" << std::endl;
     }
