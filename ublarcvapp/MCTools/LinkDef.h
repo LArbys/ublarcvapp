@@ -14,11 +14,11 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ namespace std;
-#pragma link C++ class std::vector<float>+;
-#pragma link C++ class std::vector<std::vector<float> >+;
-#pragma link C++ namespace ublarcvapp+;
-#pragma link C++ namespace ublarcvapp::mctools+;
+#pragma link C++ namespace ublarcvapp;
+#pragma link C++ namespace ublarcvapp::mctools;
+
+//#pragma link C++ class std::vector<float>+;
+//#pragma link C++ class std::vector<std::vector<float> >+;
 
 #pragma link C++ class ublarcvapp::mctools::MCPos2ImageUtils+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPGraph+;

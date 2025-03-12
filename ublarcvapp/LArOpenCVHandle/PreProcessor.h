@@ -62,13 +62,19 @@ namespace larcv {
     
     void
     FilterContours(larocv::GEO2D_ContourArray_t& ctor_v);
-		   
+
+#ifndef __CINT__
+#ifndef __CLING__		   
+    // hide the enum
     std::vector<larocv::PixelChunk>
     MakePixelChunks(const cv::Mat& img,
 		    larocv::ChunkType_t type,
 		    bool calc_params=true,
 		    size_t min_ctor_size=0,
 		    size_t min_track_size=0);
+#endif
+#endif
+
     bool
     EdgeConnected(const larocv::PixelChunk& track1,
 		  const larocv::PixelChunk& track2);

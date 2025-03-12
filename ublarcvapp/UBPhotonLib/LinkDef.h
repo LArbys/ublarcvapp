@@ -14,8 +14,8 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ namespace ublarcvapp+;
-#pragma link C++ namespace ublarcvapp::ubphotonlib+;
+#pragma link C++ namespace ublarcvapp;
+#pragma link C++ namespace ublarcvapp::ubphotonlib;
 
 #pragma link C++ class ublarcvapp::ubphotonlib::UBPhotonLib+;
 

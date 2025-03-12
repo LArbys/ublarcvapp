@@ -18,8 +18,8 @@
 #pragma link C++ class ublarcvapp::reco3d::Lattice+;
 #pragma link C++ class ublarcvapp::reco3d::AStar3DNodePtrList+;
 
-#pragma link C++ class ublarcvapp::reco3d::ReadJarrettFile+;
-#pragma link C++ class ublarcvapp::reco3d::ReadNueFile+;
+//#pragma link C++ class ublarcvapp::reco3d::ReadJarrettFile+;
+//#pragma link C++ class ublarcvapp::reco3d::ReadNueFile+;
 #pragma link C++ class ublarcvapp::reco3d::Run3DTracker+;
 #pragma link C++ class ublarcvapp::reco3d::TrackerEventDisplay+;
 

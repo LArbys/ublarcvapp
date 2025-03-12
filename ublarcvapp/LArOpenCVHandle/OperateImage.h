@@ -35,7 +35,7 @@ namespace larcv {
     /// Default destructor
     ~OperateImage(){}
 
-    enum class Operation_t : uint { kSum, kSubtract }; //, kMultiply, kDivide };
+    enum Operation_t : uint { kSum, kSubtract }; //, kMultiply, kDivide };
     
     void configure(const PSet&);
     void initialize() {}

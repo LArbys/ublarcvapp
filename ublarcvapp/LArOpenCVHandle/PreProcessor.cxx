@@ -207,8 +207,8 @@ namespace larcv {
 	pchunk.overallPCA = larocv::CalcPCA(ctor);
 	pchunk.edge1PCA = larocv::SquarePCA(img,edge1,_pca_box_size,_pca_box_size);
 	pchunk.edge2PCA = larocv::SquarePCA(img,edge2,_pca_box_size,_pca_box_size);
-	pchunk.track_frac = type==larocv::ChunkType_t::kTrack  ? 1 : 0;
-	pchunk.shower_frac = type==larocv::ChunkType_t::kShower ? 1 : 0;
+	pchunk.track_frac = type==larocv::ChunkType_t::kTrackPixelChunk  ? 1 : 0;
+	pchunk.shower_frac = type==larocv::ChunkType_t::kShowerPixelChunk ? 1 : 0;
 	auto masked_pts=larocv::MaskImage(img,ctor,0,false);
 	pchunk.mean_pixel_dist = larocv::MeanDistanceToLine(masked_pts,pchunk.overallPCA);
 	pchunk.sigma_pixel_dist = larocv::SigmaDistanceToLine(masked_pts,pchunk.overallPCA);
@@ -302,8 +302,8 @@ namespace larcv {
     auto track_img_t = PrepareImage(track_img);
     auto shower_img_t = PrepareImage(shower_img);
 
-    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrack,false);
-    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShower,false);
+    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrackPixelChunk,false);
+    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShowerPixelChunk,false);
     
     LARCV_DEBUG() << "Track chunks " << track_pchunk_v.size()
 		  << " & Shower chunks " << shower_pchunk_v.size() << std::endl;
@@ -335,8 +335,8 @@ namespace larcv {
     auto track_img_t = PrepareImage(track_img);
     auto shower_img_t = PrepareImage(shower_img);
     
-    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrack,true);
-    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShower,true);
+    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrackPixelChunk,true);
+    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShowerPixelChunk,true);
 
     for(auto& shower_pchunk : shower_pchunk_v) {
       auto& shower_ctor = shower_pchunk.ctor;
@@ -364,9 +364,9 @@ namespace larcv {
     auto track_img_t = PrepareImage(track_img);
     auto shower_img_t = PrepareImage(shower_img);
     
-    auto adc_pchunk_v = MakePixelChunks(adc_img_t,larocv::ChunkType_t::kUnknown,true);
-    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrack,true);
-    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShower,true);
+    auto adc_pchunk_v = MakePixelChunks(adc_img_t,larocv::ChunkType_t::kUnknownPixelChunk,true);
+    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrackPixelChunk,true);
+    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShowerPixelChunk,true);
      
     /// determine track/shower fraction of ADC contours
     for(auto& adc_pchunk : adc_pchunk_v) {
@@ -462,9 +462,9 @@ namespace larcv {
     auto track_img_t = PrepareImage(track_img);
     auto shower_img_t = PrepareImage(shower_img);
         
-    auto adc_pchunk_v = MakePixelChunks(adc_img_t,larocv::ChunkType_t::kUnknown);
-    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrack);
-    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShower);
+    auto adc_pchunk_v = MakePixelChunks(adc_img_t,larocv::ChunkType_t::kUnknownPixelChunk);
+    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrackPixelChunk);
+    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShowerPixelChunk);
 
     std::vector<size_t> cidx_v;
 
@@ -533,9 +533,9 @@ namespace larcv {
     auto track_img_t = PrepareImage(track_img);
     auto shower_img_t = PrepareImage(shower_img);
 
-    auto adc_pchunk_v = MakePixelChunks(adc_img_t,larocv::ChunkType_t::kUnknown,false);
-    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrack,false);
-    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShower,false);
+    auto adc_pchunk_v = MakePixelChunks(adc_img_t,larocv::ChunkType_t::kUnknownPixelChunk,false);
+    auto track_pchunk_v = MakePixelChunks(track_img_t,larocv::ChunkType_t::kTrackPixelChunk,false);
+    auto shower_pchunk_v = MakePixelChunks(shower_img_t,larocv::ChunkType_t::kShowerPixelChunk,false);
 
     std::vector<size_t> cidx_v;
 

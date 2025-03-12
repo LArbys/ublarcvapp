@@ -69,6 +69,7 @@ endif()
 
 #---Eigen3
 find_package(Eigen3 REQUIRED)
+get_property(EIGEN3_INCLUDE_DIRS TARGET Eigen3::Eigen PROPERTY INTERFACE_INCLUDE_DIRECTORIES )
 
 #---LArLite
 set( larlite_DIR $ENV{LARLITE_LIBDIR}/cmake/larlite )
