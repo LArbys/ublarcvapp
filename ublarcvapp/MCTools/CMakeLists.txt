@@ -31,6 +31,7 @@ add_library( ${LIBNAME} SHARED MCPos2ImageUtils.cxx
 
 # larlite libraries
 set(LARLITE_LIBS_USED ${LARLITE_LIBS} )
+set(UBLARCVAPP_LIBS_USED LArCVApp_ubdllee)
 
 # includes for ROOT dictionary gen
 include_directories(${LARCV_INCLUDE_DIR} ${LARCV_JSON_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/ublarcvapp/${MODULE_NAME})
@@ -49,7 +50,7 @@ target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 # Generate the shared library from the sources
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${LARCV_JSON_INCLUDE_DIR} )
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor ${LARLITE_LIBS_USED} )
+target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor ${LARLITE_LIBS_USED} ${UBLARCVAPP_LIBS_USED})
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

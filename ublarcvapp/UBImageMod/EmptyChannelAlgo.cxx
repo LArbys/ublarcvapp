@@ -52,7 +52,8 @@ namespace ublarcvapp {
     
     return empty_v;
   }
-  
+
+  /*
   std::vector<larcv::Image2D> EmptyChannelAlgo::makeBadChImage( int minstatus, int nplanes, int start_tick, int nticks, int nchannels, 
                                                                 int time_downsample_factor, int wire_downsample_factor,
                                                                 const larlite::event_chstatus& ev_status ) {
@@ -89,7 +90,7 @@ namespace ublarcvapp {
     }
     return badchs;
   }
-
+  */
 
   std::vector<larcv::Image2D> EmptyChannelAlgo::makeBadChImage( int minstatus, int nplanes, int start_tick, int nticks, int nchannels, 
                                                                 int time_downsample_factor, int wire_downsample_factor,

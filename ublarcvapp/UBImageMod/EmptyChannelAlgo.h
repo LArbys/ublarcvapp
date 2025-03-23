@@ -5,7 +5,7 @@
 
 // larlite
 #include "larlite/Base/DataFormatConstants.h"
-#include "larlite/DataFormat/chstatus.h" // needed because of duplicate name!
+//#include "larlite/DataFormat/chstatus.h" // needed because of duplicate name!
 
 // larcv
 #include "larcv/core/DataFormat/Image2D.h"
@@ -24,9 +24,9 @@ namespace ublarcvapp {
 
     std::vector<int> findEmptyChannels( float threshold, const larcv::Image2D& tpcimg, const float max_value=-1.0 );
 
-    std::vector<larcv::Image2D> makeBadChImage( int minstatus, int nplanes, int start_tick, int nticks, int nchannels, 
-						int time_downsample_factor, int wire_downsample_factor,
-						const larlite::event_chstatus& ev_status );
+    // std::vector<larcv::Image2D> makeBadChImage( int minstatus, int nplanes, int start_tick, int nticks, int nchannels, 
+    // 						int time_downsample_factor, int wire_downsample_factor,
+    // 						const larlite::event_chstatus& ev_status );
     
     std::vector<larcv::Image2D> makeBadChImage( int minstatus, int nplanes, int start_tick, int nticks, int nchannels, 
 						int time_downsample_factor, int wire_downsample_factor,

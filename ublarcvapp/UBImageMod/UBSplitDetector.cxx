@@ -573,6 +573,8 @@ namespace ublarcvapp {
 
     // give pack the image vector
     output_imgs.Emplace( std::move(outimg_v) );
+    
+    return true;
   }
 
   bool UBSplitDetector::cropUsingBBox2D( const larcv::ROI& bbox_vec,
