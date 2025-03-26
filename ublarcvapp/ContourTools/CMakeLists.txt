@@ -25,7 +25,7 @@ ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
 add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} )
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil LArCVApp_LArOpenCVHandle LArCVApp_Reco3D ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
+target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil LArCVApp_LArOpenCVHandle LArCVApp_Reco3D ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_imgcodecs opencv_core)
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

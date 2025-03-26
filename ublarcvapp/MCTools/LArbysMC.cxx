@@ -397,7 +397,7 @@ namespace mctools {
     struct plane_pixsum_t {
       int plane;
       float pixsum;
-      bool operator<(const plane_pixsum_t& rhs ) {
+      bool operator<(const plane_pixsum_t& rhs ) const {
         if ( pixsum<rhs.pixsum ) return true;
         return false;
       };
