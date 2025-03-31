@@ -1,9 +1,9 @@
 add_subdirectory(dbscan)
 add_subdirectory(Reco3D)
 add_subdirectory(LArOpenCVHandle)
-add_subdirectory(ContourTools)
-
+add_subdirectory(ContourTools) # requires opencv, laropencv
 if (HAS_LARLITE)
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")  
   add_subdirectory(LArliteHandler)
   add_subdirectory(LLCVProcessor)
   add_subdirectory(UBImageMod)
@@ -13,7 +13,6 @@ if (HAS_LARLITE)
   add_subdirectory(MCTools)
   add_subdirectory(UBPhotonLib)
 endif()
-
 #if (Boost_FOUND)
 #  add_subdirectory(DLTagger)
 #endif()

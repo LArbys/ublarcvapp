@@ -22,7 +22,7 @@
 // larcv
 #include "larcv/core/DataFormat/Image2D.h"
 #include "larcv/core/Base/PSet.h"
-#include "AStar3DAlgo.h"
+#include "ublarcvapp/Reco3D/AStar3DAlgo.h"
 
 namespace ublarcvapp {
 namespace reco3d {

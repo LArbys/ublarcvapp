@@ -25,6 +25,8 @@
 #include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 #include "larcv/core/DataFormat/Image2D.h"
 #include "larcv/core/DataFormat/ImageMeta.h"
+#include "larcv/core/Processor/ProcessFactory.h"
+#include "larcv/core/Processor/ProcessBase.h"
 #include <TVector3.h>
 #include "TH1D.h"
 #include "TH2D.h"
@@ -36,11 +38,9 @@
 
 //#include "LArCV/core/DataFormat/ChStatus.h"
 //#include "larcv/app/LArOpenCVHandle/LArbysUtils.h"
-#include "AStar3DAlgo.h"
-#include "AStar3DAlgoProton.h"
+#include "ublarcvapp/Reco3D/AStar3DAlgo.h"
+#include "ublarcvapp/Reco3D/AStar3DAlgoProton.h"
 
-#include "larcv/core/Processor/ProcessBase.h"
-#include "larcv/core/Processor/ProcessFactory.h"
 
 namespace ublarcvapp {
 namespace reco3d {

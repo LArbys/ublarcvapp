@@ -43,13 +43,17 @@ target_include_directories(${LIBNAME}
   PRIVATE
   ${PROJECT_SOURCE_DIR}
   )
-target_link_libraries(${LIBNAME} ${LARLITE_LIBS_USED} ${LARCV_LIBS_USED} ${UBLARCVAPP_LIBS_USED})
+
+target_link_libraries(${LIBNAME}
+  ${LARLITE_LIBS_USED}
+  ${LARCV_LIBS_USED}
+  ${UBLARCVAPP_LIBS_USED})
 
 include_directories( ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/ublarcvapp/${MODULE_NAME} ${LARCV_INCLUDE_DIR} ${LARLITE_INCLUDE_DIR} )
-ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
-target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 
-#message("public headers: ${ALL_HEADERS}")
+ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
+
+target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

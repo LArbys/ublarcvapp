@@ -1,37 +1,108 @@
 set(MODULE_NAME LArOpenCVHandle)
 
-# Collect the headers
-file(GLOB HEADERS "*.h")
-
-# Remove LinkDef.h
-list(FILTER HEADERS EXCLUDE REGEX ".*LinkDef.h$")
- 
-# However, the file(GLOB...) allows for wildcard additions:
-file(GLOB SOURCES "*.cxx")
-
-# library name
 set(LIBNAME LArCVApp_${MODULE_NAME})
 
-# includes
-include_directories(${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS} ${LARLITE_INCDIRS} ${GEO2D_INC_DIR} ${LAROPENCV_INC_DIR} ${OpenCV_INCLUDE_DIRS} )
-#message("opencv: ${OpenCV_INCLUDE_DIRS}")
-#message("opencv: ${OpenCV_LIBS}")
+# Collect the headers
+set( HEADERS
+  BadRegionAna.h
+  BlankImage.h
+  CosmicPixelAna.h
+  CosmicTrackAna.h
+  CosmicVertexAna.h
+  DeadWireAna.h
+  GenDeadChannelMap.h
+  GoodcROIFilter.h
+  ImageROICheckMC.h
+  InterWriteOutLC.h
+  LArbysImage.h
+  LArbysImageExtract.h
+  LArbysImageMC.h
+  LArbysImageMaker.h
+  LArbysLoader.h
+  LArbysUtils.h
+  OperateImage.h
+  PGraphTruthMatch.h
+  PIDImageMaker.h
+  PostTagger.h
+  PreProcessor.h
+  ROIAna.h
+  SSNetEventAna.h
+  SSNetTruthAna.h
+  SegmentFilter.h
+  SingleROIFaker.h
+  VertexAna.h
+  VertexFilter.h
+  VertexInROI.h
+)
 
-if (HAS_LARLITE)
-  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")
-  #message("build ubimagemod with larlite")
-else()
-  #message("build ubimagemod without larlite")
-endif()
+add_library( ${LIBNAME} SHARED
+  BadRegionAna.cxx
+  BlankImage.cxx
+  CosmicPixelAna.cxx
+  CosmicTrackAna.cxx
+  CosmicVertexAna.cxx
+  DeadWireAna.cxx
+  GenDeadChannelMap.cxx
+  GoodcROIFilter.cxx
+  ImageROICheckMC.cxx
+  InterWriteOutLC.cxx
+  LArbysImage.cxx
+  LArbysImageExtract.cxx
+  LArbysImageMC.cxx
+  LArbysImageMaker.cxx
+  LArbysLoader.cxx
+  LArbysUtils.cxx
+  OperateImage.cxx
+  PGraphTruthMatch.cxx
+  PIDImageMaker.cxx
+  PostTagger.cxx
+  PreProcessor.cxx
+  ROIAna.cxx
+  SSNetEventAna.cxx
+  SSNetTruthAna.cxx
+  SegmentFilter.cxx
+  SingleROIFaker.cxx
+  VertexAna.cxx
+  VertexFilter.cxx
+  VertexInROI.cxx
+)  
+
+set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
+target_include_directories(${LIBNAME}
+  PUBLIC
+  $<INSTALL_INTERFACE:include/ublarcvapp/${MODULE_NAME}>
+  PRIVATE
+  ${PROJECT_SOURCE_DIR}
+  ${OpenCV_INCLUDE_DIRS}  
+  ${LARLITE_INCLUDE_DIR}
+  ${GEO2D_INC_DIR}
+  ${LAROPENCV_INC_DIR}
+  ${LARCV_INCLUDE_DIR}  
+)
+target_link_libraries( ${LIBNAME} PUBLIC
+  opencv_imgcodecs
+  opencv_core  
+  LArCVCoreBase
+  LArCVCoreDataFormat
+  LArCVCoreCVUtil
+  ${GEO2D_LIBS}  
+  ${LAROPENCV_LIBS}  
+  LArCVApp_Reco3D  
+)
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}
+  ${OpenCV_INCLUDE_DIRS}  
+  ${LARLITE_INCLUDE_DIR}
+  ${GEO2D_INC_DIR}
+  ${LAROPENCV_INC_DIR}
+  ${LARCV_INCLUDE_DIR}  
+)
 
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
 
-# Generate the shared library from the sources
-add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)
-set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
-target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS})
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreProcessor opencv_imgcodecs opencv_core)
+# add dictionary file to sources                                                                                                                                               
+target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

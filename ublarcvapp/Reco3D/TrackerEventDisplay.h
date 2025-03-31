@@ -24,7 +24,7 @@
 
 #include "larcv/core/Processor/ProcessBase.h"
 #include "larcv/core/Processor/ProcessFactory.h"
-#include "AStarTracker.h"
+#include "ublarcvapp/Reco3D/AStarTracker.h"
 
 namespace ublarcvapp {
 namespace reco3d {
