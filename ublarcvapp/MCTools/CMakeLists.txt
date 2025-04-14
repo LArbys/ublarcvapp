@@ -31,7 +31,7 @@ add_library( ${LIBNAME} SHARED MCPos2ImageUtils.cxx
 
 # larlite libraries
 set(LARLITE_LIBS_USED ${LARLITE_LIBS} )
-set(UBLARCVAPP_LIBS_USED LArCVApp_ubdllee)
+set(UBLARCVAPP_LIBS_USED LArCVApp_ubdllee LArCVApp_UBWireTool )
 
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
 
