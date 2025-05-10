@@ -11,6 +11,7 @@
 #pragma link C++ class ublarcvapp::InfillImageStitcher+;
 #pragma link C++ class ublarcvapp::EmptyChannelAlgo+;
 #pragma link C++ class ublarcvapp::ubimagemod::TrackImageMask+;
+#pragma link C++ class ublarcvapp::ubimagemod::PointImageProjection+;
 #endif
 
 

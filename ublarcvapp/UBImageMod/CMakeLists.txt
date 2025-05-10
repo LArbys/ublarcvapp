@@ -13,6 +13,7 @@ set( HEADERS
   UBCropLArFlow.h
   UBCropMask.h
   UBSplitDetector.h
+  PointImageProjection.h
   )
 
 # Define library and add sources
@@ -24,7 +25,8 @@ add_library( ${LIBNAME} SHARED
   TrackImageMask.cxx
   UBCropLArFlow.cxx
   UBCropMask.cxx
-  UBSplitDetector.cxx  
+  UBSplitDetector.cxx
+  PointImageProjection.cxx  
   )
 
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
