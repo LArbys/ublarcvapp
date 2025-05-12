@@ -2,6 +2,7 @@
 
 #include "larlite/LArUtil/Geometry.h"
 #include "larlite/LArUtil/DetectorProperties.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 namespace ublarcvapp {
 namespace ubimagemod {
@@ -19,19 +20,31 @@ namespace ubimagemod {
 
     // get wire and time given xyz
     TVector3 worldLoc( xyz[0], xyz[1], xyz[2] );
+
+    //LARCV_NORMAL() << img.meta().dump() << std::endl;
     
     UInt_t wireid = larutil::Geometry::GetME()->NearestWire( worldLoc, img.meta().plane() );
-    if ( wireid < img.meta().min_x() )
+    if ( wireid < img.meta().min_x() ) {
+      LARCV_NORMAL() << "Wire " << wireid << " below " << img.meta().min_x() << std::endl;
       return 0.0;
-    if ( wireid >= img.meta().max_x() )
+    }
+    if ( wireid >= img.meta().max_x() ) {
+      LARCV_NORMAL() << "Wire " << wireid << " above max=" << img.meta().max_x() << std::endl;      
       return 0.0;
+    }
 
-    double tick = larutil::DetectorProperties::GetME()->ConvertXToTicks( xyz[0], img.meta().plane() );
-    if (  tick < img.meta().min_y() )
+    //double tick = larutil::DetectorProperties::GetME()->ConvertXToTicks( xyz[0], img.meta().plane() );
+    float cm_per_tick = larutil::LArProperties::GetME()->DriftVelocity()*0.5;
+    double tick  = xyz[0]/cm_per_tick + 3200.0;
+    if (  tick < img.meta().min_y() ) {
+      LARCV_NORMAL() << "tick " << tick << " below min=" << img.meta().min_y() << std::endl;      
       return 0.0;
+    }
 
-    if ( tick >= img.meta().max_y() )
+    if ( tick >= img.meta().max_y() ) {
+      LARCV_NORMAL() << "tick " << tick << " greater than max=" << img.meta().max_y() << std::endl;
       return 0.0;
+    }
 
     int col = (int)img.meta().col( (float)wireid );
     int row = (int)img.meta().row( (float)tick );
