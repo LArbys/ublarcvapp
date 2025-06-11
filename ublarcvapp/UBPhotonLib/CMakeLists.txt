@@ -6,11 +6,13 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 # Collect the headers
 set( HEADERS
   UBPhotonLib.h
+  PhotonVisibilityEstimator.h
 )
 
 # Add sources
 add_library( ${LIBNAME} SHARED
   UBPhotonLib.cxx
+  PhotonVisibilityEstimator.cxx
 )
 
 # larlite libraries

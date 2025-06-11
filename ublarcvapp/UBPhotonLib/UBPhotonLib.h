@@ -25,7 +25,6 @@ namespace ubphotonlib {
     std::vector<long> getVoxelCoords( long voxelid ) const;
     std::vector<long> getVoxelCoords( const std::vector<float>& pos ) const;    
     long getVisLibIndex( long voxelid, int opch ) const;
-    long getVoxelIndex( const std::vector<float>& pos, int opch ) const;
     long getVisLibIndex( const std::vector<float>& pos, int opch ) const;
     long getVoxelID( const std::vector<long>& voxcoords ) const;
 
@@ -35,17 +34,17 @@ namespace ubphotonlib {
       int dim_index[3];
       float vis;
       VisData_t()
-	: voxelid(0),
-	  opchid(0),
-	  dim_index{0,0,0},
-	  vis(0.0)
+	    : voxelid(0),
+	      opchid(0),
+	      dim_index{0,0,0},
+	      vis(0.0)
       {};
       bool operator<( VisData_t& rhs ) const {
-	if (rhs.voxelid < voxelid )
-	  return true;
-	if ( rhs.voxelid==voxelid && rhs.opchid < opchid )
-	  return true;
-	return false;
+	      if (rhs.voxelid < voxelid )
+	        return true;
+	      if ( rhs.voxelid==voxelid && rhs.opchid < opchid )
+	        return true;
+	      return false;
       };
     };
     

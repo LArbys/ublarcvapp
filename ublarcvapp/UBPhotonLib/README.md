@@ -1,4 +1,62 @@
-# UB Photon Library Interface
+# UBPhotonLib
+
+Interface to visibility library for MicroBooNE.
+
+## Classes
+
+### UBPhotonLib
+Singleton class providing access to the photon visibility library. This class loads the photon library data and provides methods to query the visibility (probability of detection) for photons emitted from any voxel in the detector to any optical detector.
+
+### PhotonVisibilityEstimator
+A utility class that uses UBPhotonLib to estimate photon detection from multiple 3D point sources. This is useful for:
+- Estimating scintillation light from particle tracks
+- Calculating total light yield from complex geometries
+- Comparing detection patterns across different optical detectors
+
+## Usage Examples
+
+### Python Example
+```python
+from ublarcvapp import ublarcvapp
+
+# Create estimator
+estimator = ublarcvapp.ubphotonlib.PhotonVisibilityEstimator()
+
+# Add point sources (x, y, z in cm, number of photons)
+estimator.addPhotonSource(100.0, 0.0, 400.0, 1000.0)
+estimator.addPhotonSource(110.0, 10.0, 420.0, 1500.0)
+
+# Calculate detected photons per optical detector
+photons_per_opdet = estimator.calculateDetectedPhotons(use_trilinear=True)
+
+# Get total collection efficiency
+efficiency = estimator.getCollectionEfficiency(True)
+print(f"Collection efficiency: {efficiency:.4f}")
+```
+
+### C++ Example
+```cpp
+#include "ublarcvapp/UBPhotonLib/PhotonVisibilityEstimator.h"
+
+using namespace ublarcvapp::ubphotonlib;
+
+PhotonVisibilityEstimator estimator;
+
+// Add point sources
+estimator.addPhotonSource(100.0, 0.0, 400.0, 1000.0);
+
+// Calculate results
+auto photons_map = estimator.calculateDetectedPhotons(true);
+float total = estimator.getTotalDetectedPhotons(true);
+```
+
+## Test Scripts
+- `test/test_photon_estimator.py` - Python example with visualization
+- `test/test_photon_estimator.cxx` - C++ standalone example
+
+## Technical Details
+
+### Photon Library Files
 
 
 Where can I get the photon library file?

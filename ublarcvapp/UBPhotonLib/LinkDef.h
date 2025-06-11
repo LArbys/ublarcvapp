@@ -18,6 +18,8 @@
 #pragma link C++ namespace ublarcvapp::ubphotonlib;
 
 #pragma link C++ class ublarcvapp::ubphotonlib::UBPhotonLib+;
+#pragma link C++ class ublarcvapp::ubphotonlib::PhotonVisibilityEstimator+;
+#pragma link C++ class ublarcvapp::ubphotonlib::PhotonVisibilityEstimator::PhotonSource+;
 
 #endif
 

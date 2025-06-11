@@ -2,6 +2,7 @@
 
 #include <iostream>
 #include <chrono>
+#include <cmath>
 
 #include "TFile.h"
 #include "TTree.h"
@@ -90,12 +91,12 @@ namespace ubphotonlib {
       lindex = Voxel*_nopchs + OpChannel; 
       
       if ( i>0 && i%10000000==0 ) {
-	std::cout << "   loading entry " << i  << ":"
-		  << " vis=" << Visibility
-		  << " vox=" << Voxel
-		  << " opdet=" << OpChannel
-		  <<"  lindex=" << lindex
-		  << std::endl;
+        std::cout << "   loading entry " << i  << ":"
+                  << " vis=" << Visibility
+		              << " vox=" << Voxel
+		              << " opdet=" << OpChannel
+		              <<"  lindex=" << lindex
+		              << std::endl;
       }
       _visibility_v[lindex] = Visibility;
     }
@@ -164,7 +165,7 @@ namespace ubphotonlib {
     bool valid = true;
     for (int i=0; i<3; i++) {
       if ( voxcoords[i]<0 || voxcoords[i]>=_nvoxels_dim[i] )
-	valid = false;
+	      valid = false;
     }
     if (!valid)
       return -1;
@@ -195,19 +196,88 @@ namespace ubphotonlib {
 
   float UBPhotonLib::getVisibilityTrilinear( const std::vector<float>& pos, int opch )
   {
-    long lindex = getVoxelIndex( pos, opch );
-    if ( lindex<0 || lindex>(long)_visibility_v.size() )
-      return 0.0;
-
-    std::pair<long,int> voxopch_key( lindex, opch );
-    auto it=_voxelopchindex_to_visibility.find( voxopch_key );
-    if ( it==_voxelopchindex_to_visibility.end() ) {
-      // not found
-      return 0.0;
+    // Calculate fractional position in grid coordinates
+    std::vector<float> grid_pos(3, 0);
+    std::vector<long> base_voxel(3, 0);
+    std::vector<float> frac(3, 0);
+    
+    for (int i = 0; i < 3; i++) {
+      grid_pos[i] = (pos[i] - _cryo_origin_tpc_coord_cm[i]) / _voxel_len_cm[i];
+      base_voxel[i] = (long)std::floor(grid_pos[i]);
+      frac[i] = grid_pos[i] - base_voxel[i];
+      
+      // Check bounds
+      if (base_voxel[i] < 0 || base_voxel[i] >= _nvoxels_dim[i] - 1) {
+        // Outside grid bounds, fall back to nearest neighbor
+        return getVisibility(pos, opch);
+      }
     }
-
-    // return visibility
-    return it->second;
+    
+    // Get visibility values for the 8 surrounding voxels
+    float vis[2][2][2];
+    bool valid = true;
+    
+    for (int i = 0; i < 2; i++) {
+      for (int j = 0; j < 2; j++) {
+        for (int k = 0; k < 2; k++) {
+          std::vector<long> voxel_coords = {
+            base_voxel[0] + i,
+            base_voxel[1] + j, 
+            base_voxel[2] + k
+          };
+          
+          // Check if voxel is within bounds
+          for (int dim = 0; dim < 3; dim++) {
+            if (voxel_coords[dim] < 0 || voxel_coords[dim] >= _nvoxels_dim[dim]) {
+              valid = false;
+              break;
+            }
+          }
+          
+          if (!valid) break;
+          
+          long voxel_id = getVoxelID(voxel_coords);
+          if (voxel_id < 0) {
+            valid = false;
+            break;
+          }
+          
+          long lib_index = getVisLibIndex(voxel_id, opch);
+          if (lib_index < 0 || lib_index >= (long)_visibility_v.size()) {
+            vis[i][j][k] = 0.0;
+          } else {
+            vis[i][j][k] = _visibility_v[lib_index];
+          }
+        }
+        if (!valid) break;
+      }
+      if (!valid) break;
+    }
+    
+    // If any voxel was invalid, fall back to nearest neighbor
+    if (!valid) {
+      return getVisibility(pos, opch);
+    }
+    
+    // Perform trilinear interpolation
+    // First interpolate along x-axis
+    float vis_x[2][2];
+    for (int j = 0; j < 2; j++) {
+      for (int k = 0; k < 2; k++) {
+        vis_x[j][k] = vis[0][j][k] * (1.0 - frac[0]) + vis[1][j][k] * frac[0];
+      }
+    }
+    
+    // Then interpolate along y-axis
+    float vis_xy[2];
+    for (int k = 0; k < 2; k++) {
+      vis_xy[k] = vis_x[0][k] * (1.0 - frac[1]) + vis_x[1][k] * frac[1];
+    }
+    
+    // Finally interpolate along z-axis
+    float result = vis_xy[0] * (1.0 - frac[2]) + vis_xy[1] * frac[2];
+    
+    return result;
   }
   
 }
