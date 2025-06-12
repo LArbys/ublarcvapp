@@ -19,5 +19,8 @@
 #pragma link C++ class ublarcvapp::pixelutils::TrackToSpacePoints+;
 #pragma link C++ class ublarcvapp::pixelutils::TrackToSpacePoints::SpacePointCharge+;
 #pragma link C++ class ublarcvapp::pixelutils::TrackToSpacePoints::PixelData+;
+#pragma link C++ class ublarcvapp::pixelutils::ShowerToSpacePoints+;
+#pragma link C++ class ublarcvapp::pixelutils::ShowerToSpacePoints::SpacePointCharge+;
+#pragma link C++ class ublarcvapp::pixelutils::ShowerToSpacePoints::PixelData+;
 
 #endif

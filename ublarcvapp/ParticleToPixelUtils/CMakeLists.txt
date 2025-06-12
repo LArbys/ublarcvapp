@@ -6,11 +6,13 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 # Collect the headers
 set( HEADERS
   TrackToSpacePoints.h
+  ShowerToSpacePoints.h
 )
 
 # Add sources
 add_library( ${LIBNAME} SHARED
   TrackToSpacePoints.cxx
+  ShowerToSpacePoints.cxx
 )
 
 # larlite libraries
