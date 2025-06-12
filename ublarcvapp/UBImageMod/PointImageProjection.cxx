@@ -22,8 +22,15 @@ namespace ubimagemod {
     TVector3 worldLoc( xyz[0], xyz[1], xyz[2] );
 
     //LARCV_NORMAL() << img.meta().dump() << std::endl;
+    UInt_t wireid = 0;
+    try {
+      wireid = larutil::Geometry::GetME()->NearestWire( worldLoc, img.meta().plane() );
+    }
+    catch ( std::exception& e ) {
+      LARCV_WARNING() << e.what() << " - return 0.0" << std::endl;
+      return 0.0;
+    }
     
-    UInt_t wireid = larutil::Geometry::GetME()->NearestWire( worldLoc, img.meta().plane() );
     if ( wireid < img.meta().min_x() ) {
       LARCV_NORMAL() << "Wire " << wireid << " below " << img.meta().min_x() << std::endl;
       return 0.0;
