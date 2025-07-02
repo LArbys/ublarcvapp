@@ -19,6 +19,10 @@ namespace larcv {
 
   static LArbysImageProcessFactory __global_LArbysImageProcessFactory__;
 
+  LArbysImage::LArbysImage()
+    : LArbysImage("LArbysImage")
+  {};
+  
   LArbysImage::LArbysImage(const std::string name)
     : ProcessBase(name),
       _image_cluster_cfg("aho"),

@@ -37,7 +37,8 @@ namespace pixelutils {
       SpacePointCharge() 
         : position(0,0,0), charge(0), 
           wire_u(-1), wire_v(-1), wire_y(-1), tick(-1),
-          plane_charges(3,0) {}
+          plane_charges(3,0) {};
+      ~SpacePointCharge() {};
     };
     
     /**

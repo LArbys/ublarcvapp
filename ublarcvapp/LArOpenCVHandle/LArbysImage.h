@@ -19,10 +19,11 @@ namespace larcv {
   public:
     
     /// Default constructor
-    LArbysImage(const std::string name="LArbysImage");
+    LArbysImage();
+    LArbysImage(const std::string name);
     
     /// Default destructor
-    virtual ~LArbysImage(){}
+    virtual ~LArbysImage(){};
 
     void configure(const PSet&);
 
