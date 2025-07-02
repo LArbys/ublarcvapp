@@ -7,7 +7,7 @@ set( HEADERS
   ContourShapeMeta.h
   ContourCluster.h
   ContourClusterAlgo.h  
-  ContourAStarClusterAlgo.h
+  #ContourAStarClusterAlgo.h
 )
 
 # Collect the sources
@@ -15,7 +15,7 @@ add_library( ${LIBNAME} SHARED
   ContourShapeMeta.cxx
   ContourCluster.cxx
   ContourClusterAlgo.cxx  
-  ContourAStarClusterAlgo.cxx
+  #ContourAStarClusterAlgo.cxx
 )
 
 set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
@@ -40,8 +40,8 @@ target_link_libraries( ${LIBNAME} PUBLIC
   LArCVCoreCVUtil
   ${GEO2D_LIBS}  
   ${LAROPENCV_LIBS}  
-  LArCVApp_LArOpenCVHandle
-  LArCVApp_Reco3D  
+  #LArCVApp_LArOpenCVHandle
+  #LArCVApp_Reco3D  
 )
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
   ${PROJECT_SOURCE_DIR}

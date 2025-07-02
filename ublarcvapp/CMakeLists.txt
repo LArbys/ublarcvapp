@@ -1,6 +1,6 @@
 add_subdirectory(dbscan)
-add_subdirectory(Reco3D)
-add_subdirectory(LArOpenCVHandle)
+#add_subdirectory(Reco3D)
+#add_subdirectory(LArOpenCVHandle)
 add_subdirectory(ContourTools) # requires opencv, laropencv
 if (HAS_LARLITE)
   set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")  
