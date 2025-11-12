@@ -93,10 +93,7 @@ namespace mctools {
 
     clear();
     
-    buildgraphonly( shower_v, track_v, mctruth_v );
-
-    // fill the daugher to mother shower ID map
-    _fill_shower_daughter2mother_map( shower_v );    
+    buildgraphonly( shower_v, track_v, mctruth_v );   
     
     std::vector<float> threshold_v(adc_v.size(),10.0);
     _scanPixelData( adc_v, segment_v, instance_v, ancestor_v, threshold_v );
@@ -164,6 +161,9 @@ namespace mctools {
 
     clear();
     
+    // fill the daugher to mother shower ID map
+    _fill_shower_daughter2mother_map( shower_v ); 
+
     node_v.clear();
     node_v.reserve( shower_v.size()+track_v.size()+100 );
 
@@ -2556,6 +2556,29 @@ namespace mctools {
     }
     return edep_pos;
   }
+  
+  /**
+   * @brief get ancestor ID for track ID by querying info in Nodes
+   */
+  int MCPixelPGraph::getAncestorID( int trackid ) {
+    Node_t* pnode = findTrackID(trackid);
+    if (pnode==nullptr)
+      return -1;
+    return pnode->aid;
+  }
+
+  /**
+   * @brief get ancestor ID for track ID by querying info in Nodes
+   */
+  int MCPixelPGraph::getShowerMotherID( int trackid ) {
+    auto it = _shower_daughter2mother.find( trackid );
+    if ( it!=_shower_daughter2mother.end() ) {
+      return it->second;
+    }
+    return -1;
+  }
+
+
   
 }
 }
