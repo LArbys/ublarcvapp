@@ -200,6 +200,7 @@ namespace mctools {
     Node_t* findTrackID( int trackid );
     int getAncestorID( int trackid );
     int getShowerMotherID( int trackid );
+    int getParticleID( int trackid );
 
     // print info methods
     void printAllNodeInfo();

@@ -2578,6 +2578,16 @@ namespace mctools {
     return -1;
   }
 
+  /**
+   * @brief get particle ID for track ID by querying info in Nodes
+   */
+  int MCPixelPGraph::getParticleID( int trackid ) {
+    Node_t* pnode = findTrackID(trackid);
+    if (pnode==nullptr)
+      return -1;
+    return pnode->pid;
+  }
+
 
   
 }
