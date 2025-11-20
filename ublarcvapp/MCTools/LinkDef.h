@@ -20,6 +20,10 @@
 //#pragma link C++ class std::vector<float>+;
 //#pragma link C++ class std::vector<std::vector<float> >+;
 
+#pragma link C++ class ublarcvapp::mctools::MCPGNode+;
+#pragma link C++ class ublarcvapp::mctools::MCParticleGraph+;
+
+#pragma link C++ class ublarcvapp::mctools::MCPixelLabels+;
 #pragma link C++ class ublarcvapp::mctools::MCPos2ImageUtils+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPGraph+;
 #pragma link C++ class ublarcvapp::mctools::MCPixelPMap+;

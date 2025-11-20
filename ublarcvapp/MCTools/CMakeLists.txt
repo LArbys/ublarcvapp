@@ -5,6 +5,8 @@ set(LIBNAME LArCVApp_${MODULE_NAME})
 
 # Collect the headers
 set( HEADERS MCPos2ImageUtils.h
+  MCPGNode.h
+  MCParticleGraph.h
   MCPixelPGraph.h
   TruthTrackSCE.h
   TruthShowerTrunkSCE.h
@@ -18,6 +20,8 @@ set( HEADERS MCPos2ImageUtils.h
 
 # Add sources
 add_library( ${LIBNAME} SHARED MCPos2ImageUtils.cxx
+  MCPGNode.cxx
+  MCParticleGraph.cxx
   MCPixelPGraph.cxx
   TruthTrackSCE.cxx
   TruthShowerTrunkSCE.cxx
