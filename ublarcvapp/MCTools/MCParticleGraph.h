@@ -50,7 +50,7 @@ namespace mctools {
                      const larlite::event_mctrack&  track_v,
                      const larlite::event_mctruth&  mctruth_v );
 
-    MCPGNode* findTrackID( int trackid );
+    MCPGNode* findTrackID( long trackid );
     std::vector<MCPGNode*> getNodeAndDescendentsFromTrackID( const int& trackid );
     std::vector<MCPGNode*> getPrimaryParticles( bool exclude_neutrons );
     std::vector<MCPGNode*> getNeutrinoPrimaryParticles( bool exclude_neutrons );
@@ -72,11 +72,13 @@ namespace mctools {
 
 
   public:
+
     std::vector< MCPGNode > node_v; //< collection of nodes
     MCPGNode* _eventRootNode;
     bool _cluster_neutrino_particles; //< if true, nu primary particles clustered together
     float _kNuVertexDistCutoff_cm;
     std::vector< std::vector<float> > _nu_vertices_v;
+    std::map<long,long> _tid_to_node_v; ///< map from trackid to position in node_v
 
     std::map<int,int> _shower_daughter2mother;
 

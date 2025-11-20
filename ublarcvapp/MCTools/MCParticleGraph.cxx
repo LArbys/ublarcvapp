@@ -29,6 +29,7 @@ namespace mctools {
       node_v.clear();
       _eventRootNode = nullptr;
       _shower_daughter2mother.clear();
+      _tid_to_node_v.clear();
   }
 
   /**
@@ -469,6 +470,11 @@ namespace mctools {
       LARCV_INFO() << "Rearranged graph to include neutrino vertex nodes. Number of Nu Interactions: " << nnu << std::endl;
     }
     
+    // map track id to position in node_v container
+    for (size_t i=0; i<node_v.size(); i++){
+        auto& node = node_v.at(i);
+        _tid_to_node_v[ node.tid ] = (long)i;
+    }
     //printAllNodeInfo();
     //printGraph();
   }
@@ -556,33 +562,41 @@ namespace mctools {
    * @return The node if found, nullptr if not found
    *
    */
-  MCPGNode* MCParticleGraph::findTrackID( int trackid ) {
-    MCPGNode dummy;
-    dummy.tid = trackid;
-    auto it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
-    if ( it==node_v.end() || it->tid!=dummy.tid ) {
-      // no node, check the daughter ID map
-      auto it_showerdaughter = _shower_daughter2mother.find( trackid );
-      if ( it_showerdaughter!=_shower_daughter2mother.end() ) {
-        // found an id
-        //LARCV_DEBUG() << "  found map to mother: " << it_showerdaughter->second << std::endl;
-        dummy.tid = it_showerdaughter->second;
-      }
-      else {
-        // still nope
-        return nullptr;
-      }
-      // with the mother shower's trackid, try to find the node again
-      it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
-      //if ( it!=node_v.end() )
-      //  LARCV_DEBUG() << "  mother id maps to existing node" << std::endl;
-    }
-    
-    if ( it==node_v.end() || it->tid!=dummy.tid ) { 
+  MCPGNode* MCParticleGraph::findTrackID( long trackid ) {
+
+    auto it = _tid_to_node_v.find( (long)trackid );
+    if ( it==_tid_to_node_v.end())
       return nullptr;
-    }
-    //std::cout << "find trackid=" << trackid << ": " << strNodeInfo( *it ) << std::endl;    
-    return &*(it+0);
+
+    auto& node = node_v.at(it->second);
+    return &node;
+
+    // MCPGNode dummy;
+    // dummy.tid = trackid;
+    // auto it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
+    // if ( it==node_v.end() || it->tid!=dummy.tid ) {
+    //   // no node, check the daughter ID map
+    //   auto it_showerdaughter = _shower_daughter2mother.find( trackid );
+    //   if ( it_showerdaughter!=_shower_daughter2mother.end() ) {
+    //     // found an id
+    //     //LARCV_DEBUG() << "  found map to mother: " << it_showerdaughter->second << std::endl;
+    //     dummy.tid = it_showerdaughter->second;
+    //   }
+    //   else {
+    //     // still nope
+    //     return nullptr;
+    //   }
+    //   // with the mother shower's trackid, try to find the node again
+    //   it = std::lower_bound( node_v.begin(), node_v.end(), dummy );
+    //   //if ( it!=node_v.end() )
+    //   //  LARCV_DEBUG() << "  mother id maps to existing node" << std::endl;
+    // }
+    
+    // if ( it==node_v.end() || it->tid!=dummy.tid ) { 
+    //   return nullptr;
+    // }
+    // //std::cout << "find trackid=" << trackid << ": " << strNodeInfo( *it ) << std::endl;    
+    // return &*(it+0);
   }
 
   /**
