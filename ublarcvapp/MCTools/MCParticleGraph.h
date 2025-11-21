@@ -60,7 +60,10 @@ namespace mctools {
     std::string strNodeInfo( const MCPGNode& node );
     void printNodeInfo( const MCPGNode& node );
     void printGraph( MCPGNode* rootnode, bool visible_only );
-    
+
+    long getShowerMotherID( long trackid );
+    long getAncestorID( long trackid );
+    long getParticleID( long trackid );
 
   protected:
     void recursiveGetNodeAndDescendents( MCPGNode* node, std::vector<MCPGNode*>& nodelist );

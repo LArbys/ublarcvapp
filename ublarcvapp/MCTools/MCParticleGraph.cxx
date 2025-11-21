@@ -1113,6 +1113,33 @@ namespace mctools {
     return _nu_vertices_v.size();
   }
 
+  long MCParticleGraph::getShowerMotherID( long trackid )
+  {
+    auto it = _shower_daughter2mother.find( trackid );
+    if ( it!=_shower_daughter2mother.end() ) {
+      return it->second;
+    }
+    return -1;
+  }
+
+  long MCParticleGraph::getParticleID( long trackid )
+  {
+    auto pnode  = findTrackID( trackid );
+    if ( pnode==nullptr )
+      return -1;
+
+    return pnode->pid;
+  }
+
+  long MCParticleGraph::getAncestorID( long trackid )
+  {
+    auto pnode  = findTrackID( trackid );
+    if ( pnode==nullptr )
+      return -1;
+
+    return pnode->aid;
+  }
+
   
 }
 }

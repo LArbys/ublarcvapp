@@ -15,7 +15,10 @@ set( HEADERS MCPos2ImageUtils.h
   LArbysMC.h
   NeutrinoPixelFilter.h
   FlashMatcher.h
-  FlashMatcherV2.h  
+  FlashMatcherV2.h 
+  MCPixelLabels.h
+  EventMCPixelLabels.h
+  MCPixelLabelMaker.h 
   MCPixelPMap.h )
 
 # Add sources
@@ -31,6 +34,9 @@ add_library( ${LIBNAME} SHARED MCPos2ImageUtils.cxx
   NeutrinoPixelFilter.cxx
   FlashMatcher.cxx
   FlashMatcherV2.cxx  
+  MCPixelLabels.cxx
+  EventMCPixelLabels.cxx
+  MCPixelLabelMaker.cxx
   MCPixelPMap.cxx )
 
 # larlite libraries
@@ -47,6 +53,8 @@ target_include_directories(${LIBNAME}
   PRIVATE  
   ${PROJECT_SOURCE_DIR}
   ${LARCV_JSON_INCLUDE_DIR}
+  ${HIGHFIVE_INCLUDE_DIR}
+  ${HDF5_INCLUDE_DIRS}
 )
 
 target_link_libraries( ${LIBNAME} PUBLIC
