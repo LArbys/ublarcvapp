@@ -16,6 +16,19 @@
 namespace ublarcvapp {
 namespace mctools {
 
+  MCPixelLabelMaker::~MCPixelLabelMaker()
+  {
+      if ( psce ) {
+          delete psce;
+          psce = nullptr;
+      }
+
+      if ( preverse_sce ) {
+          delete preverse_sce;
+          preverse_sce = nullptr;
+      }
+  }
+
   void MCPixelLabelMaker::process( 
     larlite::storage_manager& ioll, 
     larcv::IOManager& iolcv,
@@ -23,8 +36,9 @@ namespace mctools {
   {
     
     // moving real position to apparent position
-    larutil::SpaceChargeMicroBooNE* psce = 
-      new larutil::SpaceChargeMicroBooNE(larutil::SpaceChargeMicroBooNE::kMCC9_Forward);
+    if ( psce==nullptr ) {
+      psce = new larutil::SpaceChargeMicroBooNE(larutil::SpaceChargeMicroBooNE::kMCC9_Forward);
+    }
 
     ublarcvapp::mctools::MCParticleGraph mcpg;
     mcpg.buildgraph(ioll);
@@ -56,7 +70,7 @@ namespace mctools {
 
     // get the simch product we need
     larlite::event_simch* ev_simch = 
-      (larlite::event_simch*)ioll.get_data(larlite::data::kSimChannel,"largeant");
+      (larlite::event_simch*)ioll.get_data(larlite::data::kSimChannel,source);
 
     // get images
     larcv::EventImage2D* ev_img = 
@@ -132,32 +146,70 @@ namespace mctools {
                 int pid  = pnode_t->pid;
                 int origin = pnode_t->origin;
 
-                double t0 = pnode_t->start.at(3);
+                double t0 = pnode_t->start.at(3); // in ns
 
-                bool applied = false;
-                std::vector<double> pos_sce = psce->ApplySpaceChargeEffect( pos[0], pos[1], pos[2], applied );
 
-                // get (u,v,y,tick)
-                std::vector<float> imgpos = 
-                    ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( pos[0],
-                        pos[1],
-                        pos[2],
-                        t0,
-                        true );
+                std::vector<double> pos_sce(3,0);
+                std::vector<double> imgpos(4,0); // (U,V,Y,tick)
+                int row = -1;
+                std::array<int,4> imgindex = {-1,-1,-1,-1};
 
-                float tick = imgpos[3];
-                if ( tick<(float)meta0.min_y() || tick>=(float)meta0.max_y() ) {
-                    ide_outofimg++;
-                    continue;
+                if ( source=="largeant" ) {
+
+                    bool applied = false;
+                    pos_sce = psce->ApplySpaceChargeEffect( pos[0], pos[1], pos[2], applied );
+
+                    // get (u,v,y,tick)
+                    std::vector<float> imgpos = 
+                        ublarcvapp::mctools::MCPos2ImageUtils::Get()->truepos_to_imagepos( pos[0],
+                            pos[1],
+                            pos[2],
+                            t0,
+                            true );
+                    pos[0] = (tick-3200)*0.5*driftv;
+                    tick = (int)imgpos[3];
+                    if ( tick<(int)meta0.min_y() || tick>=(int)meta0.max_y() ) {
+                        ide_outofimg++;
+                        continue;
+                    }
+
+                    row = meta0.row( imgpos[3] );
+
+                    imgindex = { 
+                        (int)imgpos[0], 
+                        (int)imgpos[1], 
+                        (int)imgpos[2], 
+                        row };
                 }
+                else if ( source=="driftWC:simpleSC:Detsim") {
+                    if ( preverse_sce == nullptr ) {
+                        preverse_sce = new larutil::SpaceChargeMicroBooNE(larutil::SpaceChargeMicroBooNE::kMCC9_Backward);
+                    }
+                    // the (y,z) is post spacecharge effect and x is drifted to the wireplanes
+                    float x_t0_offset = (t0*1.0e-3)*driftv;
+                    x_t0_offset = 0.0;
+                    pos_sce[0] = float(tick-3200)*0.5*driftv - x_t0_offset;
+                    pos_sce[1] = pos[1];
+                    pos_sce[2] = pos[2];
+                    pos[0] = pos_sce[0];
 
-                int row = meta0.row( imgpos[3] );
-
-                std::array<int,4> imgindex = { 
-                    (int)imgpos[0], 
-                    (int)imgpos[1], 
-                    (int)imgpos[2], 
-                    row };
+                    for (int p=0; p<3; p++) {
+                        imgpos[p]   = wire_v[p];
+                        imgindex[p] = wire_v[p];
+                    }
+                    imgpos[3] = tick;
+                    if ( tick<(int)meta0.min_y() || tick>=(int)meta0.max_y() ) {
+                        ide_outofimg++;
+                        continue;
+                    }
+                    row = meta0.row( tick );
+                    imgindex[3] = row;
+                }
+                else {
+                    std::stringstream errmsg;
+                    errmsg << "unrecognized simch source: " << source << std::endl;
+                    throw std::runtime_error(errmsg.str());
+                }
 
                 auto it_index = _pixels_v._imgcoord_to_tripindex.find( imgindex );
                 if ( it_index==_pixels_v._imgcoord_to_tripindex.end() ) {
@@ -173,7 +225,7 @@ namespace mctools {
                     trip.pos[0] = pos[0];
                     trip.pos[1] = pos[1];
                     trip.pos[2] = pos[2];
-                    trip.pos_reco[0] = (tick-3200)*0.5*driftv;
+                    trip.pos_reco[0] = pos_sce[0];
                     trip.pos_reco[1] = pos_sce[1];
                     trip.pos_reco[2] = pos_sce[2];
 
@@ -181,10 +233,10 @@ namespace mctools {
                     _pixels_v._imgcoord_to_tripindex[imgindex] = trip.index;
 
                     // we also index stuff
-                    for (int iu=-1; iu<=1; iu++) {
-                    for (int iv=-1; iv<=1; iv++) {
-                    for (int iy=-1; iy<=1; iy++) {
-                    for (int ir=-1; ir<=1; ir++) {
+                    for (int iu=-dwire; iu<=dwire; iu++) {
+                    for (int iv=-dwire; iv<=dwire; iv++) {
+                    for (int iy=-dwire; iy<=dwire; iy++) {
+                    for (int ir=-drow; ir<=drow; ir++) {
                         std::array<int,4> modindex = imgindex;
                         modindex[0] += iu;
                         modindex[1] += iv;
@@ -193,6 +245,24 @@ namespace mctools {
                         auto it_mod = _pixels_v._imgcoord_to_tripindex.find( modindex );
                         if ( it_mod==_pixels_v._imgcoord_to_tripindex.end()) {
                             _pixels_v._imgcoord_to_tripindex[modindex] = trip.index;
+                        }
+                        else {
+                            // found a previous record
+                            int new_dindex = std::abs(iu)+std::abs(iv)+std::abs(iy)+std::abs(ir);
+
+                            if ( new_dindex!=0 ) { 
+                              auto& oldtrip = _pixels_v._triplets_v.at( it_mod->second );
+                              int old_dindex = 0;
+                              for (int ii=0; ii<3; ii++) {
+                                  old_dindex += std::abs( imgindex[ii]-oldtrip.imgcoord[ii] );
+                              }
+                              old_dindex += std::abs( imgindex[3]-oldtrip.imgcoord[4] );
+  
+                              if ( new_dindex<=old_dindex ) {
+                                  // replace index
+                                  _pixels_v._imgcoord_to_tripindex[modindex] = trip.index;
+                              }
+                            }
                         }
                     }
                     }

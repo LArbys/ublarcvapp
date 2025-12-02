@@ -29,7 +29,8 @@ namespace mctools {
       std::vector<float> start;          //< (x,y,z,t) before sce, true start of particle
       std::vector<float> first_edep_pos; //< (x,y,z,t) before sce, first step that leaves edep in cryostat
       std::vector<float> first_tpc_pos;  //< (x,y,z,t) before sce, first step inside the TPC, visible in the image
-    
+      std::vector<float> mom4;           //< (E,px,py,pz)
+
       int origin; // 1=neutrino, 2=cosmic, 0=unassigned, -1=unassigned
 
       MCPGNode()
@@ -46,7 +47,8 @@ namespace mctools {
 	      process("null"),
         start({0,0,0,0}),
         first_edep_pos({0,0,0,0}),	
-        first_tpc_pos({0,0,0,0}),		
+        first_tpc_pos({0,0,0,0}),	
+        mom4({0,0,0,0}),
         origin(-1)
       {
 	      daughter_v.clear();
@@ -73,6 +75,7 @@ namespace mctools {
         start({0,0,0,0}),
         first_edep_pos({0,0,0,0}),	
         first_tpc_pos({0,0,0,0}),		
+        mom4({0,0,0,0}),
         origin(-1)
       {
 	      daughter_v.clear();

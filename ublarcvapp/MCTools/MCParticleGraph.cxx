@@ -168,6 +168,15 @@ namespace mctools {
       tracknode.start[1] = mct.Start().Y();
       tracknode.start[2] = mct.Start().Z();
       tracknode.start[3] = mct.Start().T();
+      try {
+        tracknode.mom4[0]  = mct.Start().E();
+        tracknode.mom4[1]  = mct.Start().Px();
+        tracknode.mom4[2]  = mct.Start().Py();
+        tracknode.mom4[3]  = mct.Start().Pz();
+      }
+      catch (...) {
+        tracknode.mom4 = std::vector<float>{0,0,0,0};
+      }
 
       if ( tracknode.origin==1 ) {
 	      // store nu particle
@@ -255,6 +264,16 @@ namespace mctools {
 
       showernode.first_edep_pos = std::vector<float>(4,0);
       showernode.first_tpc_pos  = std::vector<float>(4,0);
+
+      try {
+        showernode.mom4[0]  = mcsh.Start().E();
+        showernode.mom4[1]  = mcsh.Start().Px();
+        showernode.mom4[2]  = mcsh.Start().Py();
+        showernode.mom4[3]  = mcsh.Start().Pz();
+      }
+      catch (...) {
+        showernode.mom4 = std::vector<float>{0,0,0,0};
+      }
 
       bool x_isinf = false;
       if ( mcsh.DetProfile().X()>1.0e100 || mcsh.DetProfile().X()<-1.0e100 )
@@ -379,6 +398,16 @@ namespace mctools {
             fsnode.mtid = tid;
             fsnode.aid  = tid;
             fsnode.origin = 1; // neutrino origin (from genie)
+
+            try {
+              for (int i=0; i<3; i++)
+                fsnode.mom4[i+1]  = part.Momentum(0)[i];
+              fsnode.mom4[0]  = part.Momentum(0)[3];
+            }
+            catch (...) {
+              fsnode.mom4 = std::vector<float>{0,0,0,0};
+            }
+
             LARCV_DEBUG() << "Add Genie Final State Particle to initial List: tid=" << tid << " pdg=" << pid << std::endl;	    
             node_v.emplace_back( std::move(fsnode) );
           }
@@ -659,6 +688,13 @@ namespace mctools {
           << node.first_tpc_pos[2] << ","
           << node.first_tpc_pos[3]*1.0e-3
           << " us)" << std::endl;
+
+    if ( node.mom4.size()>=4 )
+      ss << "    mom4(E,px,py,pz)=(" << node.mom4[0] << ","
+          << node.mom4[1] << ","
+          << node.mom4[2] << ","
+          << node.mom4[3] << ") "
+          << " MeV" << std::endl;
     
 
     //ss << std::endl;

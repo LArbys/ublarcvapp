@@ -3,6 +3,7 @@
 
 #include <array>
 #include <map>
+#include <cmath>
 
 #include "larcv/core/Base/larcv_base.h"
 #include "larcv/core/DataFormat/IOManager.h"
@@ -21,10 +22,15 @@ class MCPixelLabelMaker : public larcv::larcv_base {
 public:
 
   MCPixelLabelMaker()
-  : larcv::larcv_base("MCPixelLabelMaker")
+  : larcv::larcv_base("MCPixelLabelMaker"),
+  dwire(1),
+  drow(1),
+  source("largeant"),
+  preverse_sce(nullptr),
+  psce(nullptr)
   {};
 
-  virtual ~MCPixelLabelMaker() {};
+  virtual ~MCPixelLabelMaker();
 
   void process( larlite::storage_manager& ioll, 
                 larcv::IOManager& iolcv,
@@ -37,9 +43,27 @@ public:
       ublarcvapp::mctools::MCParticleGraph& mcpg,
       larutil::SpaceChargeMicroBooNE* psce );
 
+  void set_dwire( int dwiremod ) { dwire=std::abs(dwiremod); };
+
+  void set_drow( int drowmod ) { drow=std::abs(drowmod); };
+
+  void set_largeant_source() { source="largeant"; };
+
+  void set_driftwc_source() { source="driftWC:simpleSC:Detsim"; };
+
   void export_as_hdf(std::string hdf_outfile);
 
+  void clear() {
+    _pixels_v.clear();
+  };
+
   EventMCPixelLabels _pixels_v;
+
+  int dwire; ///< create copies of MCPixelLabels with triplet indices with modified wire index, wire+dwire
+  int drow;  ///< create copies of MCPixelLabels with triplet indices with modified row index, row+drow
+  std::string source;
+  larutil::SpaceChargeMicroBooNE* preverse_sce;
+  larutil::SpaceChargeMicroBooNE* psce;
 
 
 };
