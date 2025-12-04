@@ -58,11 +58,12 @@ target_include_directories(${LIBNAME}
 )
 
 target_link_libraries( ${LIBNAME} PUBLIC
-  ${LARLITE_LIBS_USED}   
+  ${LARLITE_LIBS_USED}
   LArCVCoreBase
   LArCVCoreDataFormat
   LArCVCoreProcessor
   ${UBLARCVAPP_LIBS_USED}
+  ${HDF5_LIBRARIES}
 )
 
 # includes for ROOT dictionary gen
