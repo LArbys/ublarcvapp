@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <map>
+#include <cstddef>
 
 namespace ublarcvapp {
 namespace ubphotonlib {
