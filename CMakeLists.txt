@@ -7,14 +7,28 @@ if (CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 endif()
 
 # CFLAGS
-SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
-SET(CMAKE_CXX_FLAGS "-std=c++11 -Wall -fPIC -pedantic -fopenmp -mtune=native")
+#SET(CMAKE_C_FLAGS "-std=gnu99 -pedantic -fPIC -pedantic -fopenmp -mtune=native")
+#SET(CMAKE_CXX_FLAGS "-Wall -fPIC -pedantic -fopenmp -mtune=native")
 
 ## Dependencies
 
 #---CERN ROOT (required)
 find_package(ROOT CONFIG REQUIRED)
-
+# we set the compiler version based on the one used for ROOT
+execute_process(
+    COMMAND bash "-c" "root-config --features"
+    OUTPUT_VARIABLE TEST_ROOT_CXX_STANDARD )
+if (${TEST_ROOT_CXX_STANDARD} MATCHES "cxx17")
+  message( STATUS "using cxx17")
+  set(CMAKE_CXX_STANDARD 17)
+elseif (${TEST_ROOT_CXX_STANDARD} MATCHES "cxx14")
+  message( STATUS "using cxx14")
+  set(CMAKE_CXX_STANDARD 14)
+else ()
+  message( STATUS "using cxx11")  
+  set(CMAKE_CXX_STANDARD 11)
+endif()
+    
 #---LArCV (required)
 set( larcv_DIR "$ENV{LARCV_LIBDIR}/cmake/larcv")
 find_package( larcv REQUIRED )
@@ -55,9 +69,12 @@ endif()
 
 #---Eigen3
 find_package(Eigen3 REQUIRED)
+get_property(EIGEN3_INCLUDE_DIRS TARGET Eigen3::Eigen PROPERTY INTERFACE_INCLUDE_DIRECTORIES )
 
 #---LArLite
-set( LARLITE_INC_DIRS "$ENV{LARLITE_COREDIR}" "$ENV{LARLITE_BASEDIR}" "$ENV{LARLITE_USERDEVDIR}" "$ENV{LARLITE_BASEDIR}/../" )
+set( larlite_DIR $ENV{LARLITE_LIBDIR}/cmake/larlite )
+find_package( larlite REQUIRED )
+set( LARLITE_INC_DIRS "$ENV{LARLITE_INCDIR}" )
 set( LARLITE_LIB_DIR  "$ENV{LARLITE_LIBDIR}" )
 set( HAS_LARLITE 1 )
 file( GLOB LARLITE_LIBS "$ENV{LARLITE_LIBDIR}/libLArLite*.so" )
@@ -83,9 +100,42 @@ if (Boost_FOUND)
     message(STATUS "Using boost libraries: ${Boost_LIBRARIES}")
     message(STATUS "Using boost thread library: ${Boost_THREAD_LIBRARY}")
     link_directories(${Boost_LIBRARY_DIRS})
+else()
+    message(STATUS "Boost not found")
 endif (Boost_FOUND)
 
-#INCLUDE_DIRECTORIES( ${Boost_INCLUDE_DIR} )
+#---HDF5 (for machine learning data output)
+find_package(HDF5 COMPONENTS C CXX QUIET)
+if(HDF5_FOUND)
+    message(STATUS "Found HDF5: ${HDF5_VERSION}")
+    add_compile_definitions(HAVE_HDF5)
+else()
+    message(STATUS "HDF5 not found, HDF5 output features will be disabled")
+endif()
+
+#---HighFive (header-only HDF5 C++ interface)
+if(HDF5_FOUND)
+    # Try to find HighFive as an installed package first
+    find_package(HighFive QUIET)
+    if(NOT HighFive_FOUND)
+        # If not found, check if it exists as a submodule or in a known location
+        if(EXISTS "$ENV{UBDL_BASEDIR}/extern/highfive/include")
+            set(HIGHFIVE_INCLUDE_DIR "$ENV{UBDL_BASEDIR}/extern/highfive/include")
+            message(STATUS "Found HighFive headers at: ${HIGHFIVE_INCLUDE_DIR}")
+            set(HighFive_FOUND TRUE)
+        else()
+            message(STATUS "HighFive not found. To use HDF5 features, please:")
+            message(STATUS "  1. Install HighFive: https://github.com/highfive-devs/highfive/tree/main ")
+            message(STATUS "  2. Or add as submodule: git submodule add https://github.com/highfive-devs/highfive/tree/main extern/highfive")
+        endif()
+    else()
+        message(STATUS "Found HighFive package")
+    endif()
+    
+    if(HighFive_FOUND)
+        add_compile_definitions(HAVE_HIGHFIVE)
+    endif()
+endif()
 
 #--- glog
 #find_package(glog REQUIRED)

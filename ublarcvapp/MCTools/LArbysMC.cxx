@@ -5,14 +5,14 @@
 
 #include "LArbysMC.h"
 
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
-#include "Base/MCConstants.h"
-#include "DataFormat/storage_manager.h"
-#include "DataFormat/mctrack.h"
-#include "DataFormat/mcshower.h"
-#include "DataFormat/mctruth.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/Base/MCConstants.h"
+#include "larlite/DataFormat/storage_manager.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/mcshower.h"
+#include "larlite/DataFormat/mctruth.h"
 
 #include "ublarcvapp/ubdllee/dwall.h"
 
@@ -31,7 +31,7 @@ namespace mctools {
     _producer_wireimage = "wire";
     _psce = new larutil::SpaceChargeMicroBooNE();
     for (int p=0; p<3; p++) _plane_vtx_pixsum[p] = 0.;
-      
+    Clear();
     
   }
 
@@ -137,6 +137,14 @@ namespace mctools {
     _event  = mgr.event_id();
     _entry  = (int)mgr.get_index();
 
+    // no truth?
+    _neutrino_present = false;
+    if ( ev_mctruth->size()==0 ) {
+      if ( _mc_tree )
+        _mc_tree->Fill();
+      return false;      
+    }
+    
     // If we've got a neutrino, sample that
     auto const& mct = ev_mctruth->at(0);
     _neutrino_present = mct.Origin()==larlite::simb::kBeamNeutrino;
@@ -389,7 +397,7 @@ namespace mctools {
     struct plane_pixsum_t {
       int plane;
       float pixsum;
-      bool operator<(const plane_pixsum_t& rhs ) {
+      bool operator<(const plane_pixsum_t& rhs ) const {
         if ( pixsum<rhs.pixsum ) return true;
         return false;
       };
@@ -471,6 +479,8 @@ namespace mctools {
     _genie_mode = -1;
     _nu_pdg = 0;
 
+    _Enu_true = 0.;
+    _vtx_t = 0;
     _vtx_x = _vtx_y = _vtx_z = 0.;
     _vtx_sce_x = _vtx_sce_y = _vtx_sce_z = 0.;
     _vtx_detx = 0;
@@ -487,17 +497,19 @@ namespace mctools {
     _evis_had = 0.;
     _evis_vtx =0.;
     _evis_lep = 0;
-    _hi_lep_pdg = 0.;
+    _hi_lep_pdg = 0;
+    _hi_lep_e   = 0.;
     _nprimary = 0;
+    _ntotal = 0;    
     _nproton = 0;
     _nproton_60mev = 0;
     _nlepton =0;
     _nlepton_35mev = 0;
     _nmeson = 0;
     _nmeson_35mev = 0;
+    _npi0 = 0;
     _nshower = 0;
     _nneutron = 0;
-    _npi0 =0;
     _1l1p0pi = 0;
     _1l0p0pi = 0;
     

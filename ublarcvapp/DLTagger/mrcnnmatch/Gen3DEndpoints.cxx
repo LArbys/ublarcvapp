@@ -1,7 +1,7 @@
 #include "Gen3DEndpoints.h"
 
 // larlite
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/Geometry.h"
 
 // ublarcvapp
 #include "ublarcvapp/UBWireTool/UBWireTool.h"

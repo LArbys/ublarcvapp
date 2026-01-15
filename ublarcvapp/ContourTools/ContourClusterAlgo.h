@@ -14,7 +14,7 @@
 
 #include <opencv2/core.hpp>
 
-#include "ContourShapeMeta.h"
+#include "ublarcvapp/ContourTools/ContourShapeMeta.h"
 
 namespace ublarcvapp {
 

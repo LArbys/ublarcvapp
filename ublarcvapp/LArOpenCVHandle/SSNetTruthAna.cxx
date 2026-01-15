@@ -5,8 +5,8 @@
 #include "LArbysImageMaker.h"
 #include "larcv/core/DataFormat/EventROI.h"
 #include "LArbysUtils.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 #include "larcv/core/CVUtil/CVUtil.h"
 #include <array>
 #include <cassert>

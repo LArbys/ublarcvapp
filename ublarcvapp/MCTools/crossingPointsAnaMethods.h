@@ -4,8 +4,8 @@
 #include <vector>
 
 // larlite
-#include "DataFormat/mctrack.h"
-#include "DataFormat/mctrajectory.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/mctrajectory.h"
 
 class TTree;
 
@@ -33,6 +33,10 @@ namespace mctools {
   
     static float getTick( const larlite::mcstep& step, const float trig_time=4050.0,
                           const larutil::SpaceChargeMicroBooNE* psce=nullptr );
+
+    static float getTrueTick( const std::vector<float>& step, const float trig_time=4050.0,
+			      const larutil::SpaceChargeMicroBooNE* psce=nullptr );
+    
 
     static int doesTrackCrossImageBoundary( const larlite::mctrack& track, const larcv::ImageMeta& meta,
                                             const float trig_time, const larutil::SpaceChargeMicroBooNE* psce=nullptr );

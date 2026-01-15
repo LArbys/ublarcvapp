@@ -19,6 +19,10 @@ namespace larcv {
 
   static LArbysImageProcessFactory __global_LArbysImageProcessFactory__;
 
+  LArbysImage::LArbysImage()
+    : LArbysImage("LArbysImage")
+  {};
+  
   LArbysImage::LArbysImage(const std::string name)
     : ProcessBase(name),
       _image_cluster_cfg("aho"),
@@ -483,8 +487,8 @@ namespace larcv {
 			 kINVALID_DOUBLE);
 	
 	// Store the type
-	if      (par.type==larocv::data::ParticleType_t::kTrack)   proi.Shape(kShapeTrack);
-	else if (par.type==larocv::data::ParticleType_t::kShower)  proi.Shape(kShapeShower);
+	if      (par.type==larocv::data::ParticleCluster::ParticleType_t::kTrack)   proi.Shape(kShapeTrack);
+	else if (par.type==larocv::data::ParticleCluster::ParticleType_t::kShower)  proi.Shape(kShapeShower);
 	  
 	// Push the ROI into the PGraph
 	LARCV_DEBUG() << " @ pg array index " << pidx << std::endl;

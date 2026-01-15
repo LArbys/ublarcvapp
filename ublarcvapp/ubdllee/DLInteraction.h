@@ -4,8 +4,8 @@
 #include <vector>
 
 // larlite
-#include "core/DataFormat/track.h"
-#include "core/DataFormat/shower.h"
+#include "larlite/DataFormat/track.h"
+#include "larlite/DataFormat/shower.h"
 
 // larcv
 #include "larcv/core/DataFormat/ROI.h"

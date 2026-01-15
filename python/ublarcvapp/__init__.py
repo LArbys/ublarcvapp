@@ -17,3 +17,4 @@ for l in [x for x in os.listdir(ublarcvapp_dir) if x.endswith('.so')]:
     ROOT.gSystem.Load(l)
 
 import ROOT.ublarcvapp as ublarcvapp
+ublarcvapp.mctools.MCPixelPGraph

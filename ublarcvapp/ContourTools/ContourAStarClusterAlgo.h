@@ -20,7 +20,7 @@
 #include <opencv2/imgproc.hpp>
 #include <opencv2/imgcodecs.hpp>
 
-#include "ContourShapeMeta.h"
+#include "ublarcvapp/ContourTools/ContourShapeMeta.h"
 
 namespace ublarcvapp {
 

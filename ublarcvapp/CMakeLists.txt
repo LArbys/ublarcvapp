@@ -1,22 +1,19 @@
-add_subdirectory(LLCVProcessor)
 add_subdirectory(dbscan)
-add_subdirectory(Reco3D)
-add_subdirectory(ContourTools)
-
+#add_subdirectory(Reco3D)
+#add_subdirectory(LArOpenCVHandle)
+add_subdirectory(ContourTools) # requires opencv, laropencv
 if (HAS_LARLITE)
+  set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -DHAS_LARLITE")  
   add_subdirectory(LArliteHandler)
+  add_subdirectory(LLCVProcessor)
   add_subdirectory(UBImageMod)
   add_subdirectory(UBWireTool)
   add_subdirectory(ubdllee)
-  add_subdirectory(Filter)
+#  add_subdirectory(Filter)
   add_subdirectory(MCTools)
+  add_subdirectory(UBPhotonLib)
+  add_subdirectory(ParticleToPixelUtils)
 endif()
-
-
-if (LARCV_USE_GEO2D)
-  add_subdirectory(LArOpenCVHandle)
-endif()
-
-if (Boost_FOUND)
-  add_subdirectory(DLTagger)
-endif()
+#if (Boost_FOUND)
+#  add_subdirectory(DLTagger)
+#endif()

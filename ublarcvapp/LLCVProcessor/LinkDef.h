@@ -9,9 +9,7 @@
 #pragma link off all classes;
 #pragma link off all functions;
 
-#pragma link C++ namespace ublarcvapp;
-#pragma link C++ namespace ublarcvapp::dltagger;
-
+#pragma link C++ namespace ublarcvapp::llcv;
 #pragma link C++ class ublarcvapp::llcv::LLCVProcessDriver+;
 #pragma link C++ class ublarcvapp::llcv::LLCVProcessTest+;
 #pragma link C++ class ublarcvapp::llcv::LArCVProcessTest+;

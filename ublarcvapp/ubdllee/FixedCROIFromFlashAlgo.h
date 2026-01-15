@@ -6,7 +6,7 @@
 #include "larcv/core/DataFormat/ROI.h"
 #include "larcv/core/DataFormat/ImageMeta.h"
 
-#include "DataFormat/opflash.h"
+#include "larlite/DataFormat/opflash.h"
 
 #include "FixedCROIFromFlashConfig.h"
 

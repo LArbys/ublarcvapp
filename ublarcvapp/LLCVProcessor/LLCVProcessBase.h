@@ -6,7 +6,7 @@
 #include "larcv/core/DataFormat/IOManager.h"
 
 // larlite
-#include "DataFormat/storage_manager.h"
+#include "larlite/DataFormat/storage_manager.h"
 
 namespace larcv {
   class ProcessDriver;

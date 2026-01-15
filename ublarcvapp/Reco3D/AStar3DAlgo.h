@@ -23,9 +23,9 @@ Uses Image2D to hold image.
 #include "larcv/core/DataFormat/Image2D.h"
 #include "larcv/core/Base/PSet.h"
 
-#include "AStar3DAlgoConfig.h"
-#include "AStar3DTypes.h"
-#include "Lattice.h"
+#include "ublarcvapp/Reco3D/Lattice.h"
+#include "ublarcvapp/Reco3D/AStar3DTypes.h"
+#include "ublarcvapp/Reco3D/AStar3DAlgoConfig.h"
 
 namespace ublarcvapp {
 namespace reco3d {

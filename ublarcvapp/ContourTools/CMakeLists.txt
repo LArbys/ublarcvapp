@@ -1,31 +1,61 @@
 set(MODULE_NAME ContourTools)
 
-# Collect the headers
-file(GLOB HEADERS "*.h")
-
-# Remove LinkDef.h
-list(FILTER HEADERS EXCLUDE REGEX ".*LinkDef.h$")
- 
-# However, the file(GLOB...) allows for wildcard additions:
-file(GLOB SOURCES "*.cxx")
-
-# library name
 set(LIBNAME LArCVApp_${MODULE_NAME})
-#message("opencv libs: ${OpenCV_LIBS}")
-#message("laropencv libs: ${LAROPENCV_LIBS}")
-#message("opencv inc: ${OpenCV_INCLUDE_DIRS}")
 
-# includes
-include_directories(${LARCV_INCLUDE_DIR} $ENV{LAROPENCV_BASEDIR} $ENV{UBLARCVAPP_BASEDIR} ${OpenCV_INCLUDE_DIRS} ${GEO2D_INC_DIR} $ENV{LARLITE_USERDEVDIR} )
+# Collect the headers
+set( HEADERS
+  ContourShapeMeta.h
+  ContourCluster.h
+  ContourClusterAlgo.h  
+  #ContourAStarClusterAlgo.h
+)
+
+# Collect the sources
+add_library( ${LIBNAME} SHARED
+  ContourShapeMeta.cxx
+  ContourCluster.cxx
+  ContourClusterAlgo.cxx  
+  #ContourAStarClusterAlgo.cxx
+)
+
+set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
+
+target_include_directories(${LIBNAME}
+  PUBLIC
+  $<INSTALL_INTERFACE:include/ublarcvapp/${MODULE_NAME}>
+  PRIVATE
+  ${PROJECT_SOURCE_DIR}
+  ${LARLITE_INCLUDE_DIR}
+  ${LARCV_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIRS}
+  ${GEO2D_INC_DIR}
+  ${LAROPENCV_INC_DIR}
+)
+#target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${LARLITE_INC_DIRS})
+target_link_libraries( ${LIBNAME} PUBLIC
+  opencv_imgcodecs
+  opencv_core  
+  LArCVCoreBase
+  LArCVCoreDataFormat
+  LArCVCoreCVUtil
+  ${GEO2D_LIBS}  
+  ${LAROPENCV_LIBS}  
+  #LArCVApp_LArOpenCVHandle
+  #LArCVApp_Reco3D  
+)
+include_directories( ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROJECT_SOURCE_DIR}
+  ${LARLITE_INCLUDE_DIR}
+  ${LARCV_INCLUDE_DIR}
+  ${OpenCV_INCLUDE_DIRS}
+  ${GEO2D_INC_DIR}
+)
 
 # Generate the dictionary
 ROOT_GENERATE_DICTIONARY(G__${LIBNAME} ${HEADERS} LINKDEF LinkDef.h)
 
-# Generate the shared library from the sources
-add_library( ${LIBNAME} SHARED ${SOURCES} G__${LIBNAME}.cxx)
-set_target_properties(${LIBNAME} PROPERTIES PUBLIC_HEADER "${HEADERS}")
-target_include_directories(${LIBNAME} PUBLIC ${LARCV_INCLUDE_DIR} ${OpenCV_INCLUDE_DIRS} )
-target_link_libraries(${LIBNAME} LArCVCoreBase LArCVCoreDataFormat LArCVCoreCVUtil LArCVApp_LArOpenCVHandle LArCVApp_Reco3D ${LAROPENCV_LIBS} ${GEO2D_LIBS} opencv_core)
+# add dictionary file to sources                                                                                                                                               
+target_sources( ${LIBNAME} PRIVATE G__${LIBNAME}.cxx )
 
 # install libraries and headers
 install(TARGETS ${LIBNAME}

@@ -12,9 +12,10 @@ namespace larcv {
   class LArbysImageExtract : public ProcessBase {
 
   public:
-    
-    LArbysImageExtract(const std::string name="LArbysImageExtract");
-    ~LArbysImageExtract(){}
+
+    LArbysImageExtract();
+    LArbysImageExtract(const std::string name);
+    ~LArbysImageExtract(){};
 
     void configure(const PSet&);
     void initialize();

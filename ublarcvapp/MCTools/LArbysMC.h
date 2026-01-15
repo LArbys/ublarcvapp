@@ -6,7 +6,7 @@
 
 #include "TTree.h"
 
-#include "DataFormat/storage_manager.h"
+#include "larlite/DataFormat/storage_manager.h"
 #include "larcv/core/DataFormat/EventImage2D.h"
 #include "larcv/core/DataFormat/IOManager.h"
 

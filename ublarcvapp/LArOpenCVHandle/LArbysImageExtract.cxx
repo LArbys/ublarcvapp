@@ -7,6 +7,10 @@ namespace larcv {
 
   static LArbysImageExtractProcessFactory __global_LArbysImageExtractProcessFactory__;
 
+  LArbysImageExtract::LArbysImageExtract()
+    : LArbysImageExtract("LArbysImageExtract")
+  {}
+  
   LArbysImageExtract::LArbysImageExtract(const std::string name)
     : ProcessBase(name),
       _LArbysImageMaker()

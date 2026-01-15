@@ -11,8 +11,8 @@
 #include "larcv/core/DataFormat/ClusterMask.h"
 
 // larlite
-#include "DataFormat/opflash.h"
-#include "DataFormat/track.h"
+#include "larlite/DataFormat/opflash.h"
+#include "larlite/DataFormat/track.h"
 
 // mrcnnmatch
 #include "MRCNNMatch.h"

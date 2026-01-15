@@ -1,7 +1,7 @@
 #include "NeutrinoVertex.h"
 
-#include "LArUtil/Geometry.h"
-#include "DataFormat/mctruth.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/DataFormat/mctruth.h"
 
 #include "crossingPointsAnaMethods.h"
 

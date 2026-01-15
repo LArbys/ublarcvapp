@@ -18,7 +18,7 @@
 #include "larcv/core/Processor/ProcessFactory.h"
 
 #include "larcv/core/DataFormat/EventROI.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 
 namespace larcv {
 

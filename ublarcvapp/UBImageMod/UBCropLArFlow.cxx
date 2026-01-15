@@ -11,8 +11,8 @@
 #include "larcv/core/ROOTUtil/ROOTUtils.h"
 
 //larlite
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 #include "TCanvas.h"
 #include "TH2D.h"

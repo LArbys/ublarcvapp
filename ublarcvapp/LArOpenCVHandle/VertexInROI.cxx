@@ -3,8 +3,8 @@
 
 #include "VertexInROI.h"
 #include "larcv/core/DataFormat/EventROI.h"
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 namespace larcv {
 

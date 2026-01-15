@@ -5,8 +5,8 @@
 #include <numeric>
 #include <array>
 
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 namespace larcv {
 

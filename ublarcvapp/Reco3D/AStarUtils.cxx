@@ -2,8 +2,8 @@
 #define ASTARUTILS_CXX
 
 #include "AStarUtils.h"
-#include "LArUtil/GeometryHelper.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/GeometryHelper.h"
+#include "larlite/LArUtil/LArProperties.h"
 #include <numeric>
 #include <cassert>
 

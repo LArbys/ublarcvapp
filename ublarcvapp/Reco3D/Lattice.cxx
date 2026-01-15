@@ -1,8 +1,8 @@
 #include "Lattice.h"
 
 // larlite
-#include "LArUtil/Geometry.h"
-#include "LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
 
 namespace ublarcvapp {
 namespace reco3d {

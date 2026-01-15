@@ -2,9 +2,9 @@
 #define __UBLARCVAPP_MCTOOLS_TRUTHTRACK_SCE_H__
 
 #include <vector>
-#include "LArUtil/SpaceChargeMicroBooNE.h"
-#include "DataFormat/mctrack.h"
-#include "DataFormat/track.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/track.h"
 #include "larcv/core/Base/larcv_base.h"
 
 namespace ublarcvapp {

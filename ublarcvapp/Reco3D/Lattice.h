@@ -5,7 +5,7 @@
 
 #include "larcv/core/DataFormat/ImageMeta.h"
 
-#include "AStar3DTypes.h"
+#include "ublarcvapp/Reco3D/AStar3DTypes.h"
 
 namespace ublarcvapp {
 namespace reco3d {

@@ -11,8 +11,8 @@
 #include "ublarcvapp/UBWireTool/UBWireTool.h"
 
 // larlite
-#include "LArUtil/LArProperties.h"
-#include "LArUtil/Geometry.h"
+#include "larlite/LArUtil/LArProperties.h"
+#include "larlite/LArUtil/Geometry.h"
 
 namespace ublarcvapp {
 namespace reco3d {

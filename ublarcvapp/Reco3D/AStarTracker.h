@@ -18,13 +18,16 @@
 #include <string>
 #include <fstream>
 
-#include "Analysis/ana_base.h"
-#include "DataFormat/track.h"
-#include "DataFormat/mctrack.h"
-#include <TVector3.h>
+//#include "Analysis/ana_base.h"
+#include "larlite/DataFormat/track.h"
+#include "larlite/DataFormat/mctrack.h"
+#include "larlite/DataFormat/wire.h"
+#include "larlite/LArUtil/SpaceChargeMicroBooNE.h"
 #include "larcv/core/DataFormat/Image2D.h"
 #include "larcv/core/DataFormat/ImageMeta.h"
-#include "DataFormat/wire.h"
+#include "larcv/core/Processor/ProcessFactory.h"
+#include "larcv/core/Processor/ProcessBase.h"
+#include <TVector3.h>
 #include "TH1D.h"
 #include "TH2D.h"
 #include "TSpline.h"
@@ -35,12 +38,9 @@
 
 //#include "LArCV/core/DataFormat/ChStatus.h"
 //#include "larcv/app/LArOpenCVHandle/LArbysUtils.h"
-#include "AStar3DAlgo.h"
-#include "AStar3DAlgoProton.h"
+#include "ublarcvapp/Reco3D/AStar3DAlgo.h"
+#include "ublarcvapp/Reco3D/AStar3DAlgoProton.h"
 
-#include "larcv/core/Processor/ProcessBase.h"
-#include "larcv/core/Processor/ProcessFactory.h"
-#include "LArUtil/SpaceChargeMicroBooNE.h"
 
 namespace ublarcvapp {
 namespace reco3d {
